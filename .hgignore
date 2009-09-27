@@ -1,0 +1,13 @@
+syntax: glob
+
+*.egg-info
+*.pyc
+
+
+syntax: regexp
+
+^bin/
+^develop-eggs/
+^downloads/
+^eggs/
+^parts/

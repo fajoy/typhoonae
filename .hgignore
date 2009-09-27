@@ -10,6 +10,10 @@ syntax: regexp
 
 ^bin/
 ^develop-eggs/
+^etc/appserver.conf
+^etc/server.conf
+^etc/supervisord.conf
 ^downloads/
 ^eggs/
 ^parts/
+^var/*

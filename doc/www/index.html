@@ -4,8 +4,31 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>TyphoonAE</title>
+    <link rel="stylesheet" href="styles.css" type="text/css" media="all" />
   </head>
   <body>
-    <h1>TyphoonAE</h1>
+    <div class="center">
+      <div class="note">
+        <div class="text">
+          <p>This is TyphoonAE (alpha)</b></p>
+          <ul>
+            <li>Configure an application:<br />
+              $ bin/apptool parts/demo/
+            </li>
+            <li>Start supervisor console:<br />
+              $ bin/supervisorctl -c etc/supervisord.conf -u admin -p admin
+            </li>
+            <li>Update configuration:<br />
+              supervisor&gt; update
+            </li>
+            <li>Restart NGINX:<br />
+              supervisor&gt; restart nginx
+            </li>
+            <li><a href="javascript:window.location.reload()">Reload page!</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

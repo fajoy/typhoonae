@@ -69,7 +69,7 @@ def get_count():
     """Retrieves the value for a given sharded counter."""
 
     total = 0
-    for counter in SimpleCounterShard.all().fetch(NUM_SHARDS):
+    for counter in SimpleCounterShard.all():
         total += counter.count
     return total
 

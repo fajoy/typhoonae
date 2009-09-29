@@ -545,6 +545,11 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
                                              'Cursor %d not found' % cursor)
 
     count = next_request.count()
+    # Possible HACK, but fixes the bug that we get no results for simple
+    # queries (without fetch(n)) since SDK version 1.2.4
+    if count == 0:
+        count = 1
+
     for _ in range(count):
       try:
         query_result.result_list().append(self.__entity_for_mongo_document(cursor.next()))

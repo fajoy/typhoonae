@@ -55,6 +55,8 @@ def serve(conf):
 
     module_cache = dict()
 
+    back_ref_pattern = re.compile(r'\\([0-9]*)')
+
     while True:
         (inp, out, err, env) = fcgiapp.Accept()
 
@@ -81,9 +83,17 @@ def serve(conf):
         os.environ['USER_ID'] = user_id
 
         # Compute script path and set PATH_TRANSLATED environment variable
+        path_info = os.environ['PATH_INFO']
         for pattern, name, script in url_mapping:
-            if re.match(pattern, os.environ['PATH_INFO']) is not None:
+            # Check for back reference
+            if re.match(pattern, path_info) is not None:
+                m = back_ref_pattern.search(name)
+                if m:
+                    ind = int(m.group(1))
+                    mod = path_info.split('/')[ind]
+                    name = '.'.join(name.split('.')[0:-1]+[mod])
                 os.environ['PATH_TRANSLATED'] = script
+                os.chdir(os.path.dirname(script))
                 break
 
         try:

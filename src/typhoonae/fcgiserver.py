@@ -43,6 +43,34 @@ def get_traceback():
     return value
 
 
+_module_cache = dict()
+
+def run_module(mod_name, init_globals=None, run_name=None, alter_sys=False):
+    """Execute a module's code without importing it.
+
+    Caches module loader and code and returns the resulting top level namespace
+    dictionary.
+    """
+    global _module_cache
+
+    if mod_name not in _module_cache:
+        loader = runpy.get_loader(mod_name)
+        if loader is None:
+            raise ImportError("No module named " + mod_name)
+        code = loader.get_code(mod_name)
+        if code is None:
+            raise ImportError("No code object available for " + mod_name)
+        _module_cache[mod_name] = (loader, code)
+    else:
+        loader, code = _module_cache[mod_name]
+
+    filename = runpy._get_filename(loader, mod_name)
+    if run_name is None:
+        run_name = mod_name
+    return runpy._run_module_code(code, init_globals, run_name,
+                                  filename, loader, alter_sys)
+
+
 def serve(conf):
     """Implements the server loop.
 
@@ -52,8 +80,6 @@ def serve(conf):
 
     # Inititalize URL mapping
     url_mapping = typhoonae.initURLMapping(conf)
-
-    module_cache = dict()
 
     back_ref_pattern = re.compile(r'\\([0-9]*)')
 
@@ -97,14 +123,8 @@ def serve(conf):
                 break
 
         try:
-            # Lookup module in cache
-            if name in module_cache:
-                module_cache[name]['main']()
-            else:
-                # Load and run the application module
-                mod = runpy.run_module(name, run_name='__main__')
-                # Store module in the cache
-                module_cache[name] = mod
+            # Load and run the application module
+            run_module(name, run_name='__main__', alter_sys=True)
         except:
             try:
                 tb = get_traceback()

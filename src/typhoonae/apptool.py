@@ -137,7 +137,7 @@ def write_nginx_conf(options, conf, app_root):
             addr=addr,
             app_id=conf.application,
             fcgi_params=FCGI_PARAMS,
-            passwd_file=os.path.join(var, 'htpasswd'),
+            passwd_file=os.path.abspath(options.passwd_file),
             path='|'.join(secure_urls),
             port=port
             )
@@ -183,6 +183,10 @@ def main():
     op.add_option("-n", "--nginx", dest="nginx", metavar="FILE",
                   help="write nginx configuration to this file",
                   default=os.path.join('etc', 'server.conf'))
+
+    op.add_option("-p", "--passwd", dest="passwd_file", metavar="FILE",
+                  help="use this passwd file for authentication",
+                  default=os.path.join('etc', 'htpasswd'))
 
     op.add_option("-s", "--supervisor", dest="supervisor", metavar="FILE",
                   help="write supervisor configuration to this file",

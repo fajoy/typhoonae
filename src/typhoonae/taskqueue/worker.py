@@ -15,9 +15,11 @@
 # limitations under the License.
 """Task worker implementation."""
 
+from __future__ import with_statement
 from amqplib import client_0_8 as amqp
 import logging
 import os
+import signal
 import simplejson
 import socket
 import sys
@@ -25,6 +27,46 @@ import typhoonae.taskqueue
 import urllib2
 
 MAX_TRY_COUNT = 10
+MAX_TIME_LIMIT = 30
+
+
+class TimeLimitExceededError(Exception):
+    """Exception to be raised when a time limit is exceeded."""
+
+    def __str__(self):
+        return "Maximum time limit exceeded"
+
+
+class ExecutionTimeLimit(object):
+    """Context manager for limited code execution.
+
+    Raises an exception when maximum execution time is reached.
+    """
+
+    def __init__(self, seconds=MAX_TIME_LIMIT):
+        """Initializes the context manager.
+
+        Args:
+            seconds: integer number of seconds before sending an alarm.
+        """
+
+        self.seconds = seconds
+
+    def __enter__(self):
+        """Enters the runtime context."""
+
+        signal.signal(signal.SIGALRM, self.handle)
+        signal.alarm(self.seconds)
+
+    def __exit__(self, typ, value, trbck):
+        """Exits the runtime context."""
+
+        signal.alarm(0)
+
+    def handle(self, signum, frame):
+        """Handles signal."""
+
+        raise TimeLimitExceededError
 
 
 def handle_task(msg):
@@ -42,10 +84,14 @@ def handle_task(msg):
     )
 
     try:
-        res = urllib2.urlopen(req)
+        with ExecutionTimeLimit():
+            res = urllib2.urlopen(req)
     except urllib2.URLError, err_obj:
         reason = getattr(err_obj, 'reason', err_obj)
         logging.error("failed task %s %s" % (task, reason))
+        return False
+    except TimeLimitExceededError:
+        logging.error("failed task %s (time limit exceeded)" % task)
         return False
 
     return True

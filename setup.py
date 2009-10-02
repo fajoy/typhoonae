@@ -25,7 +25,7 @@ def read(*rnames):
 
 setuptools.setup(
     name='typhoonae',
-    version='0.1.0',
+    version='0.1.0a1',
     author="Tobias Rodaebel",
     author_email="tobias dot rodaebel at googlemail dot com",
     description="Typhoon App Engine.",

@@ -32,17 +32,6 @@ DESCRIPTION = ("FastCGI application server.")
 USAGE = "usage: %prog [options] <application root>"
 
 
-def get_traceback():
-    """Returns traceback."""
-
-    output = StringIO.StringIO()
-    traceback.print_exc(file=output)
-    value = output.getvalue()
-    output.close()
-
-    return value
-
-
 _module_cache = dict()
 
 def run_module(mod_name, init_globals=None, run_name=None, alter_sys=False):
@@ -64,9 +53,11 @@ def run_module(mod_name, init_globals=None, run_name=None, alter_sys=False):
     else:
         loader, code = _module_cache[mod_name]
 
-    filename = runpy._get_filename(loader, mod_name)
+    filename = loader.get_filename(mod_name)
+
     if run_name is None:
         run_name = mod_name
+
     return runpy._run_module_code(code, init_globals, run_name,
                                   filename, loader, alter_sys)
 
@@ -84,12 +75,11 @@ def serve(conf):
     back_ref_pattern = re.compile(r'\\([0-9]*)')
 
     while True:
-        (inp, out, err, env) = fcgiapp.Accept()
+        (inp, out, unused_err, env) = fcgiapp.Accept()
 
-        # Redirect standard input, output and error streams
+        # Redirect standard input and output streams
         sys.stdin = inp
         sys.stdout = out
-        sys.stderr = err
 
         # Initialize application environment
         os_env = dict(os.environ)
@@ -125,21 +115,10 @@ def serve(conf):
         try:
             # Load and run the application module
             run_module(name, run_name='__main__', alter_sys=True)
-        except:
-            try:
-                tb = get_traceback()
-                logging.error(tb)
-                print 'Content-Type: text/plain\n'
-                print tb
-            except IOError:
-                # TODO: Check whether it occurs due to a broken FastCGI
-                # pipe or if we have some kind of leak
-                pass
         finally:
-            # Re-redirect standard input, output and error streams
+            # Re-redirect standard input and output streams
             sys.stdin = sys.__stdin__
             sys.stdout = sys.__stdout__
-            sys.stderr = sys.__stderr__
 
             # Restore original environment
             os.environ.clear()
@@ -181,10 +160,7 @@ def main():
     typhoonae.setupStubs(conf)
 
     # Serve the application
-    try:
-        serve(conf)
-    except:
-        logging.error(get_traceback())
+    serve(conf)
 
 
 if __name__ == "__main__":

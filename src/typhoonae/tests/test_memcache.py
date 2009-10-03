@@ -74,6 +74,11 @@ class MemcacheTestCase(unittest.TestCase):
         assert (google.appengine.api.memcache.get('greeting', namespace='no') is
             None)
 
+        unicode_data = u'Äquator'
+        google.appengine.api.memcache.set('unicode', unicode_data)
+        assert google.appengine.api.memcache.get('unicode') == unicode_data
+        assert type(google.appengine.api.memcache.get('unicode')) == unicode
+
 
     def testDeletingItem(self):
         """Tries to set and delete a key and its value."""

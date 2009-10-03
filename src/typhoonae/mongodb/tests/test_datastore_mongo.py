@@ -84,6 +84,18 @@ class DatastoreMongoTestCase(unittest.TestCase):
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
         assert query.count() == 1
 
+    def testUnicode(self):
+        """Writes an entity with unicode contents."""
+
+        entity = TestModel()
+        entity.contents = u'Äquator'
+        entity.put()
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM TestModel WHERE contents=:1", u'Äquator')
+        assert query.count() == 1
+        result = query.fetch(1)
+        assert type(result[0].contents) == unicode
+
     def testAllocatingIDs(self):
         """Allocates a number of IDs."""
 

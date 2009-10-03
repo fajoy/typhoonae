@@ -22,9 +22,8 @@ import typhoonae.fcgiserver
 import unittest
 
 
-
-class InitTestCase(unittest.TestCase):
-    """Tests a number of helper functions."""
+class TestCase(unittest.TestCase):
+    """Tests our FastCGI server module."""
 
     def setUp(self):
         """Loads the sample application."""

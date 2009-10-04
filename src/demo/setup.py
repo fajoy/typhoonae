@@ -26,7 +26,7 @@ setup(
     author_email="tobias dot rodaebel at googlemail dot com",
     description="Typhoon App Engine demo application.",
     long_description=(),
-    license="GPL3",
+    license="Apache License 2.0",
     keywords="appengine gae typhoonae wsgi",
     classifiers=[
         'Development Status :: 5 - Production/Stable',

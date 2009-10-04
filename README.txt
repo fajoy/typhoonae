@@ -22,9 +22,9 @@ a copy of the License at
 Installation
 ------------
 
-This TyphoonAE Python package contains the glue code for a number of
-independent services. We recommend to install them with zc.buildout and the
-buildout configuration which can be downloaded here::
+The TyphoonAE Python package contains the glue code for a number of independent
+services. We recommend to install them with zc.buildout and the buildout
+configuration which can be downloaded here::
 
   http://typhoonae.googlecode.com/files/typhoonae-buildout-0.1.0a1.tar.gz
 

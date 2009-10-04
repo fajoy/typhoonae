@@ -30,3 +30,5 @@ configuration which can be downloaded here::
 
 Unpack the archive and follow the steps described in the README.txt file. The
 TyphoonAE Python package will also be installed by the buildout.
+
+Visit the project page http://typhoonae.googlecode.com for further information.

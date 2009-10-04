@@ -1,7 +1,7 @@
 CHANGES
 =======
 
-Version 0.1.0 (2009-09-27)
---------------------------
+Version 0.1.0a1 (2009-10-05)
+----------------------------
 
-  - Initial version.
+  - First alpha release.

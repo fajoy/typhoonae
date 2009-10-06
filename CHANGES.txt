@@ -1,6 +1,14 @@
 CHANGES
 =======
 
+Version 0.1.0a2 (2009-??-??)
+----------------------------
+
+  - Fixed an issue where an incorrect module path within a handler definition
+    can cause the fcgiserver to crash on startup.
+    - http://code.google.com/p/typhoonae/issues/detail?id=1
+
+
 Version 0.1.0a1 (2009-10-05)
 ----------------------------
 

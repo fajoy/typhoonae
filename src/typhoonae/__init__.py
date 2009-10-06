@@ -50,24 +50,37 @@ def getAppConfig(directory='.'):
 def initURLMapping(conf):
     """Returns a list with mappings URL to module name and script."""
 
-    login = google.appengine.api.appinfo.URLMap()
-    login.url = '/login'
-    login.script = '$PYTHON_LIB/typhoonae/handlers/login.py'
-    login.login = 'required'
-
-    logout = google.appengine.api.appinfo.URLMap()
-    logout.url = '/logout'
-    logout.script = '$PYTHON_LIB/typhoonae/handlers/login.py'
-
     url_mapping = []
 
+    # Configure script with login handler
+    login = google.appengine.api.appinfo.URLMap(
+        url='/login',
+        script='$PYTHON_LIB/typhoonae/handlers/login.py',
+        login='required'
+    )
+
+    # Configure script with logout handler
+    logout = google.appengine.api.appinfo.URLMap(
+        url='/logout',
+        script='$PYTHON_LIB/typhoonae/handlers/login.py'
+    )
+
+    # Generate URL mapping
     for handler in [login, logout] + conf.handlers:
         script = handler.script
         regexp = handler.url
         if script != None:
             if script.startswith('$PYTHON_LIB'):
-                module = script.replace(os.sep, '.')[12:][0:len(script)-15]
-                p = os.path.dirname(__import__(module).__file__).split(os.sep)
+                module = script.replace(os.sep, '.')[12:-3]
+                try:
+                    m = __import__(module)
+                except Exception, err_obj:
+                    logging.error(
+                        "Could not initialize script. %s: %s" %
+                        (err_obj.__class__.__name__, err_obj)
+                    )
+                    continue
+                p = os.path.dirname(m.__file__).split(os.sep)
                 path = os.path.join(os.sep.join(p[:len(p)-1]), script[12:])
             else:
                 module_path, unused_ext = os.path.splitext(script)

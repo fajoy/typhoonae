@@ -40,7 +40,14 @@ class RecoverLoop(threading.Thread):
         self.finished = threading.Event()
         self.event = threading.Event()
 
+    def stop(self):
+        """Stops the loop."""
+
+        self.finished.set()
+
     def run(self):
+        """Implements a simple callback loop."""
+
         while not self.finished.isSet():
             self.event.wait(self.interval)
             if not self.finished.isSet() and not self.event.isSet():
@@ -109,7 +116,7 @@ def main(
             chan.wait()
     finally:
         chan.basic_cancel(_consumer_tag)
-
+        loop.stop()
         chan.close()
         conn.close()
 

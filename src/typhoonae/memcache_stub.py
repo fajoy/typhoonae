@@ -19,6 +19,7 @@ import base64
 import cPickle
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.memcache.memcache_service_pb
+import logging
 import os
 import pylibmc
 import simplejson
@@ -63,11 +64,14 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         """
         super(MemcacheServiceStub, self).__init__(service_name)
         if config is None:
-            config = dict(
-                addr=DEFAULT_ADDR,
-                port=DEFAULT_PORT,
-            )
+            config = dict(addr=DEFAULT_ADDR, port=DEFAULT_PORT)
+
         self._cache = pylibmc.Client(['%(addr)s:%(port)i' % config])
+
+        behaviors = self._cache.behaviors
+        keys = sorted(k for k in behaviors if not k.startswith('_'))
+        logging.info("Memcache behavior: %s" %
+                     [(k, behaviors[k]) for k in keys])
 
     def _Dynamic_Get(self, request, response):
         """Implementation of MemcacheService::Get().

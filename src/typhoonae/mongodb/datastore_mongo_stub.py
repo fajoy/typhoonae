@@ -24,7 +24,6 @@ Transactions are unsupported.
 import logging
 import re
 import random
-import socket
 import sys
 import threading
 import types
@@ -47,43 +46,6 @@ datastore_pb.Query.__hash__ = lambda self: hash(self.Encode())
 _MAXIMUM_RESULTS = 1000
 _MAX_QUERY_OFFSET = 1000
 _MAX_QUERY_COMPONENTS = 100
-
-
-class IntidClient(object):
-  """Client for an integer ID server."""
-
-  def __init__(self, host='localhost', port=9009):
-    self.s = None
-    for res in socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM):
-      af, socktype, proto, canonname, sa = res
-      try:
-        self.s = socket.socket(af, socktype, proto)
-      except socket.error, msg:
-        self.s = None
-        continue
-      try:
-        self.s.connect(sa)
-      except socket.error, msg:
-        self.s.close()
-        self.s = None
-        continue
-      break
-
-    if self.s is None:
-      logging.error('no connection to intid server')
-
-    self.s.send('con')
-    r = self.s.recv(3)
-    if r == 'ack':
-      logging.info('connected to intid server')
-
-  def get(self):
-    self.s.send('int')
-    data = self.s.recv(64)
-    return int(data)
-
-  def close(self):
-    self.s.close()
 
 
 class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
@@ -127,7 +89,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
     # Setup the intid client
     if auto_increment_ids:
-        self.intid = IntidClient()
+        import typhoonae.intid
+        self.intid = typhoonae.intid.IntidClient()
     else:
         self.intid = None
 

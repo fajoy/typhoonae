@@ -28,6 +28,45 @@ logging.basicConfig(
 lock = threading.Lock()
 
 
+class IntidClient(object):
+    """Client for an integer ID server."""
+
+    def __init__(self, host='localhost', port=9009):
+        self.s = None
+        for res in socket.getaddrinfo(
+            host, port, socket.AF_UNSPEC, socket.SOCK_STREAM):
+
+            af, socktype, proto, canonname, sa = res
+            try:
+                self.s = socket.socket(af, socktype, proto)
+            except socket.error, msg:
+                self.s = None
+                continue
+            try:
+                self.s.connect(sa)
+            except socket.error, msg:
+                self.s.close()
+                self.s = None
+                continue
+            break
+
+        if self.s is None:
+            logging.error('no connection to intid server')
+
+        self.s.send('con')
+        r = self.s.recv(3)
+        if r == 'ack':
+            logging.info('connected to intid server')
+
+    def get(self):
+        self.s.send('int')
+        data = self.s.recv(64)
+        return int(data)
+
+    def close(self):
+        self.s.close()
+
+
 class Worker(threading.Thread):
     """The worker thread."""
 

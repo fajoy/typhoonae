@@ -62,7 +62,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
                history_file,
                require_indexes=False,
                service_name='datastore_v3',
-               auto_increment_ids=True):
+               intid_client=None):
     """Constructor.
 
     Initializes the datastore stub.
@@ -74,7 +74,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       require_indexes: bool, default False.  If True, composite indexes must
           exist in index.yaml for queries that need them.
       service_name: Service name expected for all calls.
-      auto_increment_ids: Use incrementing integer IDs for new entities.
+      intid_client: Use this client to obtain integer IDs for new entities.
     """
     super(DatastoreMongoStub, self).__init__(service_name)
 
@@ -82,17 +82,12 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     assert isinstance(app_id, basestring) and app_id != ''
     self.__app_id = app_id
     self.__require_indexes = require_indexes
-    self.__auto_increment_ids = auto_increment_ids
 
     # TODO should be a way to configure the connection
     self.__db = Connection()[app_id]
 
     # Setup the intid client
-    if auto_increment_ids:
-        import typhoonae.intid
-        self.intid = typhoonae.intid.IntidClient()
-    else:
-        self.intid = None
+    self.intid = intid_client
 
     # NOTE our query history gets reset each time the server restarts...
     # should this be fixed?
@@ -269,7 +264,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
       last_path = clone.key().path().element_list()[-1]
       if last_path.id() == 0 and not last_path.has_name():
-        if self.__auto_increment_ids:
+        if self.intid is not None:
           last_path.set_id(self.intid.get())
         else:
           last_path.set_id(random.randint(-sys.maxint-1, sys.maxint))

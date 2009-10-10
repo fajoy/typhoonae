@@ -23,6 +23,7 @@ import google.appengine.api.urlfetch_stub
 import google.appengine.api.user_service_stub
 import google.appengine.api.xmpp.xmpp_service_stub
 import google.appengine.ext.webapp
+import intid
 import logging
 import memcache_stub
 import mongodb.datastore_mongo_stub
@@ -115,7 +116,8 @@ def setupDatastore(app_id, datastore, history, require_indexes, trusted):
     history_path = os.path.join(tmp_dir, history)
 
     datastore = mongodb.datastore_mongo_stub.DatastoreMongoStub(
-        app_id, datastore_path, history_path, require_indexes=require_indexes)
+        app_id, datastore_path, history_path, require_indexes=require_indexes,
+        intid_client=intid.IntidClient())
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
         'datastore_v3', datastore)

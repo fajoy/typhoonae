@@ -29,7 +29,7 @@ lock = threading.Lock()
 
 
 class IntidClient(object):
-    """Client for an integer ID server."""
+    """Client for the integer ID server."""
 
     def __init__(self, host='localhost', port=9009):
         self.s = None

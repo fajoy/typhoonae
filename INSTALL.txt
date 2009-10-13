@@ -17,6 +17,7 @@ The key components are::
   * mongoDB - http://www.mongodb.org
   * memcached - http://www.danga.com/memcached/
   * RabbitMQ - http://www.rabbitmq.com
+  * ejabberd - http://www.process-one.net/en/ejabberd
   * FastCGI - http://www.fastcgi.com
   * nginx - http://nginx.net/
   * Supervisor - http://supervisord.org
@@ -93,6 +94,7 @@ following services up and running::
   * mongod
   * intid
   * rabbitmq
+  * ejabberd
 
 Run unit tests by typing::
 

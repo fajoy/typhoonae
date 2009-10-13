@@ -11,6 +11,7 @@ syntax: regexp
 ^bin/
 ^develop-eggs/
 ^etc/appserver.conf
+^etc/ejabberd.cfg
 ^etc/server.conf
 ^etc/supervisord.conf
 ^downloads/

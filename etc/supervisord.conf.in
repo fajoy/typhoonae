@@ -42,6 +42,14 @@ priority = 10
 redirect_stderr = true
 stdout_logfile = ${buildout:directory}/var/log/rabbitmq-server.log
 
+[program:ejabberd]
+command = ${buildout:directory}/bin/ejabberd
+process_name = ejabberd
+directory = ${buildout:directory}
+priority = 10
+redirect_stderr = true
+stdout_logfile = ${buildout:directory}/var/log/ejabberd.log
+
 [program:intid]
 command = ${buildout:directory}/bin/intid 
 process_name = intid

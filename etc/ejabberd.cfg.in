@@ -30,7 +30,9 @@ override_acls.
 
  ]}.
 
-{auth_method, internal}.
+{auth_method, [external]}.
+
+{extauth_program, "${buildout:directory}/bin/ejabberdauth"}.
 
 {shaper, normal, {maxrate, 1000}}.
 

@@ -75,12 +75,18 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def testPuttingAndGettingEntity(self):
         """Writes an entity to and gets an entity from the datastore."""
 
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM TestModel LIMIT 2000")
+
+        for entity in query:
+            entity.delete()
+
         entity = TestModel()
         entity.contents = 'foo'
         entity.put()
         assert TestModel.all().fetch(1)[0].contents == 'foo'
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
-        assert query.count() == 1
+        self.assertEqual(query.count(), 1)
 
     def testUnicode(self):
         """Writes an entity with unicode contents."""

@@ -44,6 +44,9 @@ def run_module(mod_name, init_globals=None, run_name=None, alter_sys=False):
         loader = runpy.get_loader(mod_name)
         if loader is None:
             raise ImportError("No module named " + mod_name)
+        if loader.is_package(mod_name):
+            raise ImportError(("%s is a package and cannot " +
+                              "be directly executed") % mod_name)
         code = loader.get_code(mod_name)
         if code is None:
             raise ImportError("No code object available for " + mod_name)
@@ -112,7 +115,10 @@ def serve(conf):
 
         try:
             # Load and run the application module
-            run_module(name, run_name='__main__', alter_sys=True)
+            if sys.hexversion > 33883376:
+                runpy.run_module(name, run_name='__main__', alter_sys=True)
+            else:
+                run_module(name, run_name='__main__', alter_sys=True)
         finally:
             # Re-redirect standard input and output streams
             sys.stdin = sys.__stdin__

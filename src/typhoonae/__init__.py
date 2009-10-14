@@ -77,8 +77,8 @@ def initURLMapping(conf):
                     m = __import__(module)
                 except Exception, err_obj:
                     logging.error(
-                        "Could not initialize script. %s: %s" %
-                        (err_obj.__class__.__name__, err_obj)
+                        "Could not initialize script '%s'. %s: %s" %
+                        (script, err_obj.__class__.__name__, err_obj)
                     )
                     continue
                 p = os.path.dirname(m.__file__).split(os.sep)

@@ -32,7 +32,7 @@ USAGE = "usage: %prog [options] <application root>"
 
 _module_cache = dict()
 
-def run_module(mod_name, init_globals=None, run_name=None, alter_sys=False):
+def run_module(mod_name, init_globals=None, run_name=None):
     """Execute a module's code without importing it.
 
     Caches module loader and code and returns the resulting top level namespace
@@ -58,9 +58,12 @@ def run_module(mod_name, init_globals=None, run_name=None, alter_sys=False):
 
     if run_name is None:
         run_name = mod_name
-
+    if sys.hexversion > 33883376:
+        pkg_name = mod_name.rpartition('.')[0]
+        return runpy._run_module_code(code, init_globals, run_name,
+                                      filename, loader, pkg_name)
     return runpy._run_module_code(code, init_globals, run_name,
-                                  filename, loader, alter_sys)
+                                  filename, loader, alter_sys=True)
 
 
 def serve(conf):
@@ -115,10 +118,7 @@ def serve(conf):
 
         try:
             # Load and run the application module
-            if sys.hexversion > 33883376:
-                runpy.run_module(name, run_name='__main__', alter_sys=True)
-            else:
-                run_module(name, run_name='__main__', alter_sys=True)
+            run_module(name, run_name='__main__')
         finally:
             # Re-redirect standard input and output streams
             sys.stdin = sys.__stdin__

@@ -117,6 +117,10 @@ def write_nginx_conf(options, conf, app_root):
                 static_dirs[handler.static_dir].append(ltrunc_url)
             else:
                 static_dirs[handler.static_dir] = [ltrunc_url]
+        if handler.GetHandlerType() == 'static_files':
+            sys.stderr.write('Warning: handler for url %s of type static_files '
+                             'in app.yaml getting ignored. Use static_dir '
+                             'instead.\n' % (handler.url))
         if handler.secure == 'always':
             if ltrunc_url not in secure_urls:
                 secure_urls.append(ltrunc_url)

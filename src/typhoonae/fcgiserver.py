@@ -78,11 +78,26 @@ def serve(conf):
 
     back_ref_pattern = re.compile(r'\\([0-9]*)')
 
+    class StdinAdapter:
+        """Adapter for FastCGI input stream objects."""
+
+        def __init__(self, i):
+            self.i = i
+
+        def read(self, *args):
+            return self.i.read(*args)
+
+        def readline(self, *args):
+            return self.i.readline()
+
+        def seek(self, *args):
+            return self.i.seek(*args)
+
     while True:
         (inp, out, unused_err, env) = fcgiapp.Accept()
 
         # Redirect standard input and output streams
-        sys.stdin = inp
+        sys.stdin = StdinAdapter(inp)
         sys.stdout = out
 
         # Initialize application environment

@@ -18,6 +18,7 @@
 import optparse
 import os
 import re
+import socket
 import sys
 import typhoonae 
 
@@ -79,7 +80,7 @@ location / {
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:appserver]
-command = %(bin)s/appserver --log=%(var)s/log/appserver.log %(app_root)s
+command = %(bin)s/appserver --log=%(var)s/log/appserver.log --xmpp_host=%(xmpp_host)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -99,6 +100,117 @@ process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
 stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
+"""
+
+EJABBERD_CONFIG = """
+override_local.
+
+override_acls.
+
+{loglevel, 4}.
+
+{hosts, ["%(xmpp_host)s"]}.
+
+{listen,
+ [
+
+  {5222, ejabberd_c2s, [
+
+                        {access, c2s},
+                        {shaper, c2s_shaper},
+                        {max_stanza_size, 65536}
+                       ]},
+
+  {5269, ejabberd_s2s_in, [
+                           {shaper, s2s_shaper},
+                           {max_stanza_size, 131072}
+                          ]},
+
+  {5280, ejabberd_http, [
+                         captcha,
+                         http_bind,
+                         http_poll,
+                         web_admin
+                        ]}
+
+ ]}.
+
+{auth_method, [external]}.
+
+{extauth_program, "%(bin)s/ejabberdauth"}.
+
+{shaper, normal, {maxrate, 1000}}.
+
+{shaper, fast, {maxrate, 50000}}.
+
+{acl, local, {user_regexp, ""}}.
+
+{access, max_user_sessions, [{10, all}]}.
+
+{access, max_user_offline_messages, [{5000, admin}, {100, all}]}. 
+
+{access, local, [{allow, local}]}.
+
+{access, c2s, [{deny, blocked},
+               {allow, all}]}.
+
+{access, c2s_shaper, [{none, admin},
+                      {normal, all}]}.
+
+{access, s2s_shaper, [{fast, all}]}.
+
+{access, announce, [{allow, admin}]}.
+
+{access, configure, [{allow, admin}]}.
+
+{access, muc_admin, [{allow, admin}]}.
+
+{access, muc, [{allow, all}]}.
+
+{access, pubsub_createnode, [{allow, all}]}.
+
+{access, register, [{allow, all}]}.
+
+{language, "en"}.
+
+{modules,
+ [
+  {mod_adhoc,    []},
+  {mod_announce, [{access, announce}]},
+  {mod_caps,     []},
+  {mod_configure,[]},
+  {mod_disco,    []},
+  {mod_irc,      []},
+  {mod_http_bind, []},
+  {mod_last,     []},
+  {mod_muc,      [
+                  {access, muc},
+                  {access_create, muc},
+                  {access_persistent, muc},
+                  {access_admin, muc_admin}
+                 ]},
+  {mod_offline,  [{access_max_user_messages, max_user_offline_messages}]},
+  {mod_ping,     []},
+  {mod_privacy,  []},
+  {mod_private,  []},
+  {mod_pubsub,   [
+                  {access_createnode, pubsub_createnode},
+                  {pep_sendlast_offline, false},
+                  {last_item_cache, false},
+                  {plugins, ["flat", "hometree", "pep"]}
+                 ]},
+  {mod_register, [
+                  {welcome_message, {"Welcome!",
+                                     "Hi.\\nWelcome to this Jabber server."}},
+                  {access, register}
+                 ]},
+  {mod_roster,   []},
+  {mod_shared_roster,[]},
+  {mod_stats,    []},
+  {mod_time,     []},
+  {mod_vcard,    []},
+  {mod_version,  []}
+ ]}.
 """
 
 
@@ -170,6 +282,7 @@ def write_supervisor_conf(options, conf, app_root):
     var = os.path.abspath(options.var)
     addr = options.addr
     port = options.port
+    xmpp_host = options.xmpp_host
 
     supervisor_conf_stub = open(options.supervisor, 'w')
     supervisor_conf_stub.write(
@@ -178,7 +291,7 @@ def write_supervisor_conf(options, conf, app_root):
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
 
-    jid = conf.application + '@' + options.xmpp_host
+    jid = conf.application + '@' + xmpp_host
     password = conf.application
 
     for service in conf.inbound_services:
@@ -189,10 +302,25 @@ def write_supervisor_conf(options, conf, app_root):
     supervisor_conf_stub.close()
 
 
+def write_ejabberd_conf(options):
+    """Writes ejabberd configuration file."""
+
+    bin = os.path.abspath(os.path.dirname(sys.argv[0]))
+    xmpp_host = options.xmpp_host
+
+    ejabberd_conf = open(options.ejabberd, 'w')
+    ejabberd_conf.write(EJABBERD_CONFIG % locals())
+    ejabberd_conf.close()
+
+
 def main():
     """Runs the apptool console script."""
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--ejabberd", dest="ejabberd", metavar="FILE",
+                  help="write ejabberd configuration to this file",
+                  default=os.path.join('etc', 'ejabberd.cfg'))
 
     op.add_option("--fcgi_host", dest="addr", metavar="ADDR",
                   help="use this FastCGI host",
@@ -218,8 +346,8 @@ def main():
                   help="use this directory for platform independent data",
                   default=os.environ.get('TMPDIR', '/var'))
 
-    op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
-                  help="use this XMPP host", default='localhost')
+    op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
+                  help="use this XMPP host", default=socket.gethostname())
 
     (options, args) = op.parse_args()
 
@@ -236,3 +364,4 @@ def main():
 
     write_nginx_conf(options, conf, app_root)
     write_supervisor_conf(options, conf, app_root)
+    write_ejabberd_conf(options)

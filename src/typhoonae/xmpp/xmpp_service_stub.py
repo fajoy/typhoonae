@@ -32,7 +32,7 @@ class XmppServiceStub(apiproxy_stub.APIProxyStub):
   instead of sending any stanzas.
   """
 
-  def __init__(self, log=logging.info, service_name='xmpp'):
+  def __init__(self, log=logging.info, host='localhost', service_name='xmpp'):
     """Initializer.
 
     Args:
@@ -41,6 +41,7 @@ class XmppServiceStub(apiproxy_stub.APIProxyStub):
     """
     super(XmppServiceStub, self).__init__(service_name)
     self.log = log
+    self.host = host
 
   def _Dynamic_GetPresence(self, request, response):
     """Implementation of XmppService::GetPresence.
@@ -106,4 +107,4 @@ class XmppServiceStub(apiproxy_stub.APIProxyStub):
 
     appid = os.environ['APPLICATION_ID']
 
-    return '%s@localhost' % appid
+    return '%s@%s' % (appid, self.host)

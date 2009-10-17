@@ -162,14 +162,14 @@ def setupUserService():
             login_url='/login?=%s', logout_url='/logout?=%s'))
 
 
-def setupXMPP():
+def setupXMPP(host):
     """Sets up XMPP."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
-        xmpp.xmpp_service_stub.XmppServiceStub())
+        xmpp.xmpp_service_stub.XmppServiceStub(host=host))
 
 
-def setupStubs(conf):
+def setupStubs(conf, options):
     """Sets up api proxy stubs."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy = \
@@ -192,7 +192,7 @@ def setupStubs(conf):
 
     setupUserService()
 
-    setupXMPP()
+    setupXMPP(options.xmpp_host)
 
     try:
         from google.appengine.api.images import images_stub

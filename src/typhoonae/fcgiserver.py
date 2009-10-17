@@ -156,6 +156,9 @@ def main():
                   help="write logging output to this file",
                   default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))
 
+    op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
+                  help="use this XMPP/Jabber host", default='localhost')
+
     (options, args) = op.parse_args()
 
     if sys.argv[-1].startswith('-') or sys.argv[-1] == sys.argv[0]:
@@ -176,7 +179,7 @@ def main():
     conf = typhoonae.getAppConfig()
 
     # Inititalize API proxy stubs
-    typhoonae.setupStubs(conf)
+    typhoonae.setupStubs(conf, options)
 
     # Serve the application
     serve(conf)

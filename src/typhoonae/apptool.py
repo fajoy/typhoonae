@@ -294,10 +294,11 @@ def write_supervisor_conf(options, conf, app_root):
     jid = conf.application + '@' + xmpp_host
     password = conf.application
 
-    for service in conf.inbound_services:
-        if service == 'xmpp_message':
-            supervisor_conf_stub.write(
-                SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG % locals())
+    if conf.inbound_services is not None:
+        for service in conf.inbound_services:
+            if service == 'xmpp_message':
+                supervisor_conf_stub.write(
+                    SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG % locals())
 
     supervisor_conf_stub.close()
 

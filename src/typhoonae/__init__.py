@@ -21,7 +21,6 @@ import google.appengine.api.appinfo
 import google.appengine.api.mail_stub
 import google.appengine.api.urlfetch_stub
 import google.appengine.api.user_service_stub
-import google.appengine.api.xmpp.xmpp_service_stub
 import google.appengine.ext.webapp
 import intid
 import logging
@@ -30,6 +29,7 @@ import mongodb.datastore_mongo_stub
 import os
 import re
 import taskqueue.taskqueue_stub
+import xmpp.xmpp_service_stub
 
 
 def getAppConfig(directory='.'):
@@ -166,7 +166,7 @@ def setupXMPP():
     """Sets up XMPP."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
-        google.appengine.api.xmpp.xmpp_service_stub.XmppServiceStub())
+        xmpp.xmpp_service_stub.XmppServiceStub())
 
 
 def setupStubs(conf):

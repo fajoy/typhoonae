@@ -29,5 +29,8 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
 
+- url: /_ah/xmpp/message/chat/
+  script: app.py
+
 - url: .*
   script: dummy.py

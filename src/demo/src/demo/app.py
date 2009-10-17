@@ -20,6 +20,7 @@ import google.appengine.api.capabilities
 import google.appengine.api.labs.taskqueue
 import google.appengine.api.memcache
 import google.appengine.api.users
+import google.appengine.api.xmpp
 import google.appengine.ext.db
 import google.appengine.ext.webapp
 import google.appengine.ext.webapp.template
@@ -176,12 +177,31 @@ class NoteWorker(google.appengine.ext.webapp.RequestHandler):
         note.body = self.request.body
         note.put()
 
+
+class XMPPHandler(google.appengine.ext.webapp.RequestHandler):
+    """Handles XMPP messages."""
+
+    def post(self):
+        """Handles post."""
+
+        message = google.appengine.api.xmpp.Message(self.request.POST)
+
+        logging.info("Received XMPP message: %s" % message.body)
+
+        if message.body[0:5].lower() == 'hello':
+             message.reply(".Greetings!")
+
+        note = Note()
+        note.body = message.body
+        note.put()
+
  
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/', DemoRequestHandler),
     ('/count', CountRequestHandler),
     ('/log', LogRequestHandler),
     ('/makenote', NoteWorker),
+    ('/_ah/xmpp/message/chat/', XMPPHandler),
 ], debug=True)
 
 

@@ -20,6 +20,7 @@ import logging
 import mimetools
 import optparse
 import sys
+import time
 import urllib2
 import xmpp
 
@@ -98,6 +99,7 @@ def main():
 
     op.add_option("-j", "--jid", dest="jid", metavar="JID",
                   help="use this Jabber ID", default="demo@localhost")
+
     op.add_option("-p", "--password", dest="password", metavar="PASSWORD",
                   help="use this password", default="demo")
 
@@ -113,11 +115,18 @@ def main():
 
     client = xmpp.Client(server, debug=[])
 
-    conn = client.connect()
+    for i in range(5):
+        conn = client.connect()
+        if conn:
+            break
+        logging.warning("Retrying to connect to server '%s'" % server)
+        # Retrying after 5 seconds
+        time.sleep(5)
 
     if not conn:
         logging.error("Unable to connect to server '%s'" % server)
-        sys.exit(1)
+        sys.exit(2)
+
     if conn <> 'tls':
         logging.warning("Unable to estabilish secure connection - TLS failed")
 
@@ -126,6 +135,7 @@ def main():
     if not auth:
         logging.error("Authentication on %s failed" % server)
         sys.exit(1)
+
     if auth <> 'sasl':
         logging.warning("SASL authentication on %s failed" % server)
 

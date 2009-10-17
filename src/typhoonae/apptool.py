@@ -92,6 +92,15 @@ stderr_logfile = %(var)s/log/appserver-error.log
 stderr_logfile_maxbytes = 1MB
 """
 
+SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
+[program:xmpp_http_dispatch]
+command = %(bin)s/xmpp_http_dispatch --jid=%(jid)s --password=%(password)s
+process_name = xmpp_http_dispatch
+priority = 999
+redirect_stderr = true
+stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
+"""
+
 
 def write_nginx_conf(options, conf, app_root):
     """Writes nginx server configuration stub."""
@@ -168,6 +177,15 @@ def write_supervisor_conf(options, conf, app_root):
         "# Use apptool to modify.\n")
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
+
+    jid = conf.application + '@' + options.xmpp_host
+    password = conf.application
+
+    for service in conf.inbound_services:
+        if service == 'xmpp_message':
+            supervisor_conf_stub.write(
+                SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG % locals())
+
     supervisor_conf_stub.close()
 
 
@@ -199,6 +217,9 @@ def main():
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",
                   default=os.environ.get('TMPDIR', '/var'))
+
+    op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
+                  help="use this XMPP host", default='localhost')
 
     (options, args) = op.parse_args()
 

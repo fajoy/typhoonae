@@ -75,14 +75,6 @@ priority = 20
 redirect_stderr = true
 stdout_logfile = ${buildout:directory}/var/log/deferred_taskworker.log
 
-[program:xmpp_http_dispatch]
-command = ${buildout:directory}/bin/xmpp_http_dispatch 
-process_name = xmpp_http_dispatch
-directory = ${buildout:directory}
-priority = 20
-redirect_stderr = true
-stdout_logfile = ${buildout:directory}/var/log/xmpp_http_dispatch.log
-
 [include]
 files = ${buildout:directory}/etc/appserver.conf
 

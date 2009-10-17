@@ -37,7 +37,10 @@ class InitTestCase(unittest.TestCase):
     def testSetupStubs(self):
         """Sets up apiproxy stubs."""
 
-        typhoonae.setupStubs(self.conf)
+        class TestOptions:
+            xmpp_host = 'localhost'
+
+        typhoonae.setupStubs(self.conf, TestOptions())
 
     def testInitURLMapping(self):
         """Initializes the url/script map."""

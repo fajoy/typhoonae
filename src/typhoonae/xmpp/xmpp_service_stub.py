@@ -26,10 +26,7 @@ NO_ERROR = (google.appengine.api.xmpp.xmpp_service_pb.
 
 
 class XmppServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
-    """Python only xmpp service stub.
-
-    This stub does not uses the XMPP network.
-    """
+    """XMPP service stub."""
 
     def __init__(self, log=logging.info, host='localhost', service_name='xmpp'):
         """Initializer.

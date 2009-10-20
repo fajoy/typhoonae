@@ -52,7 +52,8 @@ class XmppServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         jid = xmpp.protocol.JID(self._GetFrom(request.from_jid()))
         client = xmpp.Client(jid.getDomain(), debug=[])
         client.connect()
-        client.auth(jid.getNode(), 'demo')
+        node = jid.getNode()
+        client.auth(node, node)
         result = action(client)
         client.disconnect()
         return result

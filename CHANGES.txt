@@ -4,6 +4,8 @@ CHANGES
 Version 0.1.0a3 (2009-??-??)
 ----------------------------
 
+  - Added support for sending XMPP invitations.
+
   - Fixed unit tests.
 
 

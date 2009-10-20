@@ -18,6 +18,14 @@
     {% endfor %}
     </select>
     <p>
+      Send XMPP invitation to:
+      <form action="invite" method="POST">
+        <label for="recipient">JID</label>
+        <input name="recipient" id="recipient" />
+        <input type="submit" value="Send" />
+      </form>
+    </p>
+    <p>
       <div>User: {{ user }} {{ login_or_logout }}</div>
     </p>
   </body>

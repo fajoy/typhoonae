@@ -178,6 +178,19 @@ class NoteWorker(google.appengine.ext.webapp.RequestHandler):
         note.put()
 
 
+class InviteHandler(google.appengine.ext.webapp.RequestHandler):
+    """Invites recipient to a XMPP chat."""
+
+    def post(self):
+        """Handles post."""
+
+        recipient = self.request.get('recipient')
+        if google.appengine.api.xmpp.get_presence(recipient):
+            google.appengine.api.xmpp.send_invite(recipient)
+
+        self.redirect('/')
+
+
 class XMPPHandler(google.appengine.ext.webapp.RequestHandler):
     """Handles XMPP messages."""
 
@@ -201,6 +214,7 @@ app = google.appengine.ext.webapp.WSGIApplication([
     ('/count', CountRequestHandler),
     ('/log', LogRequestHandler),
     ('/makenote', NoteWorker),
+    ('/invite', InviteHandler),
     ('/_ah/xmpp/message/chat/', XMPPHandler),
 ], debug=True)
 

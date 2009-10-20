@@ -11,13 +11,16 @@ handlers:
 - url: /
   script: app.py
 
-- url: /makenote
-  script: app.py
-
 - url: /count
   script: app.py
 
+- url: /invite
+  script: app.py
+
 - url: /log
+  script: app.py
+
+- url: /makenote
   script: app.py
 
 - url: /dummy

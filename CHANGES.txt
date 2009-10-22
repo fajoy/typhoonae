@@ -6,6 +6,10 @@ Version 0.1.0a3 (2009-??-??)
 
   - Added support for sending XMPP invitations.
 
+  - Fixes an issue where static file pattern handlers got ignored.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=3
+
   - Fixed unit tests.
 
 

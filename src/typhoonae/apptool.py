@@ -47,6 +47,13 @@ location ~ ^/(%(path)s)/ {
 }
 """
 
+NGINX_REGEX_LOCATION = """
+location ~* ^%(regex)s$ {
+    root %(root)s;
+    rewrite %(rewrite)s break;
+}
+"""
+
 FCGI_PARAMS = """\
     fastcgi_param CONTENT_LENGTH $content_length;
     fastcgi_param CONTENT_TYPE $content_type;
@@ -239,9 +246,13 @@ def write_nginx_conf(options, conf, app_root):
             else:
                 static_dirs[handler.static_dir] = [ltrunc_url]
         if handler.GetHandlerType() == 'static_files':
-            sys.stderr.write('Warning: handler for url %s of type static_files '
-                             'in app.yaml getting ignored. Use static_dir '
-                             'instead.\n' % (handler.url))
+            rewrite = '^%s$ /%s' % (handler.url,
+                                    handler.static_files.replace('\\', '$'))
+            httpd_conf_stub.write(NGINX_REGEX_LOCATION % dict(
+                regex=handler.url,
+                root=app_root,
+                rewrite=rewrite
+            ))
         if handler.secure == 'always':
             if ltrunc_url not in secure_urls:
                 secure_urls.append(ltrunc_url)

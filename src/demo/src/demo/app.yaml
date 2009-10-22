@@ -8,6 +8,14 @@ inbound_services:
 
 handlers:
 
+- url: /static/(.*\.(css|js))
+  static_files: static/\1
+  upload: static/(.*\.(css|js))
+
+- url: /(.*\.(gif|jpg|png))
+  static_files: static/\1
+  upload: static/(.*\.(gif|jpg|png))
+
 - url: /
   script: app.py
 
@@ -27,9 +35,6 @@ handlers:
   script: dummy.py
   login: required
   secure: always
-
-- url: /static
-  static_dir: static
 
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py

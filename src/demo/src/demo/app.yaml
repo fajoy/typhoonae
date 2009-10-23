@@ -8,13 +8,13 @@ inbound_services:
 
 handlers:
 
-- url: /static/(.*\.(css|js))
-  static_files: static/\1
-  upload: static/(.*\.(css|js))
-
 - url: /(.*\.(gif|jpg|png))
   static_files: static/\1
   upload: static/(.*\.(gif|jpg|png))
+  expiration: 5h
+
+- url: /static
+  static_dir: static
 
 - url: /
   script: app.py

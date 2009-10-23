@@ -27,6 +27,8 @@ DESCRIPTION = ("Console script to perform common tasks on configuring an "
 
 USAGE = "usage: %prog [options] <application root>"
 
+DEFAULT_EXPIRATION = '30d'
+
 NGINX_HEADER = """
 server {
     listen      8080;
@@ -43,7 +45,7 @@ NGINX_FOOTER = """
 NGINX_STATIC_LOCATION = """
 location ~ ^/(%(path)s)/ {
     root %(root)s;
-    expires 30d;
+    expires %(expires)s;
 }
 """
 
@@ -51,6 +53,7 @@ NGINX_REGEX_LOCATION = """
 location ~* ^%(regex)s$ {
     root %(root)s;
     rewrite %(rewrite)s break;
+    expires %(expires)s;
 }
 """
 
@@ -235,38 +238,39 @@ def write_nginx_conf(options, conf, app_root):
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 
-    static_dirs = {}
     secure_urls = []
 
     for handler in conf.handlers:
         ltrunc_url = re.sub('^/', '', handler.url)
         if handler.GetHandlerType() == 'static_dir':
-            if handler.static_dir in static_dirs:
-                static_dirs[handler.static_dir].append(ltrunc_url)
+            l = handler.static_dir.split('/')
+            if len(l) > 1:
+                root = app_root + '/' + '/'.join(l[1:])
             else:
-                static_dirs[handler.static_dir] = [ltrunc_url]
+                root = app_root
+            httpd_conf_stub.write(NGINX_STATIC_LOCATION % dict(
+                expires=(handler.expiration or
+                         conf.default_expiration or
+                         DEFAULT_EXPIRATION),
+                path=ltrunc_url,
+                root=root
+                )
+            )
         if handler.GetHandlerType() == 'static_files':
             rewrite = '^%s$ /%s' % (handler.url,
                                     handler.static_files.replace('\\', '$'))
             httpd_conf_stub.write(NGINX_REGEX_LOCATION % dict(
+                expires=(handler.expiration or
+                         conf.default_expiration or
+                         DEFAULT_EXPIRATION),
                 regex=handler.url,
-                root=app_root,
-                rewrite=rewrite
-            ))
+                rewrite=rewrite,
+                root=app_root
+                )
+            )
         if handler.secure == 'always':
             if ltrunc_url not in secure_urls:
                 secure_urls.append(ltrunc_url)
-
-    for s in static_dirs:
-        if len(s.split('/')) > 1:
-            root = app_root + '/' + '/'.join(s.split('/')[1:])
-        else:
-            root = app_root
-        httpd_conf_stub.write(NGINX_STATIC_LOCATION % dict(
-            root=root,
-            path='|'.join(static_dirs[s]),
-            )
-        )
 
     if secure_urls:
         httpd_conf_stub.write(NGINX_SECURE_LOCATION % dict(

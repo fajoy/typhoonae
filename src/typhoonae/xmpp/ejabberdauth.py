@@ -1,12 +1,12 @@
 """Script for ejabberd's external authentication mode."""
 
 import sys
-from struct import *
+import struct
 
 
 def from_ejabberd():
     input_length = sys.stdin.read(2)
-    (size,) = unpack('>h', input_length)
+    (size,) = struct.unpack('>h', input_length)
     return sys.stdin.read(size).split(':')
 
 
@@ -14,7 +14,7 @@ def to_ejabberd(bool):
     answer = 0
     if bool:
         answer = 1
-    token = pack('>hh', 2, answer)
+    token = struct.pack('>hh', 2, answer)
     sys.stdout.write(token)
     sys.stdout.flush()
 

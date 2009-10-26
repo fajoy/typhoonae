@@ -33,7 +33,12 @@ urllib2.install_opener(opener)
 
 
 def post_multipart(url, fields):
-    """ """
+    """Posts multipart form data fields.
+
+    Args:
+        url: Post multipart form data to this URL.
+        fields: A list of tuples of the form [(fieldname, value), ...].
+    """
 
     content_type, body = encode_multipart_formdata(fields)
 
@@ -46,7 +51,10 @@ def post_multipart(url, fields):
 
 
 def encode_multipart_formdata(fields):
-    """ """
+    """Encodes multipart form data.
+
+    Returns content type and body.
+    """
 
     BOUNDARY = mimetools.choose_boundary()
     CRLF = '\r\n'

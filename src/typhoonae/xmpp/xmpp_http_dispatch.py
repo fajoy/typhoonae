@@ -75,15 +75,23 @@ def encode_multipart_formdata(fields):
     return content_type, body
 
 
-def dispatch(conn, message):
-    """The dispatcher function."""
+class Dispatcher(object):
+    """The XMPP/HTTP dispatcher class."""
 
-    logging.debug(str(message))
-    post_multipart('http://localhost:8080/_ah/xmpp/message/chat/',
-                   [('body', message.getBody()),
-                    ('from', str(message.getFrom())),
-                    ('stanza', str(message)),
-                    ('to', str(message.getTo()))])
+    def __init__(self, address):
+        """Initializes the dispatcher."""
+
+        self.address = address
+
+    def __call__(self, conn, message):
+        """The dispatcher function."""
+
+        logging.debug(str(message))
+        post_multipart('http://%s/_ah/xmpp/message/chat/' % self.address,
+                       [('body', message.getBody()),
+                        ('from', str(message.getFrom())),
+                        ('stanza', str(message)),
+                        ('to', str(message.getTo()))])
 
 
 def loop(conn):
@@ -104,6 +112,10 @@ def main():
     """The main function."""
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("-a", "--address", dest="address", metavar="HOST:PORT",
+                  help="the application host and port",
+                  default="localhost:8080")
 
     op.add_option("-j", "--jid", dest="jid", metavar="JID",
                   help="use this Jabber ID", default="demo@localhost")
@@ -147,7 +159,7 @@ def main():
     if auth <> 'sasl':
         logging.warning("SASL authentication on %s failed" % server)
 
-    client.RegisterHandler('message', dispatch)
+    client.RegisterHandler('message', Dispatcher(options.address))
     client.sendInitPresence()
 
     loop(client)

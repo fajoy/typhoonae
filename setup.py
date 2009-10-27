@@ -20,12 +20,12 @@ import setuptools
 
 
 def read(*rnames):
-    return open(os.path.join(*rnames)).read()
+    return open(os.path.join(os.getcwd(), *rnames)).read()
 
 
 setuptools.setup(
     name='typhoonae',
-    version='0.1.0a3',
+    version=read('version.txt').strip(),
     author="Tobias Rodaebel",
     author_email="tobias dot rodaebel at googlemail dot com",
     description="Typhoon App Engine.",

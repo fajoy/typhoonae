@@ -176,7 +176,7 @@ htmlhelp_basename = 'TyphoonAEdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'TyphoonAE.tex', u'TyphoonAE Documentation',
+  ('index', 'TyphoonAE.tex', u'TyphoonAE Handbook and Reference Manual',
    u'Tobias Rodäbel', 'manual'),
 ]
 

@@ -12,7 +12,7 @@ Google's API.
 .. toctree::
    :maxdepth: 2
 
-   philosophy
+   introduction
    architecture
    gettingstarted
 

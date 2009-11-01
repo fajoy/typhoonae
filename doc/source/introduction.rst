@@ -13,8 +13,8 @@ own hardware `at home`. Or you wonder what's so special about this whole `cloud
 thing`.
 
 The basic idea of this document is to give a brief explanation on principles
-and design descisions behind TyphoonAE. By reading this documentation you can
-learn how to install your own app engine runnig your apps.
+and design descisions behind TyphoonAE. You can learn how to install your own
+app engine runnig your apps.
 
 If you are interested in developing TyphoonAE itself, this book contains a
 refrence guide. You'll get an architecture overview and an introduction to the

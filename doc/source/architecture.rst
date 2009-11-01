@@ -3,4 +3,7 @@
 Architecture overview
 =====================
 
-.. image:: architecture.*
+.. figure:: architecture.*
+   :alt: TyphoonAE's archtecture
+
+   This is an architecture overview of TyphoonAE.

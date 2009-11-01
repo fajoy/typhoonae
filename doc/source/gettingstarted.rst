@@ -14,13 +14,13 @@ Python interpreter
 
 It is possible to run TyphoonAE's Python parts with Python 2.5.x and 2.6.x, but
 it is recommended to use a version which is supported by the Google App Engine
-SDK [#f1]_.
+SDK [#SDK]_.
 
 We recommend to install TyphoonAE into a `virtualenv
 <http://pypi.python.org/pypi/virtualenv>`_ in order to obtain isolation from
 any 'system' packages you've got installed in your Python version.
 
-.. [#f1] See http://code.google.com/intl/de/appengine/docs/python/overview.html for further information.
+.. [#SDK] See http://code.google.com/intl/de/appengine/docs/python/overview.html for further information.
 
 Google App Engine SDK
 ---------------------
@@ -31,7 +31,7 @@ You don't have to install the Google App Engine SDK, because `zc.buildout
 Other requirements
 ------------------
 
-Most of the required libraries and programs will be installed by zc.buildout [#f2]_.
+Most of the required libraries and programs will be installed by zc.buildout [#buildout]_.
 
 The buildout needs Python and the tools contained in /bin and /usr/bin of a
 standard installation of the Linux operating environment. You should ensure
@@ -43,7 +43,7 @@ that these directories are on your PATH and following programs can be found:
 
 (Note: On Debian Lenny libncurses5-dev and libssl-dev are required.)
 
-.. [#f2] See the buildout.cfg file.
+.. [#buildout] See the buildout.cfg file.
 
 Installation
 ============

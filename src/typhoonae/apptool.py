@@ -15,6 +15,9 @@
 # limitations under the License.
 """Console script to perform common tasks on configuring an application."""
 
+import crontab
+import google.appengine.api.croninfo
+import google.appengine.cron
 import optparse
 import os
 import re
@@ -329,6 +332,60 @@ def write_ejabberd_conf(options):
     ejabberd_conf.close()
 
 
+def print_error(msg):
+    """Prints an error message to the standard error stream."""
+
+    sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
+
+
+def write_crontab(options, app_root):
+    """Writes crontab entries."""
+
+    cron_path = os.path.join(app_root, 'cron.yaml')
+    if not os.path.isfile(cron_path):
+        return
+ 
+    cron_file = open(cron_path, 'r')
+    try:
+        cron_info = google.appengine.api.croninfo.LoadSingleCron(cron_file)
+    except Exception, err_obj:
+        print_error(str(err_obj))
+        return
+    finally:
+        cron_file.close()
+
+    cmd_avail = False
+    crontab_avail = False
+
+    for p in os.environ['PATH'].split(':'):
+        names = os.listdir(p)
+        if 'wget' in names or 'curl' in names:
+            cmd_avail = True
+        if 'crontab' in names:
+            crontab_avail = True
+        if cmd_avail and crontab_avail:
+            break
+
+    if not cmd_avail:
+        print_error("Command curl or wget required.")
+        return
+
+    if not crontab_avail:
+        print_error("Command crontab required.")
+        return
+
+    for entry in cron_info.cron:
+        parser = google.appengine.cron.groc.CreateParser(entry.schedule)
+        parser.timespec()
+
+    # TODO: Translate attributes to crontab entries
+    #attrs = ['ordinal_set', 'weekday_set', 'month_set', 'time_string',
+    #         'interval_mins', 'period_string']
+    #
+    #for a in attrs:
+    #    print a, getattr(parser, a)
+
+
 def main():
     """Runs the apptool console script."""
 
@@ -381,3 +438,4 @@ def main():
     write_nginx_conf(options, conf, app_root)
     write_supervisor_conf(options, conf, app_root)
     write_ejabberd_conf(options)
+    write_crontab(options, app_root)

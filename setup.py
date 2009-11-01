@@ -53,6 +53,7 @@ setuptools.setup(
     package_dir={'': 'src'},
     install_requires=[
         'fcgiapp',
+        'python-crontab',
         'setuptools',
         'simplejson',
         ],

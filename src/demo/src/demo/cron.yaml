@@ -1,0 +1,4 @@
+cron:
+- description: hourly log entry
+  url: /log
+  schedule: every day 00:00

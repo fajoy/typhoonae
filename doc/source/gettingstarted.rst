@@ -4,10 +4,32 @@
 Getting started
 ===============
 
-Brief documentation on installing TyphoonAE.
+The following chapter will guide you through the initial steps required to
+install TyphoonAE into a stand-alone directory tree on your development
+machine.
 
 Before you install
 ==================
+
+First of all, TyphoonAE is tested on Mac OS X Leopard, Snow Leopard
+[#SnowLeopard]_, Debian Lenny and Ubuntu 9.0.4/9.10. Since TyphoonAE integrates
+an extensive number of open source products its installing process must cover
+many dependencies. Hence, the group of platforms which can run TyphoonAE
+shrinks slightly.
+
+This is a very short overview of the *larger* parts. Later on, we will have a
+closer look at these parts and what keeps them together.
+
+ * `Google App Engine SDK <http://code.google.com/appengine>`_
+ * `mongoDB <http://www.mongodb.org/>`_
+ * `memcached <http://www.danga.com/memcached/>`_
+ * `RabbitMQ <http://www.rabbitmq.com/>`_
+ * `ejabberd <http://www.process-one.net/en/ejabberd>`_
+ * `FastCGI <http://www.fastcgi.com/>`_
+ * `nginx <http://nginx.net/>`_
+ * `Supervisor <http://supervisord.org/>`_
+
+.. [#SnowLeopard] To install TyphoonAE on Mac OS X Snow Leopard you must install a pure Python 2.5.4, because the system version raises incompatibility issues.
 
 Python interpreter
 ------------------
@@ -18,7 +40,7 @@ SDK [#SDK]_.
 
 We recommend to install TyphoonAE into a `virtualenv
 <http://pypi.python.org/pypi/virtualenv>`_ in order to obtain isolation from
-any 'system' packages you've got installed in your Python version.
+any *system* packages you've got installed in your Python version.
 
 .. [#SDK] See http://code.google.com/intl/de/appengine/docs/python/overview.html for further information.
 

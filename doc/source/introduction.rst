@@ -4,17 +4,18 @@
 Introduction
 ============
 
-Who should read this handbook?
-==============================
+Who should read this manual?
+============================
 
-If you've already written a Google App Engine application and pushed it happily
-into the cloud you're probably asking how to get all that stuff running on your
-own hardware `at home`. Or you wonder what's so special about this whole `cloud
-thing`.
+If you've already written a `Google App Engine
+<http://code.google.com/appengine>`_ application and deployed it successfully
+to the appspot you're probably asking how coolt it'd be to get all that stuff
+running on your own hardware `at home`. Or you just wonder what's so special
+about this whole `cloud thing`.
 
-The basic idea of this document is to give a brief explanation on principles
-and design descisions behind TyphoonAE. You can learn how to install your own
-app engine runnig your apps.
+The basic idea of this document is to give a brief explanation on the
+principles and design descisions behind TyphoonAE. You can learn how to install
+your own app engine runnig your GAE applications.
 
 If you are interested in developing TyphoonAE itself, this book contains a
 refrence guide. You'll get an architecture overview and an introduction to the

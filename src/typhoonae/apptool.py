@@ -15,14 +15,15 @@
 # limitations under the License.
 """Console script to perform common tasks on configuring an application."""
 
-import crontab
 import google.appengine.api.croninfo
 import google.appengine.cron
 import optparse
 import os
 import re
 import socket
+import subprocess
 import sys
+import tempfile
 import typhoonae 
 
 DESCRIPTION = ("Console script to perform common tasks on configuring an "
@@ -338,6 +339,58 @@ def print_error(msg):
     sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
 
 
+CRONTAB_ROW = re.compile(r'^\s*([^@#\s]+)\s+([^@#\s]+)\s+([^@#\s]+)'
+                         r'\s+([^@#\s]+)\s+([^@#\s]+)\s+([^#\n]*)'
+                         r'(\s+#\s*([^\n]*)|$)')
+
+EVERY_DAY_SET = set([0, 1, 2, 3, 4, 5, 6])
+EVERY_MONTH_SET = set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+
+
+def read_crontab(options):
+    """Reads the user's crontab.
+
+    Args:
+        options: Dictionary of command line options.
+
+    Returns crontab entries.
+    """
+
+    result = list()
+
+    p = subprocess.Popen(
+        ['crontab', '-l'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    (stdout, stderr) = p.communicate()
+
+    for entry in stdout.split('\n'):
+        m = re.match(CRONTAB_ROW, entry)
+        if m:
+            result.append(m.groups())
+
+    return result
+
+
+class CrontabRow(object):
+    """Represents one crontab row."""
+
+    def __init__(self):
+        """Initialize crontab row instance."""
+
+        self.minute = '*'
+        self.hour = '*'
+        self.dom = '*'
+        self.month = '*'
+        self.dow = '*'
+        self.command = ''
+        self.description = None
+
+    def __repr__(self):
+        return "%s %s %s %s %s %s # %s" % (
+            self.minute, self.hour, self.dom, self.month, self.dow,
+            self.command, self.description)
+
+
 def write_crontab(options, app_root):
     """Writes crontab entries."""
 
@@ -354,42 +407,62 @@ def write_crontab(options, app_root):
     finally:
         cron_file.close()
 
-    cmd_avail = False
-    crontab_avail = False
-
-    for p in os.environ['PATH'].split(':'):
-        names = os.listdir(p)
-        if 'wget' in names or 'curl' in names:
-            cmd_avail = True
-        if 'crontab' in names:
-            crontab_avail = True
-        if cmd_avail and crontab_avail:
-            break
-
-    if not cmd_avail:
-        print_error("Command curl or wget required.")
-        return
-
-    if not crontab_avail:
-        print_error("Command crontab required.")
-        return
+    tab = read_crontab(options)
 
     for entry in cron_info.cron:
         parser = google.appengine.cron.groc.CreateParser(entry.schedule)
         parser.timespec()
 
-    # TODO: Translate attributes to crontab entries
-    #attrs = ['ordinal_set', 'weekday_set', 'month_set', 'time_string',
-    #         'interval_mins', 'period_string']
-    #
-    #for a in attrs:
-    #    print a, getattr(parser, a)
+        row = CrontabRow()
+
+        if parser.time_string:
+            m, h = parser.time_string.split(':')
+            if len(m) == 2 and m[0] == '0': m = m[1:]
+            if len(h) == 2 and h[0] == '0': h = h[1:]
+            row.minute = m
+            row.hour = h
+
+        if parser.period_string:
+            if parser.period_string == 'hours':
+                row.minute = '0'
+                row.hour = '*/%i' % parser.interval_mins
+            elif parser.period_string == 'minutes':
+                row.minute = '*/%i' % parser.interval_mins
+
+        if parser.month_set and parser.month_set != EVERY_MONTH_SET:
+            row.month = ','.join(map(str, parser.month_set))
+
+        if parser.weekday_set and parser.weekday_set != EVERY_DAY_SET:
+            row.dow = ','.join(map(str, parser.weekday_set))
+
+        row.command = os.path.join(
+            os.path.dirname(os.path.abspath(sys.argv[0])), 'runtask')
+        row.command += ' ' + 'http://localhost:8080' + entry.url
+
+        row.description = '%s (%s)' % (entry.description, entry.schedule)
+
+        tab.append(re.match(CRONTAB_ROW, str(row)).groups())
+
+    if options.set_crontab:
+        _, path = tempfile.mkstemp()
+        try:
+            tmp = open(path, "w")
+            tmp.write('\n'.join([' '.join(r) for r in tab]))
+            tmp.close()
+            subprocess.call(['crontab', path])
+        finally:
+            if os.path.isfile(path):
+                os.remove(path)
 
 
 def main():
     """Runs the apptool console script."""
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--crontab", dest="set_crontab", action="store_true",
+                  help="set crontab if cron.yaml exists",
+                  default=False)
 
     op.add_option("--ejabberd", dest="ejabberd", metavar="FILE",
                   help="write ejabberd configuration to this file",

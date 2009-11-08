@@ -1,6 +1,14 @@
 CHANGES
 =======
 
+Version 0.1.0b1 (2009-??-??)
+----------------------------
+
+  - Added support for scheduled tasks.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=5
+
+
 Version 0.1.0a3 (2009-10-22)
 ----------------------------
 

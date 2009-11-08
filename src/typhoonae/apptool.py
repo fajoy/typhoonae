@@ -454,6 +454,8 @@ def write_crontab(options, app_root):
             if os.path.isfile(path):
                 os.remove(path)
 
+    return tab
+
 
 def main():
     """Runs the apptool console script."""

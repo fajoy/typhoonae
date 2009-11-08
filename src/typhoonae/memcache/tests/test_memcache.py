@@ -19,7 +19,7 @@ import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.memcache.memcache_stub
 import os
 import time
-import typhoonae.memcache_stub
+import typhoonae.memcache.memcache_stub
 import unittest
 
 
@@ -33,7 +33,7 @@ class MemcacheTestCase(unittest.TestCase):
             google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-            'memcache', typhoonae.memcache_stub.MemcacheServiceStub())
+            'memcache', typhoonae.memcache.memcache_stub.MemcacheServiceStub())
 
         # Uncomment to run tests against the SDK's memcache service stub.
         #google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
@@ -102,10 +102,11 @@ class MemcacheTestCase(unittest.TestCase):
         """Tries to obtain a key."""
 
         os.environ['APPLICATION_ID'] = ''
-        assert typhoonae.memcache_stub.getKey('bar') == 'YmFy'
-        assert typhoonae.memcache_stub.getKey('b', namespace='a') == 'YS5i'
+        assert typhoonae.memcache.memcache_stub.getKey('bar') == 'YmFy'
+        assert (typhoonae.memcache.memcache_stub.getKey('b', namespace='a') ==
+                'YS5i')
         os.environ['APPLICATION_ID'] = 'app'
-        assert (typhoonae.memcache_stub.getKey('b', namespace='a') ==
+        assert (typhoonae.memcache.memcache_stub.getKey('b', namespace='a') ==
                 'YXBwLmEuYg==')
         del os.environ['APPLICATION_ID']
         google.appengine.api.memcache.set('counter', 0, namespace='me') 

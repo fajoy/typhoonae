@@ -24,7 +24,7 @@ import google.appengine.api.user_service_stub
 import google.appengine.ext.webapp
 import intid
 import logging
-import memcache_stub
+import memcache.memcache_stub
 import mongodb.datastore_mongo_stub
 import os
 import re
@@ -137,7 +137,7 @@ def setupMemcache():
     """Sets up memcache."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('memcache',
-        memcache_stub.MemcacheServiceStub())
+        memcache.memcache_stub.MemcacheServiceStub())
 
 
 def setupTaskQueue(root_path='.'):

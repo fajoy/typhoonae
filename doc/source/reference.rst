@@ -4,7 +4,7 @@
 Reference guide
 ===============
 
-Let's have a closer look at the TyphoonAE core package.
+Let's have a closer look at the TyphoonAE core packages.
 
 typhoonae
 =========
@@ -23,6 +23,11 @@ typhoonae.handlers.login
 
 .. automodule:: typhoonae.handlers.login
    :members:
+
+typhoonae.memcache
+==================
+
+.. automodule:: typhoonae.memcache
 
 typhoonae.mongodb
 =================

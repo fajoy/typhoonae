@@ -9,9 +9,10 @@ Who should read this manual?
 
 If you've already written a `Google App Engine
 <http://code.google.com/appengine>`_ application and deployed it successfully
-to the appspot you're probably asking how coolt it'd be to get all that stuff
-running on your own hardware `at home`. Or you just wonder what's so special
-about this whole `cloud thing`.
+to the appspot you're probably asking how cool it'd be to get all that stuff
+running on your own hardware `at home`. Or you plan to build your own scalable
+app engine with high-performance, distributed services powered by one hundred
+percent open source.
 
 The basic idea of this document is to give a brief explanation on the
 principles and design descisions behind TyphoonAE. You can learn how to install

@@ -22,7 +22,7 @@ closer look at these parts and what keeps them together.
 
  * `Google App Engine SDK <http://code.google.com/appengine>`_
  * `mongoDB <http://www.mongodb.org/>`_
- * `memcached <http://www.danga.com/memcached/>`_
+ * `memcached <http://memcached.org>`_
  * `RabbitMQ <http://www.rabbitmq.com/>`_
  * `ejabberd <http://www.process-one.net/en/ejabberd>`_
  * `FastCGI <http://www.fastcgi.com/>`_
@@ -112,3 +112,40 @@ like this::
   rabbitmq                         RUNNING    pid 40158, uptime 0:00:16
   taskworker                       RUNNING    pid 40193, uptime 0:00:09
   xmpp_http_dispatch               RUNNING    pid 40167, uptime 0:00:16
+
+Command-line tools
+==================
+
+The following sections describe the tools and programs placed in the bin/
+directory.
+
+Commands in alphabetical order
+------------------------------
+
+ * **appcfg** - Links to the SDK's original appcfg.py. It can upload and
+   download data to and from your application's datastore.
+ * **appserver** - FastCGI application server. Runs an application (mainly
+   request handlers) in processes isolated from the core web server.
+ * **apptool** - Console script to perform common tasks on configuring an
+   application.
+ * **buildout** - The main buildout script.
+ * **deferred_taskworker** - Handles deferred tasks from the task queue.
+ * **dev_appserver** - Links to the SDK's original dev_appserver.py. It's
+   included to check whether your application runs with the installed original
+   SDK.
+ * **ejabberd** - The jabber daemon is a distributed, fault-tolerant technology
+   that allows the creation of large-scale instant messaging applications.
+ * **ejabberdauth** - External authentication module for ejabberd.
+ * **ejabberdctl** - Control tool for ejabberd.
+ * **intid** - Small integer-ID server.
+ * **memcached** - High-performance, distributed memory object caching system. 
+ * **mongod** - MongoDB's daemon.
+ * **nginxctl** - NGINX control script.
+ * **rabbitmq-server** - Highly reliable enterprise messaging system based on
+   the emerging AMQP standard.
+ * **rabbitmqctl** - RabbitMQ's control script.
+ * **runtask** - Little helper program to run scheduled tasks.
+ * **supervisorctl** - The supervisor daemon control tool.
+ * **supervisord** - Supervisor daemon.
+ * **taskworker** - Handles tasks from the task queue.
+ * **xmpp_http_dispatch** - XMPP/HTTP dispatcher.

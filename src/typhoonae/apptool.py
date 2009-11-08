@@ -476,15 +476,15 @@ def main():
                   help="use this port of the FastCGI host",
                   default='8081')
 
-    op.add_option("-n", "--nginx", dest="nginx", metavar="FILE",
+    op.add_option("--nginx", dest="nginx", metavar="FILE",
                   help="write nginx configuration to this file",
                   default=os.path.join('etc', 'server.conf'))
 
-    op.add_option("-p", "--passwd", dest="passwd_file", metavar="FILE",
+    op.add_option("--passwd", dest="passwd_file", metavar="FILE",
                   help="use this passwd file for authentication",
                   default=os.path.join('etc', 'htpasswd'))
 
-    op.add_option("-s", "--supervisor", dest="supervisor", metavar="FILE",
+    op.add_option("--supervisor", dest="supervisor", metavar="FILE",
                   help="write supervisor configuration to this file",
                   default=os.path.join('etc', 'appserver.conf'))
 

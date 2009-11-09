@@ -18,7 +18,6 @@
 import BaseHTTPServer
 import SimpleHTTPServer
 import cgi
-import google.appengine.api.apiproxy_stub_map
 import httplib
 import os
 import threading

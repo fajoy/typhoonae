@@ -133,6 +133,11 @@ class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
         google.appengine.api.labs.taskqueue.add(url='/makenote',
                                                 eta=eta,
                                                 payload="%i delayed" % count)
+        params = {
+            'total_notes': str(len(notes)),
+            'unused': False
+        }
+        google.appengine.api.labs.taskqueue.add(url='/count', params=params)
         vars = dict(
             count=count,
             env=os.environ,
@@ -153,6 +158,13 @@ class CountRequestHandler(google.appengine.ext.webapp.RequestHandler):
         count = query.count()
         self.response.headers.add_header("Content-Type", "text/plain")
         self.response.out.write('Count: %i' % count)
+
+    def post(self):
+        """Writes a logging message."""
+
+        count = self.request.get('total_notes')
+        if not count: count = 'not available'
+        logging.info("Total number of notes %s" % count)
 
 
 class LogRequestHandler(google.appengine.ext.webapp.RequestHandler):

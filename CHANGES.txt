@@ -8,6 +8,11 @@ Version 0.1.0b1 (2009-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=5
 
+  - Fixes an issue where the params keyword argument gets ignored when adding
+    a task
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=7
+
 
 Version 0.1.0a3 (2009-10-22)
 ----------------------------

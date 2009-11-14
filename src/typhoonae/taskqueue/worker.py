@@ -80,7 +80,8 @@ def handle_task(msg):
     req = urllib2.Request(
         url='http://%(host)s:%(port)s%(url)s' % task,
         data=task['payload'],
-        headers={'Content-Type': 'text/plain'}
+        headers={'Content-Type': task['content_type'],
+                 'X-AppEngine-TaskName': task['name']}
     )
 
     try:

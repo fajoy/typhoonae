@@ -75,7 +75,13 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
                 TaskQueueServiceError.UNKNOWN_QUEUE)
             return
 
+        content_type = 'text/plain'
+        for h in request.header_list():
+            if h.key() == 'content-type':
+                content_type = h.value()
+
         task_dict = dict(
+            content_type=content_type,
             eta=request.eta_usec()/1000000,
             host=os.environ['SERVER_NAME'],
             method=request.method(),

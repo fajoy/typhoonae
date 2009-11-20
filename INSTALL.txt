@@ -2,10 +2,10 @@
 TyphoonAE - Typhoon App Engine Development Environment
 ======================================================
 
-The TyphoonAE project (formerly known as twistedae) aims at providing a
-full-featured and productive serving environment to run Google App Engine
-(Python) applications. It delivers the parts for building your own scalable App
-Engine while staying compatible with Google's API.
+The TyphoonAE project aims at providing a full-featured and productive serving
+environment to run Google App Engine (Python) applications. It delivers the
+parts for building your own scalable App Engine while staying compatible with
+Google's API.
 
 
 The Stack

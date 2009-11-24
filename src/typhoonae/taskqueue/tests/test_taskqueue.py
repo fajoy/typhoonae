@@ -18,6 +18,7 @@
 import datetime
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.apiproxy_stub_map
+import google.appengine.ext.deferred
 import os
 import time
 import typhoonae.taskqueue
@@ -31,6 +32,11 @@ class DummyURLFetchServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
     def _Dynamic_Fetch(self, request, response):
         response.set_statuscode(500)
+
+
+def do_something():
+    """Dummy function to test the deferred API."""
+    print "Did something."
 
 
 class TaskQueueTestCase(unittest.TestCase):
@@ -82,3 +88,9 @@ class TaskQueueTestCase(unittest.TestCase):
         google.appengine.api.labs.taskqueue.add(url='/run')
         google.appengine.api.labs.taskqueue.Queue('test').add(
             google.appengine.api.labs.taskqueue.Task(url='/foo'))
+
+    def testDeferred(self):
+        """Testing deferred API."""
+
+        google.appengine.ext.deferred.defer(
+            do_something, _name='deferred', _countdown=10)

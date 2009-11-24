@@ -105,6 +105,7 @@ def serve(conf):
         os.environ.clear()
         os.environ.update(env)
         os.environ['APPLICATION_ID'] = conf.application
+        os.environ['CURRENT_VERSION_ID'] = conf.version + ".1"
         os.environ['AUTH_DOMAIN'] = 'localhost'
         os.environ['SERVER_SOFTWARE'] = 'TyphoonAE/0.1.0'
         os.environ['TZ'] = 'UTC'

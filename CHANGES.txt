@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+Version 0.1.0b2 (2009-??-??)
+----------------------------
+
+  - Fixes an issue where the CURRENT_VERSION_ID variable is missing in the CGI
+    environment.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=8
+
+
 Version 0.1.0b1 (2009-11-20)
 ----------------------------
 

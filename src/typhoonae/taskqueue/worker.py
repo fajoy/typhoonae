@@ -17,6 +17,7 @@
 
 from __future__ import with_statement
 from amqplib import client_0_8 as amqp
+import base64
 import logging
 import os
 import signal
@@ -79,7 +80,7 @@ def handle_task(msg):
 
     req = urllib2.Request(
         url='http://%(host)s:%(port)s%(url)s' % task,
-        data=task['payload'],
+        data=base64.b64decode(task['payload']),
         headers={'Content-Type': task['content_type'],
                  'X-AppEngine-TaskName': task['name']}
     )

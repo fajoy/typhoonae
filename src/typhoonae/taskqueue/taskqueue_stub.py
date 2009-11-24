@@ -16,6 +16,7 @@
 """Task queue API proxy stub."""
 
 from amqplib import client_0_8 as amqp
+import base64
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.labs.taskqueue.taskqueue_service_pb
 import google.appengine.api.labs.taskqueue.taskqueue_stub
@@ -86,7 +87,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             host=os.environ['SERVER_NAME'],
             method=request.method(),
             name=request.task_name(),
-            payload=request.body(),
+            payload=base64.b64encode(request.body()),
             port=os.environ['SERVER_PORT'],
             queue=request.queue_name(),
             try_count=1,

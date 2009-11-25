@@ -17,6 +17,7 @@
 
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.memcache.memcache_stub
+import google.appengine.ext.db
 import os
 import time
 import typhoonae.memcache.memcache_stub
@@ -144,3 +145,19 @@ class MemcacheTestCase(unittest.TestCase):
         assert google.appengine.api.memcache.get('first') == first
         google.appengine.api.memcache.replace('first', second)
         assert google.appengine.api.memcache.get('first') == second
+
+    def testCacheProtobuf(self):
+        """Tries to cache an encoded protocol buffer."""
+
+        class MyModel(google.appengine.ext.db.Model):
+            name = google.appengine.ext.db.StringProperty()
+
+        entity = MyModel(name="foobar")
+
+        os.environ['APPLICATION_ID'] = 'app'
+        google.appengine.api.memcache.set('protobuf',
+            google.appengine.ext.db.model_to_protobuf(entity).Encode())
+
+        encoded_entity = google.appengine.api.memcache.get('protobuf')
+        assert (google.appengine.ext.db.model_from_protobuf(encoded_entity).name
+                == 'foobar')

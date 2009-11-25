@@ -66,12 +66,6 @@ def initURLMapping(conf):
         script='$PYTHON_LIB/typhoonae/handlers/login.py'
     )
 
-    # Configure deferred task handler
-    deferred = google.appengine.api.appinfo.URLMap(
-        url='/_ah/queue/deferred',
-        script='$PYTHON_LIB/google/appengine/ext/deferred/deferred.py'
-    )
-
     # Generate URL mapping
     for handler in [login, logout] + conf.handlers:
         script = handler.script

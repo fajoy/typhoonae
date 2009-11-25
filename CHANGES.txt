@@ -9,6 +9,15 @@ Version 0.1.0b2 (2009-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=8
 
+  - Deferred API works now.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=9
+
+  - Fixes an issue where memcache.put() raises a UnicodeDecodeError when
+    trying to store an encoded protocol buffer.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=10
+
 
 Version 0.1.0b1 (2009-11-20)
 ----------------------------

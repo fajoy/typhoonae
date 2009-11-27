@@ -18,6 +18,7 @@
 import datetime
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.apiproxy_stub_map
+import google.appengine.api.datastore_types
 import google.appengine.ext.db
 import os
 import time
@@ -112,3 +113,16 @@ class DatastoreMongoTestCase(unittest.TestCase):
         start, end = google.appengine.ext.db.allocate_ids(test_key, 2000)
         self.assertEqual(start, 2001)
         self.assertEqual(end, 4001)
+
+    def testKeysOnly(self):
+        """Fetches keys only."""
+
+        entity = TestModel(contents='Some contents')
+        entity.put()
+        query = TestModel.all(keys_only=True)
+        cursor = query.fetch(1)
+        assert type(cursor[0]) == google.appengine.api.datastore_types.Key
+
+
+if __name__ == "__main__":
+    unittest.main() 

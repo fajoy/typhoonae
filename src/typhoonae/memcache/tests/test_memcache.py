@@ -159,5 +159,10 @@ class MemcacheTestCase(unittest.TestCase):
             google.appengine.ext.db.model_to_protobuf(entity).Encode())
 
         encoded_entity = google.appengine.api.memcache.get('protobuf')
-        assert (google.appengine.ext.db.model_from_protobuf(encoded_entity).name
-                == 'foobar')
+        cached_entity = google.appengine.ext.db.model_from_protobuf(
+            encoded_entity)
+        assert cached_entity.name == 'foobar'
+
+
+if __name__ == "__main__":
+    unittest.main()

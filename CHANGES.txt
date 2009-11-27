@@ -18,6 +18,10 @@ Version 0.1.0b2 (2009-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=10
 
+  - Added support for datastore queries with the keys_only keyword argument.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=11
+
 
 Version 0.1.0b1 (2009-11-20)
 ----------------------------

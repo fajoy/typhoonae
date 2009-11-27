@@ -93,12 +93,21 @@ def serve(conf):
         def seek(self, *args):
             return self.i.seek(*args)
 
+    class StdoutAdapter:
+        """Adapter for FastCGI output stream objects."""
+
+        def __init__(self, o):
+            self.o = o
+
+        def write(self, s):
+            self.o.write(str(s))
+
     while True:
         (inp, out, unused_err, env) = fcgiapp.Accept()
 
         # Redirect standard input and output streams
         sys.stdin = StdinAdapter(inp)
-        sys.stdout = out
+        sys.stdout = StdoutAdapter(out)
 
         # Initialize application environment
         os_env = dict(os.environ)

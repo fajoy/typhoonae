@@ -22,6 +22,11 @@ Version 0.1.0b2 (2009-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=11
 
+  - Fixes an issue where writing unicode strings to the FastCGI output stream
+    raises a TypeError.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=12
+
 
 Version 0.1.0b1 (2009-11-20)
 ----------------------------

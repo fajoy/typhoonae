@@ -20,7 +20,6 @@ import google.appengine.cron
 import optparse
 import os
 import re
-import socket
 import subprocess
 import sys
 import tempfile
@@ -495,7 +494,7 @@ def main():
                   default=os.environ.get('TMPDIR', '/var'))
 
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
-                  help="use this XMPP host", default=socket.gethostname())
+                  help="use this XMPP host", default='localhost')
 
     (options, args) = op.parse_args()
 

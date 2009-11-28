@@ -99,6 +99,9 @@ def serve(conf):
         def __init__(self, o):
             self.o = o
 
+        def flush(self):
+            self.o.flush()
+
         def write(self, s):
             self.o.write(str(s))
 

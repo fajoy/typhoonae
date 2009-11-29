@@ -80,7 +80,11 @@ class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):
         c[cookie_name]['path'] = '/'
         h = re.compile('^Set-Cookie: ').sub('', c.output(), count=1)
         self.response.headers.add_header('Set-Cookie', str(h))
-        self.redirect('/')
+
+        self.response.headers.add_header('Content-Type', 'text/html')
+        self.response.out.write(
+            '<html><body>You\'re logged in as admin@localhost! This is a demo '
+            'login handler.<br><a href="/">Return</a></body></html>')
 
 
 class LogoutRequestHandler(google.appengine.ext.webapp.RequestHandler):

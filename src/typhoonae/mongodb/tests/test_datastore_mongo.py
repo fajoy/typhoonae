@@ -114,6 +114,17 @@ class DatastoreMongoTestCase(unittest.TestCase):
         self.assertEqual(start, 2001)
         self.assertEqual(end, 4001)
 
+    def testFilter(self):
+        """Filters queries."""
+
+        data = 'foo'
+        entity = TestModel(contents=data)
+        entity.put()
+        q = TestModel.all()
+        q.filter("contents =", data)
+        result = q.get()
+        assert result.contents == data
+
     def testKeysOnly(self):
         """Fetches keys only."""
 

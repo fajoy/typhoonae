@@ -50,14 +50,18 @@ class DatastorePostgreSQLTestCase(unittest.TestCase):
         class TestModel(google.appengine.ext.db.Model):
             """Some test model."""
 
-            data   = google.appengine.ext.db.StringProperty()
-            point  = google.appengine.ext.db.GeoPtProperty()
-            number = google.appengine.ext.db.IntegerProperty()
+            data    = google.appengine.ext.db.StringProperty()
+            name    = google.appengine.ext.db.StringProperty(required=True)
+            point   = google.appengine.ext.db.GeoPtProperty()
+            number  = google.appengine.ext.db.IntegerProperty()
+            created = google.appengine.ext.db.DateTimeProperty(auto_now=True)
 
-        entity = TestModel()
-        entity.data   = 'foobar'        # str or unicode
-        entity.number = 6               # int or long
-        entity.point  = "45.256,-71.92" # GeoPt
+        entity = TestModel(
+            data='foobar',
+            name='John Appleseed',
+            number=6,
+            point="45.256,-71.92")
+
         entity.put()
 
 

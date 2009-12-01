@@ -91,18 +91,38 @@ location / {
 }
 """
 
+SUPERVISOR_MONGODB_CONFIG = """
+[program:mongod]
+command = %(bin)s/mongod --dbpath=%(var)s
+process_name = mongod
+directory = %(bin)s
+priority = 10
+redirect_stderr = true
+stdout_logfile = %(var)s/log/mongod.log
+"""
+
+SUPERVISOR_BDBDATASTORE_CONFIG = """
+[program:bdbdatastore]
+command = java -jar %(root)s/parts/bdbdatastore/bdbdatastore-0.2.2.jar %(var)s
+process_name = bdbdatastore
+directory = %(app_root)s
+priority = 10
+redirect_stderr = true
+stdout_logfile = %(var)s/log/bdbdatastore.log
+"""
+
 SUPERVISOR_APPSERVER_CONFIG = """
-[fcgi-program:appserver]
-command = %(bin)s/appserver --log=%(var)s/log/appserver.log --xmpp_host=%(xmpp_host)s %(app_root)s
+[fcgi-program:%(app_id)s]
+command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
 priority = 999
 redirect_stderr = true
-stdout_logfile = %(var)s/log/appserver.log
+stdout_logfile = %(var)s/log/%(app_id)s.log
 stdout_logfile_maxbytes = 1MB
 stdout_logfile_backups = 10
-stderr_logfile = %(var)s/log/appserver-error.log
+stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
 """
 
@@ -296,10 +316,13 @@ def write_nginx_conf(options, conf, app_root):
 def write_supervisor_conf(options, conf, app_root):
     """Writes supercisord configuration stub."""
 
-    bin = os.path.abspath(os.path.dirname(sys.argv[0]))
-    var = os.path.abspath(options.var)
     addr = options.addr
+    app_id = conf.application
+    bin = os.path.abspath(os.path.dirname(sys.argv[0]))
+    datastore = options.datastore.lower()
     port = options.port
+    root = os.getcwd()
+    var = os.path.abspath(options.var)
     xmpp_host = options.xmpp_host
 
     supervisor_conf_stub = open(options.supervisor, 'w')
@@ -308,6 +331,13 @@ def write_supervisor_conf(options, conf, app_root):
         "# Use apptool to modify.\n")
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
+
+    if datastore == 'mongodb':
+        supervisor_conf_stub.write(SUPERVISOR_MONGODB_CONFIG % locals())
+    elif datastore == 'bdbdatastore':
+        supervisor_conf_stub.write(SUPERVISOR_BDBDATASTORE_CONFIG % locals())
+    else:
+        raise RuntimeError, "unknown datastore"
 
     jid = conf.application + '@' + xmpp_host
     password = conf.application
@@ -464,6 +494,9 @@ def main():
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists",
                   default=False)
+
+    op.add_option("--datastore", dest="datastore", metavar="NAME",
+                  help="use this datastore", default='mongodb')
 
     op.add_option("--ejabberd", dest="ejabberd", metavar="FILE",
                   help="write ejabberd configuration to this file",

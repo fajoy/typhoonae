@@ -4,6 +4,8 @@ CHANGES
 Version 0.1.0b2 (2009-??-??)
 ----------------------------
 
+  - Added BDBDatastore support.
+
   - Fixes an issue where the CURRENT_VERSION_ID variable is missing in the CGI
     environment.
 

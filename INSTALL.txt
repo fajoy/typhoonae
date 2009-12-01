@@ -15,6 +15,7 @@ The key components are::
 
   * Google App Engine SDK - http://code.google.com/appengine
   * mongoDB - http://www.mongodb.org
+  * BDBDatastore - http://arachnid.github.com/bdbdatastore
   * memcached - http://memcached.org
   * RabbitMQ - http://www.rabbitmq.com
   * ejabberd - http://www.process-one.net/en/ejabberd

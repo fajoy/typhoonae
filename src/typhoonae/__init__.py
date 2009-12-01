@@ -32,6 +32,9 @@ import taskqueue.taskqueue_stub
 import xmpp.xmpp_service_stub
 
 
+end_request_hook = None
+
+
 def getAppConfig(directory='.'):
     """Returns a configuration object."""
 
@@ -105,22 +108,38 @@ def setupCapability():
         'capability_service', capability_stub.CapabilityServiceStub())
 
 
-def setupDatastore(app_id, datastore, history, require_indexes, trusted):
+def setupDatastore(name, app_id, datastore, history, require_indexes, trusted):
     """Sets up datastore."""
 
-    tmp_dir = os.environ['TMPDIR']
-    if not os.path.exists(tmp_dir):
-        os.mkdir(tmp_dir)
+    if name == 'mongodb':
+        tmp_dir = os.environ['TMPDIR']
+        if not os.path.exists(tmp_dir):
+            os.mkdir(tmp_dir)
 
-    datastore_path = os.path.join(tmp_dir, datastore)
-    history_path = os.path.join(tmp_dir, history)
+        datastore_path = os.path.join(tmp_dir, datastore)
+        history_path = os.path.join(tmp_dir, history)
 
-    datastore = mongodb.datastore_mongo_stub.DatastoreMongoStub(
-        app_id, datastore_path, history_path, require_indexes=require_indexes,
-        intid_client=intid.IntidClient())
+        datastore = mongodb.datastore_mongo_stub.DatastoreMongoStub(
+            app_id, datastore_path, history_path,
+            require_indexes=require_indexes, intid_client=intid.IntidClient())
+    elif name == 'bdbdatastore':
+        from notdot.bdbdatastore import socket_apiproxy_stub
+        datastore = socket_apiproxy_stub.RecordingSocketApiProxyStub(
+            ('localhost', 9123))
+        global end_request_hook
+        end_request_hook = datastore.closeSession
+    else:
+        raise RuntimeError, "unknown datastore"
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
         'datastore_v3', datastore)
+
+    if name in ['bdbdatastore']:
+        from google.appengine.tools import dev_appserver_index
+        app_root = os.getcwd()
+        logging.info("%s" % app_root)
+        dev_appserver_index.SetupIndexes(app_id, app_root)
+        dev_appserver_index.IndexYamlUpdater(app_root)
 
 
 def setupMail(smtp_host, smtp_port, smtp_user, smtp_password,
@@ -177,9 +196,8 @@ def setupStubs(conf, options):
 
     setupCapability()
 
-    setupDatastore(conf.application,
-                   'dev_appserver.datastore',
-                   'dev_appserver.datastore.history',
+    setupDatastore(options.datastore.lower(), conf.application,
+                   'dev_appserver.datastore', 'dev_appserver.datastore.history',
                    False, False)
 
     setupMail('localhost', 25, '', '')

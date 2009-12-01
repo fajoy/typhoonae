@@ -159,11 +159,17 @@ def serve(conf):
             # Finish request
             fcgiapp.Finish()
 
+            if typhoonae.end_request_hook:
+                typhoonae.end_request_hook()
+
 
 def main():
     """Initializes the server."""
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--datastore", dest="datastore", metavar="NAME",
+                  help="use this datastore", default='mongodb')
 
     op.add_option("--log", dest="logfile", metavar="FILE",
                   help="write logging output to this file",

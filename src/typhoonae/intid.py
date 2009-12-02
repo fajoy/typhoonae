@@ -81,10 +81,10 @@ class Worker(threading.Thread):
             data = self.socket.recv(3)
             if data == 'int':
                 lock.acquire()
-                self.db['int'] += 1
-                self.socket.send(str(self.db['int']))
+                i = self.db['int'] = self.db['int'] + 1
                 self.db.sync()
                 lock.release()
+                self.socket.send(str(i))
             elif data == 'con':
                 self.socket.send('ack')
             else:

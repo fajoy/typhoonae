@@ -20,7 +20,6 @@ import time
 import typhoonae.intid
 import unittest
 
-
 class TestClient(threading.Thread):
     """Simple test client implementation."""
 
@@ -45,12 +44,21 @@ class IntidTestCase(unittest.TestCase):
     def testGetIntIDs(self):
         """Get some integer IDs."""
 
+        def issorted(L):
+            """"Tests if a List is sorted."""
+
+            for i in range(0, len(L)-1):
+                if cmp(L[i],L[i+1]) == -1: continue
+                else: return False
+            return True
+
         client = typhoonae.intid.IntidClient()
         ids = []
         for i in range(10):
             ids.append(client.get())
         client.close()
         assert len(ids) == 10
+        assert issorted(ids)
 
     def testConcurrentClients(self):
         """Sets up concurrent intid clients."""

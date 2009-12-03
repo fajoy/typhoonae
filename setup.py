@@ -60,6 +60,7 @@ setuptools.setup(
         amqp=['amqplib'],
         mongo=['pymongo'],
         memcached=['pylibmc'],
+        psycopg=['psycopg2'],
         xmpp=['xmpppy']
         ),
     zip_safe=False,

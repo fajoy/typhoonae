@@ -35,7 +35,7 @@ setuptools.setup(
         read('CHANGES.txt')
         ),
     license="Apache License 2.0",
-    keywords="gae appengine wsgi fastcgi",
+    keywords=["gae", "appengine", "wsgi", "fastcgi"],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',

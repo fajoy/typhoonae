@@ -21,7 +21,7 @@ setup(
         "for bdbdatastore, the migration path to an alternate backend is "
         "smooth.",
     license="Apache License 2.0",
-    keywords="appengine gae bdb",
+    keywords=["appengine", "gae", "bdb"],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',

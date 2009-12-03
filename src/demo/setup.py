@@ -27,7 +27,7 @@ setup(
     description="Typhoon App Engine demo application.",
     long_description=(),
     license="Apache License 2.0",
-    keywords="appengine gae typhoonae wsgi",
+    keywords=["appengine", "gae", "typhoonae", "wsgi"],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',

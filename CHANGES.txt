@@ -1,0 +1,76 @@
+CHANGES
+=======
+
+Version 0.1.0b2 (2009-??-??)
+----------------------------
+
+  - Added BDBDatastore support.
+
+  - Fixes an issue where the CURRENT_VERSION_ID variable is missing in the CGI
+    environment.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=8
+
+  - Deferred API works now.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=9
+
+  - Fixes an issue where memcache.put() raises a UnicodeDecodeError when
+    trying to store an encoded protocol buffer.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=10
+
+  - Added support for datastore queries with the keys_only keyword argument.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=11
+
+  - Fixes an issue where writing unicode strings to the FastCGI output stream
+    raises a TypeError.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=12
+
+
+Version 0.1.0b1 (2009-11-20)
+----------------------------
+
+  - Added support for scheduled tasks.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=5
+
+  - Fixes an issue where the params keyword argument gets ignored when adding
+    a task.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=7
+
+  - Minor refactoring.
+
+
+Version 0.1.0a3 (2009-10-22)
+----------------------------
+
+  - Added support for sending XMPP invitations.
+
+  - Fixes an issue where static file pattern handlers got ignored.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=3
+
+  - Fixed unit tests.
+
+
+Version 0.1.0a2 (2009-10-17)
+----------------------------
+
+  - Added XMPP support.
+
+  - Fixed an issue where an incorrect module path within a handler definition
+    can cause the fcgiserver to crash on startup.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=1
+
+  - Refactored integer ID client API out of datastore stub.
+
+
+Version 0.1.0a1 (2009-10-05)
+----------------------------
+
+  - First alpha release.

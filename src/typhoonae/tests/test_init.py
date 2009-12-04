@@ -39,6 +39,7 @@ class InitTestCase(unittest.TestCase):
 
         class TestOptions:
             xmpp_host = 'localhost'
+            datastore = 'mongodb'
 
         typhoonae.setupStubs(self.conf, TestOptions())
 

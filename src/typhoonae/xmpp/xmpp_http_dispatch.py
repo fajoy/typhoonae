@@ -45,7 +45,7 @@ def post_multipart(url, fields):
     headers = {'Content-Type': content_type,
                'Content-Length': str(len(body))}
 
-    r = urllib2.Request(url, body, headers)
+    r = urllib2.Request(url, str(body.encode('utf-8')), headers)
 
     return urllib2.urlopen(r).read()
 
@@ -57,20 +57,19 @@ def encode_multipart_formdata(fields):
     """
 
     BOUNDARY = mimetools.choose_boundary()
-    CRLF = '\r\n'
+    CRLF = u'\r\n'
     buffer = []
 
     for (key, value) in fields:
-        buffer.append('--%s' % BOUNDARY)
-        buffer.append('Content-Disposition: form-data; name="%s"' % key)
-        buffer.append('')
-        buffer.append(value)
+        buffer.append(u'--%s' % BOUNDARY)
+        buffer.append(u'Content-Disposition: form-data; name="%s"' % key)
+        buffer.append(u'')
+        buffer.append(value.decode('utf-8'))
 
-    buffer.append('--%s--' % BOUNDARY)
-    buffer.append('')
-    logging.debug(str(buffer))
+    buffer.append(u'--%s--' % BOUNDARY)
+    buffer.append(u'')
     body = CRLF.join(buffer)
-    content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+    content_type = u'multipart/form-data; boundary=%s' % BOUNDARY
 
     return content_type, body
 
@@ -86,12 +85,11 @@ class Dispatcher(object):
     def __call__(self, conn, message):
         """The dispatcher function."""
 
-        logging.debug(str(message))
         post_multipart('http://%s/_ah/xmpp/message/chat/' % self.address,
-                       [('body', message.getBody()),
-                        ('from', str(message.getFrom())),
-                        ('stanza', str(message)),
-                        ('to', str(message.getTo()))])
+                       [(u'body', unicode(message.getBody()).encode('utf-8')),
+                        (u'from', unicode(message.getFrom())),
+                        (u'stanza', unicode(message).encode('utf-8')),
+                        (u'to', unicode(message.getTo()))])
 
 
 def loop(conn):

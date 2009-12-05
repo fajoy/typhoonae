@@ -12,14 +12,15 @@
   <body>
     <img src="logo.png" alt="TyphoonAE" title="TyphoonAE" />
     <div class="debug">{{ env }}</div>
-    <p>Counter: {{ count }}</p>
-    <p>Notes from executed tasks or/and received XMPP messages (memcached):</p>
-    <select size="10" multiple>
-    {% for note in notes %}
-      <option>{{ note }}</option>
-    {% endfor %}
-    </select>
-    <br />
+    <div>
+      <p>Counter: {{ count }}</p>
+      <p>Notes from executed tasks and received XMPP messages (memcached):</p>
+      <select size="10" multiple>
+      {% for note in notes %}
+        <option>{{ note }}</option>
+      {% endfor %}
+      </select>
+    </div>
     <br />
     <div>
       Send XMPP invitation to:

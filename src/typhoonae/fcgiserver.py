@@ -32,6 +32,7 @@ USAGE = "usage: %prog [options] <application root>"
 
 _module_cache = dict()
 
+
 def run_module(mod_name, init_globals=None, run_name=None):
     """Execute a module's code without importing it.
 
@@ -139,7 +140,7 @@ def serve(conf):
                 if m:
                     ind = int(m.group(1))
                     mod = path_info.split('/')[ind]
-                    name = '.'.join(name.split('.')[0:-1]+[mod])
+                    name = '.'.join(name.split('.')[0:-1] + [mod])
                 os.environ['PATH_TRANSLATED'] = script
                 os.chdir(os.path.dirname(script))
                 break

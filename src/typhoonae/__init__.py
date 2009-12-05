@@ -97,7 +97,7 @@ def initURLMapping(conf):
                 regexp += '$'
             compiled = re.compile(regexp)
             url_mapping.append((compiled, module, path))
- 
+
     return url_mapping
 
 

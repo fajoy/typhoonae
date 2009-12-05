@@ -23,7 +23,7 @@ import re
 import subprocess
 import sys
 import tempfile
-import typhoonae 
+import typhoonae
 
 DESCRIPTION = ("Console script to perform common tasks on configuring an "
                "application.")
@@ -101,7 +101,7 @@ redirect_stderr = true
 stdout_logfile = %(var)s/log/mongod.log
 
 [program:intid]
-command = %(bin)s/intid 
+command = %(bin)s/intid
 process_name = intid
 directory = %(root)s
 priority = 20
@@ -189,7 +189,7 @@ override_acls.
 
 {access, max_user_sessions, [{10, all}]}.
 
-{access, max_user_offline_messages, [{5000, admin}, {100, all}]}. 
+{access, max_user_offline_messages, [{5000, admin}, {100, all}]}.
 
 {access, local, [{allow, local}]}.
 

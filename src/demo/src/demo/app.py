@@ -16,6 +16,7 @@
 """Demo application."""
 
 import datetime
+import django.utils.simplejson
 import google.appengine.api.capabilities
 import google.appengine.api.labs.taskqueue
 import google.appengine.api.memcache
@@ -185,9 +186,25 @@ class NoteWorker(google.appengine.ext.webapp.RequestHandler):
     def post(self):
         """Handles post."""
 
-        note = Note()
-        note.body = self.request.body
+        note = Note(body=self.request.body)
         note.put()
+
+    def get(self):
+        """Handles get."""
+
+        self.response.headers.add_header(
+            "Content-Type", "'application/javascript; charset=utf8'")
+        query = Note.all()
+        count = query.count()
+        if count == 0:
+            self.response.out.write(
+                django.utils.simplejson.dumps({'message': 'not available'}))
+            return
+        notes = query.fetch(1, count-1)
+        data = dict(
+            message=notes.pop().body
+        )
+        self.response.out.write(django.utils.simplejson.dumps(data))
 
 
 class InviteHandler(google.appengine.ext.webapp.RequestHandler):
@@ -226,6 +243,7 @@ app = google.appengine.ext.webapp.WSGIApplication([
     ('/count', CountRequestHandler),
     ('/log', LogRequestHandler),
     ('/makenote', NoteWorker),
+    ('/getnote', NoteWorker),
     ('/invite', InviteHandler),
     ('/_ah/xmpp/message/chat/', XMPPHandler),
 ], debug=True)

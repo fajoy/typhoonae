@@ -6,6 +6,8 @@
     <title>TyphoonAE</title>
     <link rel="stylesheet" href="/static/styles.css" type="text/css"
           media="all" />
+    <script type="text/javascript" src="/static/jquery-1.3.2.min.js"></script>
+    <script type="text/javascript" src="/static/pull.js"></script>
   </head>
   <body>
     <img src="logo.png" alt="TyphoonAE" title="TyphoonAE" />
@@ -17,16 +19,22 @@
       <option>{{ note }}</option>
     {% endfor %}
     </select>
-    <p>
+    <br />
+    <br />
+    <div>
       Send XMPP invitation to:
       <form action="invite" method="POST">
         <label for="recipient">JID</label>
         <input name="recipient" id="recipient" />
         <input type="submit" value="Send" />
       </form>
-    </p>
-    <p>
-      <div>User: {{ user }} {{ login_or_logout }}</div>
-    </p>
+    </div>
+    <br />
+    <div>
+      Last message:
+      <div id="message"></div>
+    </div>
+    <br />
+    <div>User: {{ user }} {{ login_or_logout }}</div>
   </body>
 </html>

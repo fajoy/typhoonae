@@ -31,6 +31,9 @@ handlers:
 - url: /makenote
   script: app.py
 
+- url: /getnote
+  script: app.py
+
 - url: /dummy
   script: dummy.py
   login: required

@@ -164,6 +164,21 @@ class MemcacheTestCase(unittest.TestCase):
             encoded_entity)
         assert cached_entity.name == 'foobar'
 
+    def testMulti(self):
+        """Stores multiple keys' values at once."""
+
+        google.appengine.api.memcache.set_multi(
+            {'map_key_one': 1, 'map_key_two': u'some value'})
+        values = google.appengine.api.memcache.get_multi(
+            ['map_key_one', 'map_key_two'])
+        assert {'map_key_one': 1, 'map_key_two': u'some value'} == values
+
+        google.appengine.api.memcache.add_multi(
+            {'map_key_one': 'one', 'map_key_two': 2, 'three': u'trois'})
+        values = google.appengine.api.memcache.get_multi(
+            ['map_key_two', 'three'])
+        assert {'map_key_two': u'some value', 'three': u'trois'} == values
+
 
 if __name__ == "__main__":
     unittest.main()

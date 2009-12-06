@@ -83,24 +83,13 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             value = self._cache.get(getKey(key, request.name_space()))
             if value is None:
                 continue
-            else:
-                flags = 0
-                stored_flags, stored_value = cPickle.loads(value)
-                flags |= stored_flags
-                if flags == google.appengine.api.memcache.TYPE_UNICODE:
-                    set_value = base64.b64decode(
-                        str(stored_value.encode('utf-8')))
-                elif (flags == google.appengine.api.memcache.TYPE_INT or
-                      flags == google.appengine.api.memcache.TYPE_LONG):
-                    set_value = str(stored_value)
-                elif flags == google.appengine.api.memcache.TYPE_PICKLED:
-                    set_value = stored_value
-                else:
-                    set_value = base64.b64decode(str(stored_value))
-                item = response.add_item()
-                item.set_key(getKey(key, request.name_space()))
-                item.set_value(set_value)
-                item.set_flags(flags)
+            flags = 0
+            stored_flags, stored_value = cPickle.loads(value)
+            flags |= stored_flags
+            item = response.add_item()
+            item.set_key(getKey(key, request.name_space()))
+            item.set_value(stored_value)
+            item.set_flags(flags)
 
     def _Dynamic_Set(self, request, response):
         """Implementation of MemcacheService::Set().
@@ -114,16 +103,8 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             set_policy = item.set_policy()
             old_entry = self._cache.get(key)
             set_status = MemcacheSetResponse.NOT_STORED
-            flags = item.flags()
-            if flags == google.appengine.api.memcache.TYPE_PICKLED:
-                value = item.value()
-            elif (flags == google.appengine.api.memcache.TYPE_INT or
-                  flags == google.appengine.api.memcache.TYPE_LONG):
-                value = item.value()
-            else:
-                value = base64.b64encode(item.value())
 
-            set_value = cPickle.dumps([flags, value])
+            set_value = cPickle.dumps([item.flags(), item.value()])
 
             if ((set_policy == MemcacheSetRequest.SET) or
                 (set_policy == MemcacheSetRequest.ADD and old_entry is None) or

@@ -87,7 +87,7 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             stored_flags, stored_value = cPickle.loads(value)
             flags |= stored_flags
             item = response.add_item()
-            item.set_key(getKey(key, request.name_space()))
+            item.set_key(key)
             item.set_value(stored_value)
             item.set_flags(flags)
 

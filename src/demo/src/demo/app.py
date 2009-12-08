@@ -134,11 +134,6 @@ class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
         google.appengine.api.labs.taskqueue.add(url='/makenote',
                                                 eta=eta,
                                                 payload="%i delayed" % count)
-        params = {
-            'total_notes': str(len(notes)),
-            'unused': False
-        }
-        google.appengine.api.labs.taskqueue.add(url='/count', params=params)
         vars = dict(
             count=count,
             env=os.environ,
@@ -159,13 +154,6 @@ class CountRequestHandler(google.appengine.ext.webapp.RequestHandler):
         count = query.count()
         self.response.headers.add_header("Content-Type", "text/plain")
         self.response.out.write('Count: %i' % count)
-
-    def post(self):
-        """Writes a logging message."""
-
-        count = self.request.get('total_notes')
-        if not count: count = 'not available'
-        logging.info("Total number of notes %s" % count)
 
 
 class LogRequestHandler(google.appengine.ext.webapp.RequestHandler):
@@ -192,18 +180,27 @@ class NoteWorker(google.appengine.ext.webapp.RequestHandler):
     def get(self):
         """Handles get."""
 
+        last_key = self.request.get('last_key')
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM Note ORDER BY date DESC LIMIT 1")
+
+        result = query.get()
+
+        if result != None:
+            key = str(result.key().id_or_name())
+        else:
+            key = None
+
+        if key == None or key == last_key:
+            self.response.set_status(304)
+            return
+
         self.response.headers.add_header(
             "Content-Type", "'application/javascript; charset=utf8'")
-        query = Note.all()
-        count = query.count()
-        if count == 0:
-            self.response.out.write(
-                django.utils.simplejson.dumps({'message': 'not available'}))
-            return
-        notes = query.fetch(1, count-1)
-        data = dict(
-            message=notes.pop().body
-        )
+
+        data = {'key': key, 'message': result.body}
+
         self.response.out.write(django.utils.simplejson.dumps(data))
 
 

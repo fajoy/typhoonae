@@ -1,6 +1,18 @@
 CHANGES
 =======
 
+Version 0.1.1 (2009-??-??)
+-----------------------------
+
+  - XMPP/HTTP dispatcher supports unicode.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=15
+
+  - Fixes an issue where mecache.get_multi(keys) raises a KeyError.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=16
+
+
 Version 0.1.0b2 (2009-12-04)
 ----------------------------
 

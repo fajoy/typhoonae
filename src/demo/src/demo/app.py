@@ -25,6 +25,7 @@ import google.appengine.api.xmpp
 import google.appengine.ext.db
 import google.appengine.ext.webapp
 import google.appengine.ext.webapp.template
+import google.appengine.ext.webapp.util
 import logging
 import os
 import random
@@ -249,7 +250,7 @@ app = google.appengine.ext.webapp.WSGIApplication([
 def main():
     """The main function."""
 
-    wsgiref.handlers.CGIHandler().run(app)
+    google.appengine.ext.webapp.util.run_wsgi_app(app)
 
 
 if __name__ == '__main__':

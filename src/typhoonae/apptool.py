@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import typhoonae
+import typhoonae.fcgiserver
 
 DESCRIPTION = ("Console script to perform common tasks on configuring an "
                "application.")
@@ -122,7 +123,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s %(app_root)s
+command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -331,6 +332,7 @@ def write_supervisor_conf(options, conf, app_root):
     datastore = options.datastore.lower()
     port = options.port
     root = os.getcwd()
+    server_software = options.server_software
     var = os.path.abspath(options.var)
     xmpp_host = options.xmpp_host
 
@@ -530,6 +532,10 @@ def main():
     op.add_option("--supervisor", dest="supervisor", metavar="FILE",
                   help="write supervisor configuration to this file",
                   default=os.path.join('etc', 'appserver.conf'))
+
+    op.add_option("--server_software", dest="server_software", metavar="STRING",
+                  help="use this server software identifier",
+                  default=typhoonae.fcgiserver.SERVER_SOFTWARE)
 
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",

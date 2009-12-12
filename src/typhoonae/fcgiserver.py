@@ -28,6 +28,7 @@ import typhoonae.handlers.login
 
 DESCRIPTION = ("FastCGI application server.")
 USAGE = "usage: %prog [options] <application root>"
+SERVER_SOFTWARE = "TyphoonAE/0.1.0"
 
 
 _module_cache = dict()
@@ -67,11 +68,12 @@ def run_module(mod_name, init_globals=None, run_name=None):
                                   filename, loader, alter_sys=True)
 
 
-def serve(conf):
+def serve(conf, options):
     """Implements the server loop.
 
     Args:
         conf: The application configuration.
+        options: Command line options.
     """
 
     # Inititalize URL mapping
@@ -120,7 +122,7 @@ def serve(conf):
         os.environ['APPLICATION_ID'] = conf.application
         os.environ['CURRENT_VERSION_ID'] = conf.version + ".1"
         os.environ['AUTH_DOMAIN'] = 'localhost'
-        os.environ['SERVER_SOFTWARE'] = 'TyphoonAE/0.1.0'
+        os.environ['SERVER_SOFTWARE'] = options.server_software
         os.environ['TZ'] = 'UTC'
 
         # Get user info and set the user environment variables
@@ -176,6 +178,10 @@ def main():
                   help="write logging output to this file",
                   default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))
 
+    op.add_option("--server_software", dest="server_software", metavar="STRING",
+                  help="use this server software identifier",
+                  default=SERVER_SOFTWARE)
+
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
                   help="use this XMPP/Jabber host", default='localhost')
 
@@ -202,7 +208,7 @@ def main():
     typhoonae.setupStubs(conf, options)
 
     # Serve the application
-    serve(conf)
+    serve(conf, options)
 
 
 if __name__ == "__main__":

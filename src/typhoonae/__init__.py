@@ -18,6 +18,8 @@
 import capability_stub
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.appinfo
+import google.appengine.api.blobstore.blobstore_stub
+import google.appengine.api.blobstore.file_blob_storage
 import google.appengine.api.mail_stub
 import google.appengine.api.urlfetch_stub
 import google.appengine.api.user_service_stub
@@ -188,6 +190,17 @@ def setupXMPP(host):
         xmpp.xmpp_service_stub.XmppServiceStub(host=host))
 
 
+def setupBlobstore(app_id):
+    """Sets up blobstore service."""
+
+    storage = google.appengine.api.blobstore.file_blob_storage.FileBlobStorage(
+        'blobstore', app_id)
+    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+        'blobstore',
+        google.appengine.api.blobstore.blobstore_stub.BlobstoreServiceStub(
+            storage))
+
+
 def setupStubs(conf, options):
     """Sets up api proxy stubs."""
 
@@ -211,6 +224,8 @@ def setupStubs(conf, options):
     setupUserService()
 
     setupXMPP(options.xmpp_host)
+
+    setupBlobstore(conf.application)
 
     try:
         from google.appengine.api.images import images_stub

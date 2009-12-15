@@ -24,11 +24,14 @@ import google.appengine.api.users
 import google.appengine.api.xmpp
 import google.appengine.ext.db
 import google.appengine.ext.webapp
+import google.appengine.ext.blobstore
+import google.appengine.ext.webapp.blobstore_handlers
 import google.appengine.ext.webapp.template
 import google.appengine.ext.webapp.util
 import logging
 import os
 import random
+import urllib
 import wsgiref.handlers
 
 NUM_SHARDS = 20
@@ -135,11 +138,13 @@ class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
         google.appengine.api.labs.taskqueue.add(url='/makenote',
                                                 eta=eta,
                                                 payload="%i delayed" % count)
+        upload_url = google.appengine.ext.blobstore.create_upload_url('/upload')
         vars = dict(
             count=count,
             env=os.environ,
             login_or_logout=login_or_logout,
             notes=notes,
+            upload_url=upload_url,
             user=user)
         output = google.appengine.ext.webapp.template.render('index.html', vars)
         self.response.out.write(output)
@@ -235,6 +240,30 @@ class XMPPHandler(google.appengine.ext.webapp.RequestHandler):
         note.body = message.body
         note.put()
 
+
+class UploadHandler(
+    google.appengine.ext.webapp.blobstore_handlers.BlobstoreUploadHandler):
+    """Handles upload of blobs."""
+
+    def post(self):
+        """Handles post."""
+
+        upload_files = self.get_uploads('file')
+        blob_info = upload_files[0]
+        self.redirect('/serve/%s' % blob_info.key())
+
+
+class ServeHandler(
+    google.appengine.ext.webapp.blobstore_handlers.BlobstoreDownloadHandler):
+    """Serves blobs."""
+
+    def get(self, resource):
+        """Handles get."""
+
+        resource = str(urllib.unquote(resource))
+        blob_info = google.appengine.ext.blobstore.BlobInfo.get(resource)
+        self.send_blob(blob_info)
+
  
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/', DemoRequestHandler),
@@ -243,6 +272,8 @@ app = google.appengine.ext.webapp.WSGIApplication([
     ('/makenote', NoteWorker),
     ('/getnote', NoteWorker),
     ('/invite', InviteHandler),
+    ('/upload', UploadHandler),
+    ('/serve/([^/]+)?', ServeHandler),
     ('/_ah/xmpp/message/chat/', XMPPHandler),
 ], debug=True)
 

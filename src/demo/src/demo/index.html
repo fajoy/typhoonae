@@ -30,13 +30,7 @@
     </div>
     <br />
     <div>
-      <form
-          action="{{ upload_url }}"
-          method="POST"
-          enctype="multipart/form-data">
-        Upload File: <input type="file" name="file"><br>
-        <input type="submit" name="submit" value="Submit">
-      </form>
+      <a href="/blobstore">File upload</a>
     </div>
     <br />
     <div>User: {{ user }} {{ login_or_logout }}</div>

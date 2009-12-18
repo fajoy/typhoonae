@@ -38,6 +38,9 @@ handlers:
 - url: /getnote
   script: app.py
 
+- url: /blobstore
+  script: blobstore.py
+
 - url: /dummy
   script: dummy.py
   login: required

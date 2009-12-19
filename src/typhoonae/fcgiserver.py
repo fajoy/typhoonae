@@ -172,6 +172,10 @@ def main():
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
+    op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
+                  help="path to use for storing Blobstore file stub data",
+                  default=os.path.join('var', 'blobstore'))
+
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this datastore", default='mongodb')
 

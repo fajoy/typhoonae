@@ -43,9 +43,9 @@ class UploadHandler(
     def post(self):
         """Handles post."""
 
+        logging.info(self.request)
         upload_files = self.get_uploads('file')
         blob_info = upload_files[0]
-        logging.info(blob_info)
         self.redirect('/serve/%s' % blob_info.key())
 
 

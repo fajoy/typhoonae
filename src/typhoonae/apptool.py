@@ -35,6 +35,7 @@ DEFAULT_EXPIRATION = '30d'
 
 NGINX_HEADER = """
 server {
+    client_max_body_size 100m;
     listen      8080;
     server_name localhost;
 
@@ -92,6 +93,43 @@ location / {
 }
 """
 
+NGINX_UPLOAD_CONFIG = """
+location /upload/ {
+    if ($request_uri ~* "upload/(.*)$" ) {
+        set $upload_blob_key "$1";
+    }
+    rewrite (.*) /upload break;
+    # Pass altered request body to this location
+    upload_pass @%(app_id)s;
+
+    # Store files to this directory
+    # The directory is hashed, subdirectories 0 1 2 3 4 5 6 7 8 9
+    # should exist
+    upload_store %(blobstore_path)s 1;
+
+    # Allow uploaded files to be read only by user
+    upload_store_access user:r;
+
+    # Set specified fields in request body
+    upload_set_form_field $upload_field_name.name "$upload_file_name";
+    upload_set_form_field $upload_field_name.content_type "$upload_content_type";
+    upload_set_form_field $upload_field_name.path "$upload_tmp_path";
+
+    # Inform backend about hash and size of a file
+    upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
+    upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
+
+    upload_aggregate_form_field "$upload_field_name.key" "$upload_blob_key";
+
+    upload_cleanup 400 404 499 500-505;
+}
+
+location @%(app_id)s {
+    fastcgi_pass %(addr)s:%(port)s;
+%(fcgi_params)s
+}
+"""
+
 SUPERVISOR_MONGODB_CONFIG = """
 [program:mongod]
 command = %(bin)s/mongod --dbpath=%(var)s
@@ -123,7 +161,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s %(app_root)s
+command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -260,9 +298,17 @@ override_acls.
 def write_nginx_conf(options, conf, app_root):
     """Writes nginx server configuration stub."""
 
-    var = os.path.abspath(options.var)
     addr = options.addr
+    app_id = conf.application
+    blobstore_path = os.path.abspath(
+        os.path.join(options.blobstore_path, app_id))
     port = options.port
+    var = os.path.abspath(options.var)
+
+    for i in range(10):
+        p = os.path.join(blobstore_path, str(i))
+        if not os.path.isdir(p):
+            os.makedirs(p)
 
     httpd_conf_stub = open(options.nginx, 'w')
     httpd_conf_stub.write("# Automatically generated NGINX configuration file: "
@@ -318,6 +364,7 @@ def write_nginx_conf(options, conf, app_root):
 
     vars = locals()
     vars.update(dict(fcgi_params=FCGI_PARAMS))
+    httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_FCGI_CONFIG % vars)
     httpd_conf_stub.write(NGINX_FOOTER)
     httpd_conf_stub.close()
@@ -329,6 +376,7 @@ def write_supervisor_conf(options, conf, app_root):
     addr = options.addr
     app_id = conf.application
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
+    blobstore_path = os.path.abspath(options.blobstore_path)
     datastore = options.datastore.lower()
     port = options.port
     root = os.getcwd()
@@ -501,6 +549,10 @@ def main():
     """Runs the apptool console script."""
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
+                  help="path to use for storing Blobstore file stub data",
+                  default=os.path.join('var', 'blobstore'))
 
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists",

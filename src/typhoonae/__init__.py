@@ -15,6 +15,7 @@
 # limitations under the License.
 """Helper functions for registering App Engine API proxy stubs."""
 
+import blobstore.blobstore_stub
 import capability_stub
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.appinfo
@@ -196,9 +197,7 @@ def setupBlobstore(app_id):
     storage = google.appengine.api.blobstore.file_blob_storage.FileBlobStorage(
         'blobstore', app_id)
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-        'blobstore',
-        google.appengine.api.blobstore.blobstore_stub.BlobstoreServiceStub(
-            storage))
+        'blobstore', blobstore.blobstore_stub.BlobstoreServiceStub(storage))
 
 
 def setupStubs(conf, options):

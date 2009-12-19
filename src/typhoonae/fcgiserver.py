@@ -123,6 +123,7 @@ def serve(conf, options):
         os.environ['CURRENT_VERSION_ID'] = conf.version + ".1"
         os.environ['AUTH_DOMAIN'] = 'localhost'
         os.environ['SERVER_SOFTWARE'] = options.server_software
+        os.environ['SCRIPT_NAME'] = ''
         os.environ['TZ'] = 'UTC'
 
         # Get user info and set the user environment variables

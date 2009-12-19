@@ -41,7 +41,7 @@ handlers:
 - url: /blobstore
   script: blobstore.py
 
-- url: /upload/.*
+- url: /upload
   script: blobstore.py
 
 - url: /serve/([^/]+)?

@@ -16,6 +16,7 @@
 """Dummy application."""
 
 import google.appengine.ext.webapp
+import logging
 import os
 import wsgiref.handlers
 
@@ -35,6 +36,7 @@ class FailureRequestHandler(google.appengine.ext.webapp.RequestHandler):
     def get(self):
         """Handles get."""
 
+        logging.error(self.request)
         self.response.set_status(404)
         self.response.out.write("<html><body>Not found!")
         self.response.out.write("<ul>")

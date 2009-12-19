@@ -41,6 +41,12 @@ handlers:
 - url: /blobstore
   script: blobstore.py
 
+- url: /upload/.*
+  script: blobstore.py
+
+- url: /serve/([^/]+)?
+  script: blobstore.py
+
 - url: /dummy
   script: dummy.py
   login: required

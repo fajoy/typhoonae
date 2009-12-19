@@ -29,7 +29,6 @@ import google.appengine.ext.webapp.util
 import logging
 import os
 import random
-import urllib
 
 NUM_SHARDS = 20
 

@@ -95,10 +95,6 @@ location / {
 
 NGINX_UPLOAD_CONFIG = """
 location /upload/ {
-    if ($request_uri ~* "upload/(.*)$" ) {
-        set $upload_session_key "$1";
-    }
-    rewrite (.*) /upload break;
     # Pass altered request body to this location
     upload_pass @%(app_id)s;
 
@@ -119,7 +115,7 @@ location /upload/ {
     upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
     upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
 
-    upload_aggregate_form_field "session_key" "$upload_session_key";
+    upload_pass_form_field "^submit$";
 
     upload_cleanup 400 404 499 500-505;
 }

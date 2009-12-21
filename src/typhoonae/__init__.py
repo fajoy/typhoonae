@@ -17,7 +17,6 @@
 
 import blobstore.blobstore_stub
 import blobstore.file_blob_storage
-import blobstore.handlers
 import capability_stub
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.appinfo
@@ -198,10 +197,6 @@ def setupBlobstore(blobstore_path, app_id):
         blobstore_path, app_id)
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
         'blobstore', blobstore.blobstore_stub.BlobstoreServiceStub(storage))
-
-    # Monkey-patching blobstore handlers
-    google.appengine.ext.webapp.blobstore_handlers.BlobstoreUploadHandler = \
-        blobstore.handlers.BlobstoreUploadHandler
 
 
 def setupStubs(conf, options):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2007 Google Inc., 2009 Tobias Rodäbel
+# Copyright 2009 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,117 +13,126 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TyphoonAE's handler library for Blobstore API.
+"""TyphoonAE's handler library for Blobstore API."""
 
-Contains handlers to help with uploading and downloading blobs.
+import cStringIO
+import cgi
+import datetime
+import google.appengine.api.blobstore
+import google.appengine.api.datastore
+import google.appengine.api.datastore_errors
+import logging
+import re
 
-    BlobstoreDownloadHandler: Has helper method for easily sending blobs
-        to client.
-    BlobstoreUploadHandler: Handler for receiving upload notification requests.
+
+UPLOAD_URL_PATTERN = '/%s(.*)'
+
+CONTENT_PART = """Content-Type: message/external-body; blob-key="%(blob_key)s"; access-type="X-AppEngine-BlobKey"
+MIME-Version: 1.0
+Content-Disposition: form-data; name="file"; filename="%(filename)s"
+
+Content-Type: %(content_type)s
+MIME-Version: 1.0
+Content-Length: %(content_length)s
+content-type: %(content_type)s
+content-disposition: form-data; name="file"; filename="%(filename)s"
+X-AppEngine-Upload-Creation: %(timestamp)s
+
 """
 
-import cgi
-import google.appengine.ext.blobstore
-import google.appengine.ext.webapp
-import logging
+SIMPLE_FIELD = """Content-Type: text/plain
+MIME-Version: 1.0
+Content-Disposition: form-data; name="%(name)s"
+
+%(value)s"""
 
 
-_CONTENT_DISPOSITION_FORMAT = 'attachment; filename="%s"'
+class UploadCGIHandler(object):
+    """Handles upload posts for the Blobstore API."""
 
-
-class BlobstoreDownloadHandler(google.appengine.ext.webapp.RequestHandler):
-    """Base class for creating handlers that may send blobs to users."""
-
-    def send_blob(self, blob_key_or_info, content_type=None, save_as=None):
-        """Send a blob-response based on a blob_key.
-
-        Sets the correct response header for serving a blob.  If BlobInfo
-        is provided and no content_type specified, will set request content
-        type to BlobInfo's content type.
+    def __init__(self, upload_url='upload/'):
+        """Constructor.
 
         Args:
-            blob_key_or_info: BlobKey or BlobInfo record to serve.
-            content_type: Content-type to override when known.
-            save_as: If True, and BlobInfo record is provided, use BlobInfos
-                filename to save-as.  If string is provided, use string as
-                filename.  If None or False, do not send as attachment.
-
-        Raises:
-            ValueError on invalid save_as parameter.
+            upload_url: URL which will be used for uploads.
         """
-        if isinstance(blob_key_or_info,
-                      google.appengine.ext.blobstore.BlobInfo):
-            blob_key = blob_key_or_info.key()
-            blob_info = blob_key_or_info
-        else:
-            blob_key = blob_key_or_info
-            blob_info = None
 
-        self.response.headers[
-            google.appengine.ext.blobstore.BLOB_KEY_HEADER] = str(blob_key)
+        self.upload_url = upload_url
 
-        if content_type:
-            if isinstance(content_type, unicode):
-                content_type = content_type.encode('utf-8')
-            self.response.headers['Content-Type'] = content_type
-        else:
-            del self.response.headers['Content-Type']
-
-        def send_attachment(filename):
-            if isinstance(filename, unicode):
-                filename = filename.encode('utf-8')
-            self.response.headers['Content-Disposition'] = (
-                _CONTENT_DISPOSITION_FORMAT % filename)
-
-        if save_as:
-            if isinstance(save_as, basestring):
-                send_attachment(save_as)
-            elif blob_info and save_as is True:
-                send_attachment(blob_info.filename)
-            else:
-                if not blob_info:
-                    raise ValueError(
-                        'Expected BlobInfo value for blob_key_or_info.')
-                else:
-                    raise ValueError('Unexpected value for save_as')
-
-        self.response.clear()
-
-
-class BlobstoreUploadHandler(google.appengine.ext.webapp.RequestHandler):
-    """Base class for creation blob upload handlers."""
-
-    def __init__(self):
-        super(BlobstoreUploadHandler, self).__init__()
-        self.__uploads = None
-
-    def get_uploads(self, field_name=None):
-        """Get uploads sent to this handler.
+    def __call__(self, fp, environ):
+        """Executes the handler.
 
         Args:
-            field_name: Only select uploads that were sent as a specific field.
+            fp: A file pointer to the CGI input stream.
+            environ: The CGI environment.
 
         Returns:
-            A list of BlobInfo records corresponding to each upload.
-            Empty list if there are no blob-info records for field_name.
+            File pointer to the CGI input stream.
         """
-        if self.__uploads is None:
-            self.__uploads = {}
-            logging.info(self.request.params)
-            for key, value in self.request.params.items():
-                if isinstance(value, cgi.FieldStorage):
-                    if 'blob-key' in value.type_options:
-                        self.__uploads.setdefault(key, []).append(
-                            google.appengine.ext.blobstore.
-                            parse_blob_info(value))
 
-        if field_name:
-            try:
-                return list(self.__uploads[field_name])
-            except KeyError:
-                return []
+        match = re.match(UPLOAD_URL_PATTERN % self.upload_url,
+                         environ['PATH_INFO'])
+        if match == None:
+            return fp
+
+        upload_session_key = match.group(1)
+
+        try:
+            upload_session = google.appengine.api.datastore.Get(
+                upload_session_key)
+        except google.appengine.api.datastore_errors.EntityNotFoundError:
+            logging.error('Upload session %s not found' % upload_session_key)
+            upload_session = None
+
+        if self.upload_url.endswith('/'):
+            upload_url = self.upload_url[:-1]
         else:
-            results = []
-            for uploads in self.__uploads.itervalues():
-                results += uploads
-            return results
+            upload_url = self.upload_url
+        environ['PATH_INFO'] = environ['REQUEST_URI'] = '/' + upload_url
+
+        def splitContentType(content_type):
+            parts = content_type.split(';')
+            pairs = dict([(key.lower().strip(), value) for key, value
+                          in [p.split('=', 1) for p in parts[1:]]])
+            return parts[0].strip(), pairs
+ 
+        main_type, key_values = splitContentType(environ['CONTENT_TYPE'])
+        boundary = key_values.get('boundary')
+
+        form_data = cgi.parse_multipart(fp, {'boundary': boundary})
+        data = dict([(k, ''.join(form_data[k])) for k in form_data])
+
+        fields = set([k.split('.')[0] for k in data.keys() if k != 'submit'])
+
+        message = []
+
+        def format_timestamp(stamp):
+            f = google.appengine.api.blobstore.BASE_CREATION_HEADER_FORMAT
+            return '%s.%06d' % (stamp.strftime(f), stamp.microsecond)
+
+        for field in fields:
+            message.append('--' + boundary)
+            values = dict(
+                blob_key='BLOBKEY',
+                filename=data[field+'.name'],
+                content_type=data[field+'.content_type'],
+                content_length=data[field+'.size'],
+                timestamp=format_timestamp(datetime.datetime.now())
+            )
+            message.append(CONTENT_PART % values)
+
+        if 'submit' in data.keys():
+            message.append('--' + boundary)
+            message.append(SIMPLE_FIELD %
+                           {'name': 'submit', 'value': data['submit']})
+                
+        message += ['--' + boundary + '--']
+
+        message = '\n'.join(message)
+
+        if upload_session:
+            google.appengine.api.datastore.Delete(upload_session)
+
+        environ['HTTP_CONTENT_LENGTH'] = str(len(message))
+
+        return cStringIO.StringIO(message)

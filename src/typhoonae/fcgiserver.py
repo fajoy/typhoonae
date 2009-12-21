@@ -15,7 +15,8 @@
 # limitations under the License.
 """FastCGI script to serve a CGI application."""
 
-import StringIO
+import blobstore.handlers
+import cStringIO
 import fcgiapp
 import logging
 import optparse
@@ -32,6 +33,55 @@ SERVER_SOFTWARE = "TyphoonAE/0.1.0"
 
 
 _module_cache = dict()
+
+
+class CGIHandlerChain(object):
+    """CGI handler chain."""
+
+    def __init__(self, *handlers):
+        """Constructor."""
+
+        self.handlers = handlers
+
+    def __call__(self, fp, environ):
+        """Executes CGI handlers."""
+
+        for handler in self.handlers:
+            fp = handler(fp, environ)
+
+        return fp
+
+
+class CGIInAdapter:
+    """Adapter for FastCGI input stream objects."""
+
+    def __init__(self, i):
+        self.i = i
+
+    def close(self):
+        self.i.close()
+
+    def read(self, *args):
+        return self.i.read(*args)
+
+    def readline(self, *args):
+        return self.i.readline()
+
+    def seek(self, *args):
+        return self.i.seek(*args)
+
+
+class CGIOutAdapter:
+    """Adapter for FastCGI output stream objects."""
+
+    def __init__(self, o):
+        self.o = o
+
+    def flush(self):
+        self.o.flush()
+
+    def write(self, s):
+        self.o.write(str(s))
 
 
 def run_module(mod_name, init_globals=None, run_name=None):
@@ -81,39 +131,8 @@ def serve(conf, options):
 
     back_ref_pattern = re.compile(r'\\([0-9]*)')
 
-    class StdinAdapter:
-        """Adapter for FastCGI input stream objects."""
-
-        def __init__(self, i):
-            self.i = i
-
-        def read(self, *args):
-            return self.i.read(*args)
-
-        def readline(self, *args):
-            return self.i.readline()
-
-        def seek(self, *args):
-            return self.i.seek(*args)
-
-    class StdoutAdapter:
-        """Adapter for FastCGI output stream objects."""
-
-        def __init__(self, o):
-            self.o = o
-
-        def flush(self):
-            self.o.flush()
-
-        def write(self, s):
-            self.o.write(str(s))
-
     while True:
         (inp, out, unused_err, env) = fcgiapp.Accept()
-
-        # Redirect standard input and output streams
-        sys.stdin = StdinAdapter(inp)
-        sys.stdout = StdoutAdapter(out)
 
         # Initialize application environment
         os_env = dict(os.environ)
@@ -134,6 +153,14 @@ def serve(conf, options):
             os.environ['USER_IS_ADMIN'] = '1'
         os.environ['USER_ID'] = user_id
 
+        # CGI handler chain
+        cgi_handler_chain = CGIHandlerChain(
+            blobstore.handlers.UploadCGIHandler())
+
+        # Redirect standard input and output streams
+        sys.stdin = cgi_handler_chain(CGIInAdapter(inp), os.environ)
+        sys.stdout = CGIOutAdapter(out)
+
         # Compute script path and set PATH_TRANSLATED environment variable
         path_info = os.environ['PATH_INFO']
         for pattern, name, script in url_mapping:
@@ -152,6 +179,8 @@ def serve(conf, options):
             # Load and run the application module
             run_module(name, run_name='__main__')
         finally:
+            # Flush and free stdin buffer
+            del sys.stdin
             # Re-redirect standard input and output streams
             sys.stdin = sys.__stdin__
             sys.stdout = sys.__stdout__

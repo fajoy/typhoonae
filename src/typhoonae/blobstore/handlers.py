@@ -15,6 +15,7 @@
 # limitations under the License.
 """TyphoonAE's handler library for Blobstore API."""
 
+import base64
 import cStringIO
 import cgi
 import datetime
@@ -22,7 +23,10 @@ import google.appengine.api.blobstore
 import google.appengine.api.datastore
 import google.appengine.api.datastore_errors
 import logging
+import md5
+import random
 import re
+import time
 
 
 UPLOAD_URL_PATTERN = '/%s(.*)'
@@ -45,6 +49,31 @@ MIME-Version: 1.0
 Content-Disposition: form-data; name="%(name)s"
 
 %(value)s"""
+
+
+def generateBlobKey():
+    """Generates a unique BlobKey.
+
+    Returns:
+        String version of BlobKey that is unique within the BlobInfo datastore.
+        None if there are too many name conflicts.
+    """
+    timestamp = str(time.time())
+    tries = 0
+    while tries < 10:
+        number = str(random.random())
+        digester = md5.md5()
+        digester.update(timestamp)
+        digester.update(number)
+        blob_key = base64.urlsafe_b64encode(digester.digest())
+        datastore_key = google.appengine.api.datastore.Key.from_path(
+            google.appengine.api.blobstore.BLOB_INFO_KIND, blob_key)
+        try:
+            google.appengine.api.datastore.Get(datastore_key)
+            tries += 1
+        except google.appengine.api.datastore_errors.EntityNotFoundError:
+            return blob_key
+    return None
 
 
 class UploadCGIHandler(object):
@@ -104,20 +133,36 @@ class UploadCGIHandler(object):
 
         fields = set([k.split('.')[0] for k in data.keys() if k != 'submit'])
 
-        message = []
 
         def format_timestamp(stamp):
             f = google.appengine.api.blobstore.BASE_CREATION_HEADER_FORMAT
             return '%s.%06d' % (stamp.strftime(f), stamp.microsecond)
 
+        meta_data = {}
+
+        for field in fields:
+            meta_data[field+'.timestamp'] = format_timestamp(
+                datetime.datetime.now())
+            meta_data[field+'.blobkey'] = str(generateBlobKey())
+
+        for field in fields:
+            blob_entity = google.appengine.api.datastore.Entity(
+                '__BlobInfo__', name=meta_data[field+'.blobkey'])
+            blob_entity['content_type'] = data[field+'.content_type']
+            blob_entity['creation'] = meta_data[field+'.timestamp']
+            blob_entity['filename'] = data[field+'.name']
+            blob_entity['size'] = int(data[field+'.size'])
+            google.appengine.api.datastore.Put(blob_entity)
+
+        message = []
         for field in fields:
             message.append('--' + boundary)
             values = dict(
-                blob_key='BLOBKEY',
+                blob_key=meta_data[field+'.blobkey'],
                 filename=data[field+'.name'],
                 content_type=data[field+'.content_type'],
                 content_length=data[field+'.size'],
-                timestamp=format_timestamp(datetime.datetime.now())
+                timestamp=meta_data[field+'.timestamp']
             )
             message.append(CONTENT_PART % values)
 

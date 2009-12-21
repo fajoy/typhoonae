@@ -21,7 +21,6 @@ from google.appengine.api import datastore_types
 from google.appengine.api import users
 from google.appengine.api.blobstore import blobstore_stub
 
-import logging
 import os
 import time
 
@@ -133,7 +132,6 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
             request: A fully initialized CreateUploadURLRequest instance.
             response: A CreateUploadURLResponse instance.
         """
-        logging.info(request)
         session = self._CreateSession(
             request.success_path(), users.get_current_user())
 

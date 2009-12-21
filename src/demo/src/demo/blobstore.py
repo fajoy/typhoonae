@@ -20,7 +20,6 @@ import google.appengine.ext.webapp
 import google.appengine.ext.webapp.blobstore_handlers
 import google.appengine.ext.webapp.template
 import google.appengine.ext.webapp.util
-import logging
 import urllib
 
 
@@ -43,7 +42,6 @@ class UploadHandler(
     def post(self):
         """Handles post."""
 
-        logging.info(self.request)
         upload_files = self.get_uploads('file')
         blob_info = upload_files[0]
         self.redirect('/serve/%s' % blob_info.key())
@@ -58,7 +56,6 @@ class ServeHandler(
 
         resource = str(urllib.unquote(resource))
         blob_info = google.appengine.ext.blobstore.BlobInfo.get(resource)
-        logging.info(blob_info)
         self.send_blob(blob_info)
 
  

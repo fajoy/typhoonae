@@ -22,6 +22,7 @@ import datetime
 import google.appengine.api.blobstore
 import google.appengine.api.datastore
 import google.appengine.api.datastore_errors
+import httplib
 import logging
 import md5
 import random
@@ -30,6 +31,8 @@ import time
 
 
 UPLOAD_URL_PATTERN = '/%s(.*)'
+
+BLOB_KEY_HEADER_PATTERN = 'X-AppEngine-BlobKey: (.*)'
 
 CONTENT_PART = """Content-Type: message/external-body; blob-key="%(blob_key)s"; access-type="X-AppEngine-BlobKey"
 MIME-Version: 1.0
@@ -150,7 +153,7 @@ class UploadCGIHandler(object):
                 '__BlobInfo__', name=meta_data[field+'.blobkey'])
             blob_entity['content_type'] = data[field+'.content_type']
             blob_entity['creation'] = meta_data[field+'.timestamp']
-            blob_entity['filename'] = data[field+'.name']
+            blob_entity['filename'] = data[field+'.path']
             blob_entity['size'] = int(data[field+'.size'])
             google.appengine.api.datastore.Put(blob_entity)
 
@@ -181,3 +184,50 @@ class UploadCGIHandler(object):
         environ['HTTP_CONTENT_LENGTH'] = str(len(message))
 
         return cStringIO.StringIO(message)
+
+
+class CGIResponseRewriter(object):
+    """A response rewrite does modifications on the CGI output stream."""
+
+    def __call__(self, fp, environ):
+        """Execude rewriter code.
+
+        Args:
+            fp: File pointer to repsonse output stream.
+            environ: The CGI environment.
+        """
+        response = cStringIO.StringIO(fp.getvalue())
+        headers = httplib.HTTPMessage(response).headers
+        blob_key = ''
+        if 'X-AppEngine-BlobKey' in ''.join(headers):
+            for header in headers:
+                match = re.match(BLOB_KEY_HEADER_PATTERN, header)
+                if match:
+                    blob_key = match.group(1)
+                    break
+
+            try:
+                blob_info = google.appengine.api.datastore.Get(
+                    google.appengine.api.datastore.Key.from_path(
+                        google.appengine.api.blobstore.BLOB_INFO_KIND,
+                        blob_key))
+            except google.appengine.api.datastore_errors.EntityNotFoundError:
+                return fp
+
+            output = cStringIO.StringIO()
+            for header in headers:
+                match = re.match(BLOB_KEY_HEADER_PATTERN, header)
+                if match:
+                    output.write(
+                        'Content-Type: %s\n' % blob_info['content_type'])
+                elif header.startswith('Content-Length'):
+                    output.write('Content-Length: %s\n' % blob_info['size'])
+                else:
+                    output.write(header)
+            output.write('\n')
+            blob = open(blob_info['filename'], 'rb')
+            output.write(blob.read())
+            blob.close()
+            return output
+
+        return fp

@@ -76,12 +76,21 @@ class CGIOutAdapter:
 
     def __init__(self, o):
         self.o = o
+        self.fp = cStringIO.StringIO()
+
+    def __del__(self):
+        del self.fp
 
     def flush(self):
+        rewriter_chain = CGIHandlerChain(
+            typhoonae.blobstore.handlers.CGIResponseRewriter())
+        fp = rewriter_chain(self.fp, os.environ)
+        self.o.write(fp.getvalue())
         self.o.flush()
+        self.fp.flush()
 
     def write(self, s):
-        self.o.write(str(s))
+        self.fp.write(s)
 
 
 def run_module(mod_name, init_globals=None, run_name=None):
@@ -179,7 +188,9 @@ def serve(conf, options):
             # Load and run the application module
             run_module(name, run_name='__main__')
         finally:
-            # Flush and free stdin buffer
+            # Flush buffers
+            sys.stdout.flush()
+            del sys.stdout
             del sys.stdin
             # Re-redirect standard input and output streams
             sys.stdin = sys.__stdin__

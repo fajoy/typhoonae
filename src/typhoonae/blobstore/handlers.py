@@ -196,7 +196,7 @@ class UploadCGIHandler(object):
 
 
 class CGIResponseRewriter(object):
-    """A response rewrite does modifications on the CGI output stream."""
+    """Response rewriter to modify the CGI output stream."""
 
     def __call__(self, fp, environ):
         """Execude rewriter code.

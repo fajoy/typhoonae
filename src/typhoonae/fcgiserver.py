@@ -85,9 +85,15 @@ class CGIOutAdapter:
         rewriter_chain = CGIHandlerChain(
             typhoonae.blobstore.handlers.CGIResponseRewriter())
         fp = rewriter_chain(self.fp, os.environ)
-        self.o.write(fp.getvalue())
-        self.o.flush()
-        self.fp.flush()
+        try:
+            self.o.write(fp.getvalue())
+            self.o.flush()
+        except IOError:
+            logging.warning("Invalid CGI output stream")
+        except fcgiapp.error:
+            logging.warning("Invalid CGI output stream")
+        finally:
+            self.fp.flush()
 
     def write(self, s):
         self.fp.write(s)

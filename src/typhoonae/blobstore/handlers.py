@@ -25,6 +25,7 @@ import google.appengine.api.datastore_errors
 import httplib
 import logging
 import md5
+import os
 import random
 import re
 import time
@@ -159,7 +160,7 @@ class UploadCGIHandler(object):
             blob_entity['content_type'] = data[field+'.content_type']
             blob_entity['creation'] = meta_data[field+'.timestamp']
             blob_entity['filename'] = data[field+'.name']
-            blob_entity['path'] = data[field+'.path']
+            blob_entity['path'] = os.path.basename(data[field+'.path'])
             blob_entity['size'] = int(data[field+'.size'])
             google.appengine.api.datastore.Put(blob_entity)
 
@@ -232,10 +233,13 @@ class CGIResponseRewriter(object):
                     output.write('Content-Length: %s\n' % blob_info['size'])
                 else:
                     output.write(header)
+
+            def _URI(filename):
+                return '/_ah/blobstore/%s/%s/%s' % (
+                    os.environ['APPLICATION_ID'], filename[-1], filename)
+
+            output.write('X-Accel-Redirect: %s\n' % _URI(blob_info['path']))
             output.write('\n')
-            blob = open(blob_info['path'], 'rb')
-            output.write(blob.read())
-            blob.close()
             return output
 
         return fp

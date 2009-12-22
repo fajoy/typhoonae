@@ -158,7 +158,8 @@ class UploadCGIHandler(object):
                 '__BlobInfo__', name=meta_data[field+'.blobkey'])
             blob_entity['content_type'] = data[field+'.content_type']
             blob_entity['creation'] = meta_data[field+'.timestamp']
-            blob_entity['filename'] = data[field+'.path']
+            blob_entity['filename'] = data[field+'.name']
+            blob_entity['path'] = data[field+'.path']
             blob_entity['size'] = int(data[field+'.size'])
             google.appengine.api.datastore.Put(blob_entity)
 
@@ -232,7 +233,7 @@ class CGIResponseRewriter(object):
                 else:
                     output.write(header)
             output.write('\n')
-            blob = open(blob_info['filename'], 'rb')
+            blob = open(blob_info['path'], 'rb')
             output.write(blob.read())
             blob.close()
             return output

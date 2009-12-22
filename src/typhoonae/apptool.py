@@ -313,7 +313,7 @@ def write_nginx_conf(options, conf, app_root):
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 
-    secure_urls = []
+    urls_require_login = []
 
     for handler in conf.handlers:
         ltrunc_url = re.sub('^/', '', handler.url)
@@ -343,17 +343,17 @@ def write_nginx_conf(options, conf, app_root):
                 root=app_root
                 )
             )
-        if handler.secure == 'always':
-            if ltrunc_url not in secure_urls:
-                secure_urls.append(ltrunc_url)
+        if handler.login in ('admin', 'required'):
+            if ltrunc_url not in urls_require_login:
+                urls_require_login.append(ltrunc_url)
 
-    if secure_urls:
+    if urls_require_login and options.http_base_auth_enabled:
         httpd_conf_stub.write(NGINX_SECURE_LOCATION % dict(
             addr=addr,
             app_id=conf.application,
             fcgi_params=FCGI_PARAMS,
             passwd_file=os.path.abspath(options.passwd_file),
-            path='|'.join(secure_urls),
+            path='|'.join(urls_require_login),
             port=port
             )
         )
@@ -572,6 +572,11 @@ def main():
     op.add_option("--nginx", dest="nginx", metavar="FILE",
                   help="write nginx configuration to this file",
                   default=os.path.join('etc', 'server.conf'))
+
+    op.add_option("--http_base_auth", dest="http_base_auth_enabled",
+                  action="store_true",
+                  help="enable HTTP base authentication for logging in",
+                  default=False)
 
     op.add_option("--passwd", dest="passwd_file", metavar="FILE",
                   help="use this passwd file for authentication",

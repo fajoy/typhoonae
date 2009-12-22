@@ -30,11 +30,16 @@ import re
 import time
 
 
+BLOB_KEY_HEADER = google.appengine.api.blobstore.BLOB_KEY_HEADER
+
+UPLOAD_INFO_CREATION_HEADER = (google.appengine.api.blobstore.
+                               UPLOAD_INFO_CREATION_HEADER)
+
 UPLOAD_URL_PATTERN = '/%s(.*)'
 
-BLOB_KEY_HEADER_PATTERN = 'X-AppEngine-BlobKey: (.*)'
+BLOB_KEY_HEADER_PATTERN = BLOB_KEY_HEADER+': (.*)'
 
-CONTENT_PART = """Content-Type: message/external-body; blob-key="%(blob_key)s"; access-type="X-AppEngine-BlobKey"
+CONTENT_PART = """Content-Type: message/external-body; blob-key="%(blob_key)s"; access-type="%(blob_key_header)s"
 MIME-Version: 1.0
 Content-Disposition: form-data; name="file"; filename="%(filename)s"
 
@@ -43,7 +48,7 @@ MIME-Version: 1.0
 Content-Length: %(content_length)s
 content-type: %(content_type)s
 content-disposition: form-data; name="file"; filename="%(filename)s"
-X-AppEngine-Upload-Creation: %(timestamp)s
+%(creation_header)s: %(timestamp)s
 
 """
 
@@ -161,10 +166,12 @@ class UploadCGIHandler(object):
         for field in fields:
             message.append('--' + boundary)
             values = dict(
+                blob_key_header=BLOB_KEY_HEADER,
                 blob_key=meta_data[field+'.blobkey'],
                 filename=data[field+'.name'],
                 content_type=data[field+'.content_type'],
                 content_length=data[field+'.size'],
+                creation_header=UPLOAD_INFO_CREATION_HEADER,
                 timestamp=meta_data[field+'.timestamp']
             )
             message.append(CONTENT_PART % values)
@@ -199,7 +206,7 @@ class CGIResponseRewriter(object):
         response = cStringIO.StringIO(fp.getvalue())
         headers = httplib.HTTPMessage(response).headers
         blob_key = ''
-        if 'X-AppEngine-BlobKey' in ''.join(headers):
+        if BLOB_KEY_HEADER in ''.join(headers):
             for header in headers:
                 match = re.match(BLOB_KEY_HEADER_PATTERN, header)
                 if match:

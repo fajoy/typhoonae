@@ -40,6 +40,7 @@ handlers:
 
 - url: /blobstore
   script: blobstore.py
+  login: required
 
 - url: /upload
   script: blobstore.py

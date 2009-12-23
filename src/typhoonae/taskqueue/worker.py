@@ -37,19 +37,20 @@ _COOKIE = cookielib.Cookie(
     0,
     typhoonae.handlers.login.getCookieName(),
     typhoonae.handlers.login.createLoginCookie('queue@localhost', admin=True),
-    '8080',
+    None,
     False,
-    'localhost',
+    'localhost.local',
     False,
     False,
     '/',
-    False,
-    False,
-    None,
+    True,
     False,
     None,
+    True,
     None,
-    {})
+    None,
+    {},
+    rfc2109=False)
 
 _COOKIE_JAR.set_cookie(_COOKIE)
 

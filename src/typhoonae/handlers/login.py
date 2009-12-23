@@ -85,7 +85,7 @@ class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):
         next_url = self.request.get('continue', '/')
         self.response.headers.add_header('Content-Type', 'text/html')
         self.response.out.write(
-            '<html><body>You\'re logged in as admin@localhost! This is a demo '
+            '<html><body>You\'re logged in as admin@typhoonae! This is a demo '
             'login handler.<br><a href="%s">Continue</a>'
             '</body></html>' % next_url)
 

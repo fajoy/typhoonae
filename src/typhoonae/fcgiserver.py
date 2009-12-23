@@ -90,9 +90,9 @@ class CGIOutAdapter:
             self.o.write(fp.getvalue())
             self.o.flush()
         except IOError:
-            logging.warning("Invalid CGI output stream")
+            logging.error("Invalid CGI output stream (IOError)")
         except fcgiapp.error:
-            logging.warning("Invalid CGI output stream")
+            logging.error("Invalid CGI output stream (FastCGI)")
         finally:
             self.fp.flush()
 

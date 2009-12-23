@@ -20,6 +20,7 @@ import google.appengine.cron
 import optparse
 import os
 import re
+import socket
 import subprocess
 import sys
 import tempfile
@@ -94,7 +95,7 @@ location / {
 """
 
 NGINX_UPLOAD_CONFIG = """
-location /upload/ {
+location /%(upload_url)s {
     # Pass altered request body to this location
     upload_pass @%(app_id)s;
 
@@ -165,7 +166,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s %(app_root)s
+command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -308,6 +309,7 @@ def write_nginx_conf(options, conf, app_root):
         os.path.join(options.blobstore_path, app_id))
     port = options.port
     server_name = options.server_name
+    upload_url = options.upload_url
     var = os.path.abspath(options.var)
 
     for i in range(10):
@@ -387,6 +389,7 @@ def write_supervisor_conf(options, conf, app_root):
     port = options.port
     root = os.getcwd()
     server_software = options.server_software
+    upload_url = options.upload_url
     var = os.path.abspath(options.var)
     xmpp_host = options.xmpp_host
 
@@ -531,7 +534,7 @@ def write_crontab(options, app_root):
 
         row.command = os.path.join(
             os.path.dirname(os.path.abspath(sys.argv[0])), 'runtask')
-        row.command += ' ' + 'http://localhost:8080' + entry.url
+        row.command += ' http://%s:8080%s' % (options.server_name, entry.url)
 
         row.description = '%s (%s)' % (entry.description, entry.schedule)
 
@@ -561,8 +564,7 @@ def main():
                   default=os.path.join('var', 'blobstore'))
 
     op.add_option("--crontab", dest="set_crontab", action="store_true",
-                  help="set crontab if cron.yaml exists",
-                  default=False)
+                  help="set crontab if cron.yaml exists", default=False)
 
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this datastore", default='mongodb')
@@ -572,8 +574,7 @@ def main():
                   default=os.path.join('etc', 'ejabberd.cfg'))
 
     op.add_option("--fcgi_host", dest="addr", metavar="ADDR",
-                  help="use this FastCGI host",
-                  default='localhost')
+                  help="use this FastCGI host", default=socket.getfqdn())
 
     op.add_option("--fcgi_port", dest="port", metavar="PORT",
                   help="use this port of the FastCGI host",
@@ -597,18 +598,23 @@ def main():
                   default=os.path.join('etc', 'appserver.conf'))
 
     op.add_option("--server_name", dest="server_name", metavar="STRING",
-                  help="use this server name", default='localhost')
+                  help="use this server name", default=socket.getfqdn())
 
     op.add_option("--server_software", dest="server_software", metavar="STRING",
                   help="use this server software identifier",
                   default=typhoonae.fcgiserver.SERVER_SOFTWARE)
+
+    op.add_option("--upload_url", dest="upload_url", metavar="URI",
+                  help="use this upload URL for the Blobstore configuration "
+                       "(no loeading '/')",
+                  default='upload/')
 
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",
                   default=os.environ.get('TMPDIR', '/var'))
 
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
-                  help="use this XMPP host", default='localhost')
+                  help="use this XMPP host", default=socket.getfqdn())
 
     (options, args) = op.parse_args()
 

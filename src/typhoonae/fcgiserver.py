@@ -171,7 +171,7 @@ def serve(conf, options):
 
         # CGI handler chain
         cgi_handler_chain = CGIHandlerChain(
-            blobstore.handlers.UploadCGIHandler())
+            blobstore.handlers.UploadCGIHandler(upload_url=options.upload_url))
 
         # Redirect standard input and output streams
         sys.stdin = cgi_handler_chain(CGIInAdapter(inp), os.environ)
@@ -238,6 +238,11 @@ def main():
     op.add_option("--server_software", dest="server_software", metavar="STRING",
                   help="use this server software identifier",
                   default=SERVER_SOFTWARE)
+
+    op.add_option("--upload_url", dest="upload_url", metavar="URI",
+                  help="use this upload URL for the Blobstore configuration "
+                       "(no loeading '/')",
+                  default='upload/')
 
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
                   help="use this XMPP/Jabber host", default='localhost')

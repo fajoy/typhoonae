@@ -53,7 +53,7 @@ def getUserInfo(cookie):
     return email, (admin == 'True'), user_id
 
 
-def createLoginCookie(email, admin):
+def createLoginCookiePayload(email, admin):
     """Creates cookie payload data for login information."""
 
     admin_string = 'False'
@@ -76,7 +76,7 @@ class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):
 
         cookie_name = getCookieName()
         c = Cookie.SimpleCookie()
-        c[cookie_name] = createLoginCookie('admin@localhost', admin=True)
+        c[cookie_name] = createLoginCookiePayload('admin@typhoonae', admin=True)
         c[cookie_name]['path'] = '/'
         h = re.compile('^Set-Cookie: ').sub('', c.output(), count=1)
         self.response.set_status(401)

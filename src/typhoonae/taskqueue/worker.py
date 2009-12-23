@@ -36,7 +36,8 @@ _COOKIE_JAR = cookielib.CookieJar()
 _COOKIE = cookielib.Cookie(
     0,
     typhoonae.handlers.login.getCookieName(),
-    typhoonae.handlers.login.createLoginCookie('queue@localhost', admin=True),
+    typhoonae.handlers.login.createLoginCookiePayload(
+        'queuemaster@typhoonae', admin=True),
     None,
     False,
     socket.getfqdn(),

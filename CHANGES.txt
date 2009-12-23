@@ -24,6 +24,11 @@ Version 0.1.1 (2009-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=18
 
+  - Fixes an issue where the login parameter of URL handler definitions in the
+    app.yaml configuration file got ignored.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=20
+
 
 Version 0.1.0b2 (2009-12-04)
 ----------------------------

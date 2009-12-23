@@ -34,6 +34,7 @@ handlers:
 
 - url: /makenote
   script: app.py
+  login: admin
 
 - url: /getnote
   script: app.py

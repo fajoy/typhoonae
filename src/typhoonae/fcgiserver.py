@@ -18,6 +18,7 @@
 import blobstore.handlers
 import cStringIO
 import fcgiapp
+import google.appengine.api.users
 import logging
 import optparse
 import os
@@ -178,7 +179,7 @@ def serve(conf, options):
 
         # Compute script path and set PATH_TRANSLATED environment variable
         path_info = os.environ['PATH_INFO']
-        for pattern, name, script in url_mapping:
+        for pattern, name, script, login_required, admin_only, auth_fail in url_mapping:
             # Check for back reference
             if re.match(pattern, path_info) is not None:
                 m = back_ref_pattern.search(name)
@@ -191,8 +192,13 @@ def serve(conf, options):
                 break
 
         try:
-            # Load and run the application module
-            run_module(name, run_name='__main__')
+            if (login_required or admin_only) and not email:
+                print('Status: 302 Requires login')
+                print('Location: %s\r\n' %
+                      google.appengine.api.users.create_login_url(path_info))
+            else:
+                # Load and run the application module
+                run_module(name, run_name='__main__')
         finally:
             # Flush buffers
             sys.stdout.flush()

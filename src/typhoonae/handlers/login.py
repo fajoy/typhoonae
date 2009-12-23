@@ -79,12 +79,15 @@ class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):
         c[cookie_name] = createLoginCookie('admin@localhost', admin=True)
         c[cookie_name]['path'] = '/'
         h = re.compile('^Set-Cookie: ').sub('', c.output(), count=1)
+        self.response.set_status(401)
         self.response.headers.add_header('Set-Cookie', str(h))
 
+        next_url = self.request.get('continue', '/')
         self.response.headers.add_header('Content-Type', 'text/html')
         self.response.out.write(
             '<html><body>You\'re logged in as admin@localhost! This is a demo '
-            'login handler.<br><a href="/">Return</a></body></html>')
+            'login handler.<br><a href="%s">Continue</a>'
+            '</body></html>' % next_url)
 
 
 class LogoutRequestHandler(google.appengine.ext.webapp.RequestHandler):
@@ -104,8 +107,8 @@ class LogoutRequestHandler(google.appengine.ext.webapp.RequestHandler):
 
 
 app = google.appengine.ext.webapp.WSGIApplication([
-    ('/login', LoginRequestHandler),
-    ('/logout', LogoutRequestHandler),
+    ('/_ah/login', LoginRequestHandler),
+    ('/_ah/logout', LogoutRequestHandler),
 ], debug=True)
 
 

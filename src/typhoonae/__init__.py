@@ -59,20 +59,19 @@ def initURLMapping(conf):
     url_mapping = []
 
     # Configure script with login handler
-    login = google.appengine.api.appinfo.URLMap(
-        url='/login',
+    login_handler = google.appengine.api.appinfo.URLMap(
+        url='/_ah/login',
         script='$PYTHON_LIB/typhoonae/handlers/login.py',
-        login='required'
     )
 
     # Configure script with logout handler
-    logout = google.appengine.api.appinfo.URLMap(
-        url='/logout',
+    logout_handler = google.appengine.api.appinfo.URLMap(
+        url='/_ah/logout',
         script='$PYTHON_LIB/typhoonae/handlers/login.py'
     )
 
     # Generate URL mapping
-    for handler in [login, logout] + conf.handlers:
+    for handler in [login_handler, logout_handler] + conf.handlers:
         script = handler.script
         regexp = handler.url
         if script != None:
@@ -98,7 +97,12 @@ def initURLMapping(conf):
             if not regexp.endswith('$'):
                 regexp += '$'
             compiled = re.compile(regexp)
-            url_mapping.append((compiled, module, path))
+            login_required = handler.login in ('required', 'admin')
+            admin_only = handler.login in ('admin',)
+            auth_fail = handler.auth_fail_action
+            url_mapping.append(
+                (compiled, module, path, login_required, admin_only, auth_fail)
+            )
 
     return url_mapping
 
@@ -180,7 +184,8 @@ def setupUserService():
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('user',
         google.appengine.api.user_service_stub.UserServiceStub(
-            login_url='/login?=%s', logout_url='/logout?=%s'))
+            login_url='/_ah/login?continue=%s',
+            logout_url='/_ah/logout?continue=%s'))
 
 
 def setupXMPP(host):

@@ -241,7 +241,7 @@ def main():
 
     op.add_option("--upload_url", dest="upload_url", metavar="URI",
                   help="use this upload URL for the Blobstore configuration "
-                       "(no loeading '/')",
+                       "(no leading '/')",
                   default='upload/')
 
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",

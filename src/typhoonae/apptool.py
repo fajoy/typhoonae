@@ -37,7 +37,7 @@ NGINX_HEADER = """
 server {
     client_max_body_size 100m;
     listen      8080;
-    server_name localhost;
+    server_name %(server_name)s;
 
     access_log  %(var)s/log/httpd-access.log;
     error_log   %(var)s/log/httpd-error.log;
@@ -307,6 +307,7 @@ def write_nginx_conf(options, conf, app_root):
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
     port = options.port
+    server_name = options.server_name
     var = os.path.abspath(options.var)
 
     for i in range(10):
@@ -594,6 +595,9 @@ def main():
     op.add_option("--supervisor", dest="supervisor", metavar="FILE",
                   help="write supervisor configuration to this file",
                   default=os.path.join('etc', 'appserver.conf'))
+
+    op.add_option("--server_name", dest="server_name", metavar="STRING",
+                  help="use this server name", default='localhost')
 
     op.add_option("--server_software", dest="server_software", metavar="STRING",
                   help="use this server software identifier",

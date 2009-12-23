@@ -16,8 +16,8 @@ Version 0.1.1 (2009-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=16
 
-  - Adds new command line options --server_software and --http_base_auth to
-    apptool and fcgiserver.
+  - Adds new command line options --server_name --server_software and
+    the --http_base_auth flag to apptool and fcgiserver.
 
   - Fixes an issue where the SCRIPT_NAME variable is missing in the CGI
     environment.

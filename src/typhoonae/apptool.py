@@ -579,7 +579,7 @@ def main():
                   default=os.path.join('etc', 'ejabberd.cfg'))
 
     op.add_option("--fcgi_host", dest="addr", metavar="ADDR",
-                  help="use this FastCGI host", default=socket.getfqdn())
+                  help="use this FastCGI host", default='localhost')
 
     op.add_option("--fcgi_port", dest="port", metavar="PORT",
                   help="use this port of the FastCGI host",

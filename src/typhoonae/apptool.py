@@ -166,7 +166,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s %(app_root)s
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -383,6 +383,7 @@ def write_supervisor_conf(options, conf, app_root):
 
     addr = options.addr
     app_id = conf.application
+    auth_domain = options.auth_domain
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
     datastore = options.datastore.lower()
@@ -558,6 +559,10 @@ def main():
     """Runs the apptool console script."""
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--auth_domain", dest="auth_domain", metavar="STRING",
+                  help="use this value for the AUTH_DOMAIN environment "
+                  "variable", default='localhost')
 
     op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
                   help="path to use for storing Blobstore file stub data",

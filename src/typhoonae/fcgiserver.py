@@ -156,7 +156,7 @@ def serve(conf, options):
         os.environ.update(env)
         os.environ['APPLICATION_ID'] = conf.application
         os.environ['CURRENT_VERSION_ID'] = conf.version + ".1"
-        os.environ['AUTH_DOMAIN'] = 'localhost'
+        os.environ['AUTH_DOMAIN'] = options.auth_domain
         os.environ['SERVER_SOFTWARE'] = options.server_software
         os.environ['SCRIPT_NAME'] = ''
         os.environ['TZ'] = 'UTC'
@@ -223,6 +223,10 @@ def main():
     """Initializes the server."""
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--auth_domain", dest="auth_domain", metavar="STRING",
+                  help="use this value for the AUTH_DOMAIN environment "
+                  "variable", default='localhost')
 
     op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
                   help="path to use for storing Blobstore file stub data",

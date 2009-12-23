@@ -39,7 +39,7 @@ _COOKIE = cookielib.Cookie(
     typhoonae.handlers.login.createLoginCookie('queue@localhost', admin=True),
     None,
     False,
-    'localhost.local',
+    socket.getfqdn(),
     False,
     False,
     '/',

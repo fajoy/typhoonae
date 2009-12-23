@@ -179,7 +179,7 @@ def serve(conf, options):
 
         # Compute script path and set PATH_TRANSLATED environment variable
         path_info = os.environ['PATH_INFO']
-        for pattern, name, script, login_required, admin_only, auth_fail in url_mapping:
+        for pattern, name, script, login_required, admin_only in url_mapping:
             # Check for back reference
             if re.match(pattern, path_info) is not None:
                 m = back_ref_pattern.search(name)

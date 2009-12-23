@@ -99,10 +99,8 @@ def initURLMapping(conf):
             compiled = re.compile(regexp)
             login_required = handler.login in ('required', 'admin')
             admin_only = handler.login in ('admin',)
-            auth_fail = handler.auth_fail_action
             url_mapping.append(
-                (compiled, module, path, login_required, admin_only, auth_fail)
-            )
+                (compiled, module, path, login_required, admin_only))
 
     return url_mapping
 

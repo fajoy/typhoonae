@@ -55,6 +55,7 @@ handlers:
 
 - url: /_ah/xmpp/message/chat/
   script: app.py
+  login: admin
 
 - url: .*
   script: failure.py

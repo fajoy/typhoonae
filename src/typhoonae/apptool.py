@@ -179,6 +179,24 @@ stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
 """
 
+SUPERVISOR_AMQP_CONFIG = """
+[program:taskworker]
+command = %(bin)s/taskworker --amqp_host=%(amqp_host)s
+process_name = taskworker
+directory = %(root)s
+priority = 20
+redirect_stderr = true
+stdout_logfile = %(var)s/log/taskworker.log
+
+[program:deferred_taskworker]
+command = %(bin)s/deferred_taskworker --amqp_host=%(amqp_host)s
+process_name = deferred_taskworker
+directory = %(root)s
+priority = 20
+redirect_stderr = true
+stdout_logfile = %(var)s/log/deferred_taskworker.log
+"""
+
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
 command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:8080 --jid=%(jid)s --password=%(password)s
@@ -382,6 +400,7 @@ def write_supervisor_conf(options, conf, app_root):
     """Writes supercisord configuration stub."""
 
     addr = options.addr
+    amqp_host = options.amqp_host
     app_id = conf.application
     auth_domain = options.auth_domain
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -401,6 +420,7 @@ def write_supervisor_conf(options, conf, app_root):
         "# Use apptool to modify.\n")
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
+    supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
 
     if datastore == 'mongodb':
         supervisor_conf_stub.write(SUPERVISOR_MONGODB_CONFIG % locals())
@@ -565,6 +585,9 @@ def main():
                   help="use this value for the AUTH_DOMAIN environment "
                   "variable", default='localhost')
 
+    op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
+                  help="use this AMQP host", default='localhost')
+
     op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
                   help="path to use for storing Blobstore file stub data",
                   default=os.path.join('var', 'blobstore'))
@@ -619,7 +642,7 @@ def main():
                   help="use this directory for platform independent data",
                   default=os.environ.get('TMPDIR', '/var'))
 
-    op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
+    op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
                   help="use this XMPP host", default=socket.getfqdn())
 
     (options, args) = op.parse_args()

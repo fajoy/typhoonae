@@ -19,6 +19,7 @@ from __future__ import with_statement
 from amqplib import client_0_8 as amqp
 import base64
 import logging
+import optparse
 import os
 import signal
 import simplejson
@@ -28,6 +29,8 @@ import typhoonae.handlers.login
 import typhoonae.taskqueue
 import urllib2
 
+DESCRIPTION = ("AMQP client to perform queued tasks.")
+USAGE = "usage: %prog [options]"
 MAX_TRY_COUNT = 10
 MAX_TIME_LIMIT = 30
 
@@ -103,6 +106,13 @@ def handle_task(msg):
 def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
     """The main function."""
 
+    op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
+                  help="use this AMQP host", default='localhost')
+
+    (options, args) = op.parse_args()
+
     logging.basicConfig(
         format='%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] '
                '%(message)s',
@@ -110,7 +120,7 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
 
     try:
         conn = amqp.Connection(
-            host="localhost:5672",
+            host="%s:5672" % options.amqp_host,
             userid="guest",
             password="guest",
             virtual_host="/",

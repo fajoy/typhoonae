@@ -17,6 +17,7 @@
 
 from amqplib import client_0_8 as amqp
 import logging
+import optparse
 import os
 import simplejson
 import socket
@@ -24,6 +25,9 @@ import sys
 import threading
 import typhoonae.taskqueue
 import urllib2
+
+DESCRIPTION = ("AMQP client deferred tasks.")
+USAGE = "usage: %prog [options]"
 
 
 class RecoverLoop(threading.Thread):
@@ -58,6 +62,13 @@ def main(
     queue="deferred_tasks", exchange="deferred", routing_key="deferred_worker"):
     """The main function."""
 
+    op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
+                  help="use this AMQP host", default='localhost')
+
+    (options, args) = op.parse_args()
+
     logging.basicConfig(
         format='%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] '
                '%(message)s',
@@ -65,7 +76,7 @@ def main(
 
     try:
         conn = amqp.Connection(
-            host="localhost:5672",
+            host="%s:5672" % options.amqp_host,
             userid="guest",
             password="guest",
             virtual_host="/",

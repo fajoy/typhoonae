@@ -30,8 +30,12 @@ class MainHandler(google.appengine.ext.webapp.RequestHandler):
         """Handles get."""
 
         upload_url = google.appengine.ext.blobstore.create_upload_url('/upload')
+
+        query = google.appengine.ext.blobstore.BlobInfo.all()
+        blob_infos = reversed(query.fetch(10))
+
         output = google.appengine.ext.webapp.template.render(
-            'upload.html', {'upload_url': upload_url})
+            'upload.html', {'upload_url': upload_url, 'blob_infos': blob_infos})
         self.response.out.write(output)
 
 
@@ -44,7 +48,7 @@ class UploadHandler(
 
         upload_files = self.get_uploads('file')
         blob_info = upload_files[0]
-        self.redirect('/serve/%s' % blob_info.key())
+        self.redirect('/blobstore')
 
 
 class ServeHandler(

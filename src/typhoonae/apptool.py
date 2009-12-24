@@ -181,7 +181,7 @@ stderr_logfile_maxbytes = 1MB
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --jid=%(jid)s --password=%(password)s
+command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:8080 --jid=%(jid)s --password=%(password)s
 process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -389,6 +389,7 @@ def write_supervisor_conf(options, conf, app_root):
     datastore = options.datastore.lower()
     port = options.port
     root = os.getcwd()
+    server_name = options.server_name
     server_software = options.server_software
     upload_url = options.upload_url
     var = os.path.abspath(options.var)

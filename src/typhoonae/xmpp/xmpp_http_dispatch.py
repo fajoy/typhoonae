@@ -21,15 +21,12 @@ import mimetools
 import optparse
 import sys
 import time
+import typhoonae.handlers.login
 import urllib2
 import xmpp
 
 DESCRIPTION = ("XMPP/HTTP dispatcher.")
 USAGE = "usage: %prog [options]"
-
-cj = cookielib.CookieJar()
-opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-urllib2.install_opener(opener)
 
 
 def post_multipart(url, fields):
@@ -45,9 +42,15 @@ def post_multipart(url, fields):
     headers = {'Content-Type': content_type,
                'Content-Length': str(len(body))}
 
-    r = urllib2.Request(url, str(body.encode('utf-8')), headers)
+    req = urllib2.Request(url, str(body.encode('utf-8')), headers)
 
-    return urllib2.urlopen(r).read()
+    try:
+        res = urllib2.urlopen(req)
+    except urllib2.URLError, err_obj:
+        reason = getattr(err_obj, 'reason', err_obj)
+        logging.error("failed task %s %s" % (task, reason))
+        return
+    return res.read()
 
 
 def encode_multipart_formdata(fields):
@@ -159,6 +162,8 @@ def main():
 
     client.RegisterHandler('message', Dispatcher(options.address))
     client.sendInitPresence()
+
+    typhoonae.handlers.login.authenticate('xmpp@typhoonae', admin=True)
 
     loop(client)
 

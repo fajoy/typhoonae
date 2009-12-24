@@ -18,7 +18,6 @@
 from __future__ import with_statement
 from amqplib import client_0_8 as amqp
 import base64
-import cookielib
 import logging
 import os
 import signal
@@ -31,31 +30,6 @@ import urllib2
 
 MAX_TRY_COUNT = 10
 MAX_TIME_LIMIT = 30
-
-_COOKIE_JAR = cookielib.CookieJar()
-_COOKIE = cookielib.Cookie(
-    0,
-    typhoonae.handlers.login.getCookieName(),
-    typhoonae.handlers.login.createLoginCookiePayload(
-        'queuemaster@typhoonae', admin=True),
-    None,
-    False,
-    socket.getfqdn(),
-    False,
-    False,
-    '/',
-    True,
-    False,
-    None,
-    True,
-    None,
-    None,
-    {},
-    rfc2109=False)
-
-_COOKIE_JAR.set_cookie(_COOKIE)
-
-_OPENER = urllib2.build_opener(urllib2.HTTPCookieProcessor(_COOKIE_JAR))
 
 
 class TimeLimitExceededError(Exception):
@@ -114,7 +88,7 @@ def handle_task(msg):
 
     try:
         with ExecutionTimeLimit():
-            res = _OPENER.open(req)
+            res = urllib2.urlopen(req)
     except urllib2.URLError, err_obj:
         reason = getattr(err_obj, 'reason', err_obj)
         logging.error("failed task %s %s" % (task, reason))
@@ -179,6 +153,8 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
         no_ack=False,
         callback=recv_callback,
         consumer_tag=_consumer_tag)
+
+    typhoonae.handlers.login.authenticate('queue@typhoonae', admin=True)
 
     try:
         while True:

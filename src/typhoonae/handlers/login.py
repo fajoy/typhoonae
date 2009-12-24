@@ -16,10 +16,13 @@
 """Login/logout handler."""
 
 import Cookie
+import cookielib
 import google.appengine.ext.webapp
 import md5
 import os
 import re
+import socket
+import urllib2
 import wsgiref.handlers
 
 
@@ -66,6 +69,24 @@ def createLoginCookiePayload(email, admin):
         user_id = ''
 
     return '%s:%s:%s' % (email, admin_string, user_id)
+
+
+def createLoginCookie(email, admin):
+    """Creates a login cookie."""
+
+    return cookielib.Cookie(
+        0, getCookieName(), createLoginCookiePayload(email, admin=admin), None,
+        False, socket.getfqdn(), False, False, '/', True, False, None, True, 
+        None, None, {}, rfc2109=False)
+
+
+def authenticate(email, admin=False):
+    """Authenticate user with given email."""
+
+    cj = cookielib.CookieJar()
+    cj.set_cookie(createLoginCookie(email, admin=admin))
+    urllib2.install_opener(
+        urllib2.build_opener(urllib2.HTTPCookieProcessor(cj)))
 
 
 class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):

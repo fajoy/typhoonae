@@ -8,7 +8,7 @@ Version 0.1.1 (2009-??-??)
 
   - Adds support for the new Blobstore API.
 
-  - Fixes an issute where the XMPP/HTTP dispatcher didn't handle unicode.
+  - Fixes an issue where the XMPP/HTTP dispatcher didn't handle unicode.
 
     - http://code.google.com/p/typhoonae/issues/detail?id=15
 

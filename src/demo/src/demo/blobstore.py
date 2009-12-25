@@ -62,11 +62,23 @@ class ServeHandler(
         blob_info = google.appengine.ext.blobstore.BlobInfo.get(resource)
         self.send_blob(blob_info)
 
+
+class DeleteHandler(google.appengine.ext.webapp.RequestHandler):
+    """Deletes blobs."""
+
+    def get(self, resource):
+        """Handles get."""
+
+        resource = str(urllib.unquote(resource))
+        google.appengine.ext.blobstore.delete(resource)
+        self.redirect('/blobstore')
+
  
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/blobstore', MainHandler),
     ('/upload', UploadHandler),
     ('/serve/([^/]+)?', ServeHandler),
+    ('/delete/([^/]+)?', DeleteHandler),
 ], debug=True)
 
 

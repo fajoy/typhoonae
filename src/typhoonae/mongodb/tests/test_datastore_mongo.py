@@ -153,7 +153,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
         cursor = query.fetch(1)
         assert type(cursor[0]) == google.appengine.api.datastore_types.Key
 
-    def testDerivedPropterty(self):
+    def testDerivedProperty(self):
         """Query by derived property."""
 
         entity = TestModel(contents='Foo Bar')

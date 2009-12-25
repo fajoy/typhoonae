@@ -25,11 +25,32 @@ import time
 import typhoonae.mongodb.datastore_mongo_stub
 import unittest
 
+ 
+class LowerCaseProperty(google.appengine.ext.db.Property):
+    """A convenience class for generating lower-cased fields for filtering."""
+
+    def __init__(self, property, *args, **kwargs):
+        """Constructor.
+ 
+        Args:
+            property: The property to lower-case.
+        """
+        super(LowerCaseProperty, self).__init__(*args, **kwargs)
+        self.property = property
+
+    def __get__(self, model_instance, model_class):
+        return self.property.__get__(model_instance, model_class).lower()
+ 
+    def __set__(self, model_instance, value):
+        raise google.appengine.ext.db.DerivedPropertyError(
+            "Cannot assign to a DerivedProperty")
+
 
 class TestModel(google.appengine.ext.db.Model):
     """Some test model."""
 
-    contents = google.appengine.ext.db.StringProperty()
+    contents = google.appengine.ext.db.StringProperty(required=True)
+    lowered_contents = LowerCaseProperty(contents)
 
 
 class TestIntidClient(object):
@@ -82,8 +103,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
         for entity in query:
             entity.delete()
 
-        entity = TestModel()
-        entity.contents = 'foo'
+        entity = TestModel(contents='foo')
         entity.put()
         assert TestModel.all().fetch(1)[0].contents == 'foo'
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
@@ -92,8 +112,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def testUnicode(self):
         """Writes an entity with unicode contents."""
 
-        entity = TestModel()
-        entity.contents = u'Äquator'
+        entity = TestModel(contents=u'Äquator')
         entity.put()
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel WHERE contents=:1", u'Äquator')
@@ -105,7 +124,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
         """Allocates a number of IDs."""
 
         for i in xrange(0, 2000):
-            test_key = TestModel().put()
+            test_key = TestModel(contents='some string').put()
 
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
         assert query.count() == 2000
@@ -133,6 +152,16 @@ class DatastoreMongoTestCase(unittest.TestCase):
         query = TestModel.all(keys_only=True)
         cursor = query.fetch(1)
         assert type(cursor[0]) == google.appengine.api.datastore_types.Key
+
+    def testDerivedPropterty(self):
+        """Query by derived property."""
+
+        entity = TestModel(contents='Foo Bar')
+        entity.put()
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM TestModel WHERE lowered_contents = :1", 'foo bar')
+        cursor = query.fetch(1)
+        assert cursor[0].contents == 'Foo Bar'
 
 
 if __name__ == "__main__":

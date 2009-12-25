@@ -152,6 +152,5 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
         """
         for blob_key in request.blob_key_list():
             key = datastore_types.Key.from_path('__BlobInfo__', str(blob_key))
-
+            self.__storage.DeleteBlob(key)
             datastore.Delete(key)
-            self.__storage.DeleteBlob(blob_key)

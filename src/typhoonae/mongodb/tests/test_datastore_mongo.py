@@ -163,6 +163,19 @@ class DatastoreMongoTestCase(unittest.TestCase):
         cursor = query.fetch(1)
         assert cursor[0].contents == 'Foo Bar'
 
+    def testSorting(self):
+        """Sort query."""
+
+        values = ['Spain', 'England', 'america']
+        for value in values:
+            entity = TestModel(contents=value)
+            entity.put()
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM TestModel ORDER BY lowered_contents ASC")
+        cursor = query.fetch(3)
+        self.assertEqual([u'america', u'England', u'Spain'],
+                         [e.contents for e in cursor])
+
 
 if __name__ == "__main__":
     unittest.main() 

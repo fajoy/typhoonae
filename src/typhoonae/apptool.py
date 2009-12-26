@@ -116,7 +116,7 @@ location /%(upload_url)s {
     upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
     upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
 
-    upload_pass_form_field "^submit$";
+    upload_pass_form_field ".*";
 
     upload_cleanup 400 404 499 500-505;
 }

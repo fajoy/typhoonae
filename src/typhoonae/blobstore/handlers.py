@@ -140,47 +140,52 @@ class UploadCGIHandler(object):
         form_data = cgi.parse_multipart(fp, {'boundary': boundary})
         data = dict([(k, ''.join(form_data[k])) for k in form_data])
 
-        fields = set([k.split('.')[0] for k in data.keys() if k != 'submit'])
+        fields = [f for f in set([k.split('.')[0] for k in data.keys()])
+                  if f+'.content_type' in data]
 
         def format_timestamp(stamp):
             f = google.appengine.api.blobstore.BASE_CREATION_HEADER_FORMAT
             return '%s.%06d' % (stamp.strftime(f), stamp.microsecond)
 
-        meta_data = {}
+        message = []
 
         for field in fields:
-            meta_data[field+'.timestamp'] = format_timestamp(
-                datetime.datetime.now())
-            meta_data[field+'.blobkey'] = str(generateBlobKey())
+            timestamp = format_timestamp(datetime.datetime.now())
+            blobkey = str(generateBlobKey())
 
-        for field in fields:
             blob_entity = google.appengine.api.datastore.Entity(
-                '__BlobInfo__', name=meta_data[field+'.blobkey'])
+                '__BlobInfo__', name=blobkey)
+
             blob_entity['content_type'] = data[field+'.content_type']
-            blob_entity['creation'] = meta_data[field+'.timestamp']
+            blob_entity['creation'] = timestamp
             blob_entity['filename'] = data[field+'.name']
             blob_entity['path'] = os.path.basename(data[field+'.path'])
             blob_entity['size'] = int(data[field+'.size'])
+
             google.appengine.api.datastore.Put(blob_entity)
 
-        message = []
-        for field in fields:
             message.append('--' + boundary)
             values = dict(
                 blob_key_header=BLOB_KEY_HEADER,
-                blob_key=meta_data[field+'.blobkey'],
+                blob_key=blobkey,
                 filename=data[field+'.name'],
                 content_type=data[field+'.content_type'],
                 content_length=data[field+'.size'],
                 creation_header=UPLOAD_INFO_CREATION_HEADER,
-                timestamp=meta_data[field+'.timestamp']
+                timestamp=timestamp
             )
             message.append(CONTENT_PART % values)
 
-        if 'submit' in data.keys():
+            del data[field+'.name']
+            del data[field+'.content_type']
+            del data[field+'.path']
+            del data[field+'.md5']
+            del data[field+'.size']
+
+        for field in data:
             message.append('--' + boundary)
             message.append(SIMPLE_FIELD %
-                           {'name': 'submit', 'value': data['submit']})
+                           {'name': field, 'value': data[field]})
                 
         message += ['--' + boundary + '--']
 

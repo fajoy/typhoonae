@@ -125,7 +125,7 @@ def main():
                   help="the application host and port",
                   default="localhost:8080")
 
-    op.add_option("--credentials", dest="credentials", metavar="USER:PASSWORD",
+    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
                   help="use the specified credentials for the service "
                        "admin user",
                   default=None)

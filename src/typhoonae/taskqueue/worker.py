@@ -116,7 +116,7 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
     op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
                   help="use this AMQP host", default='localhost')
 
-    op.add_option("--credentials", dest="credentials", metavar="USER:PASSWORD",
+    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
                   help="use the specified credentials for the service "
                        "admin user",
                   default=None)

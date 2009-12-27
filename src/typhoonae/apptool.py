@@ -597,7 +597,7 @@ def main():
                   help="path to use for storing Blobstore file stub data",
                   default=os.path.join('var', 'blobstore'))
 
-    op.add_option("--credentials", dest="credentials", metavar="USER:PASSWORD",
+    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
                   help="use the specified credentials for the service "
                        "admin user",
                   default=None)

@@ -31,11 +31,8 @@ class MainHandler(google.appengine.ext.webapp.RequestHandler):
 
         upload_url = google.appengine.ext.blobstore.create_upload_url('/upload')
 
-        query = google.appengine.ext.blobstore.BlobInfo.all()
-        blob_infos = reversed(query.fetch(10))
-
         output = google.appengine.ext.webapp.template.render(
-            'upload.html', {'upload_url': upload_url, 'blob_infos': blob_infos})
+            'upload.html', {'upload_url': upload_url})
         self.response.out.write(output)
 
 
@@ -48,7 +45,7 @@ class UploadHandler(
 
         upload_files = self.get_uploads('file')
         blob_info = upload_files[0]
-        self.redirect('/blobstore')
+        self.redirect('/')
 
 
 class ServeHandler(
@@ -63,22 +60,10 @@ class ServeHandler(
         self.send_blob(blob_info)
 
 
-class DeleteHandler(google.appengine.ext.webapp.RequestHandler):
-    """Deletes blobs."""
-
-    def get(self, resource):
-        """Handles get."""
-
-        resource = str(urllib.unquote(resource))
-        google.appengine.ext.blobstore.delete(resource)
-        self.redirect('/blobstore')
-
- 
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/blobstore', MainHandler),
     ('/upload', UploadHandler),
     ('/serve/([^/]+)?', ServeHandler),
-    ('/delete/([^/]+)?', DeleteHandler),
 ], debug=True)
 
 

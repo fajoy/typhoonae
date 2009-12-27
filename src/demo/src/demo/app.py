@@ -22,6 +22,7 @@ import google.appengine.api.labs.taskqueue
 import google.appengine.api.memcache
 import google.appengine.api.users
 import google.appengine.api.xmpp
+import google.appengine.ext.blobstore
 import google.appengine.ext.db
 import google.appengine.ext.webapp
 import google.appengine.ext.webapp.template
@@ -29,6 +30,7 @@ import google.appengine.ext.webapp.util
 import logging
 import os
 import random
+import urllib
 
 NUM_SHARDS = 20
 
@@ -88,7 +90,7 @@ def get_notes():
             return notes
 
     query = google.appengine.ext.db.GqlQuery(
-        "SELECT * FROM Note ORDER BY date DESC LIMIT 500")
+        "SELECT * FROM Note ORDER BY date DESC LIMIT 100")
 
     notes = ['(%s) %s - %s' %
              (note.key().id(), note.date, note.body) for note in query]
@@ -129,12 +131,17 @@ class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
         increment()
         count = get_count()
         notes = get_notes()
+
+        blobs = reversed(
+            google.appengine.ext.blobstore.BlobInfo.all().fetch(10))
+
         now = datetime.datetime.now()
         eta = now + datetime.timedelta(seconds=5)
         google.appengine.api.labs.taskqueue.add(url='/makenote',
                                                 eta=eta,
                                                 payload="%i delayed" % count)
         vars = dict(
+            blobs=blobs,
             count=count,
             env=os.environ,
             login_or_logout=login_or_logout,
@@ -235,6 +242,17 @@ class XMPPHandler(google.appengine.ext.webapp.RequestHandler):
         note.put()
 
 
+class DeleteBlobHandler(google.appengine.ext.webapp.RequestHandler):
+    """Deletes blobs."""
+
+    def get(self, resource):
+        """Handles get."""
+
+        resource = str(urllib.unquote(resource))
+        google.appengine.ext.blobstore.delete(resource)
+        self.redirect('/')
+
+
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/', DemoRequestHandler),
     ('/count', CountRequestHandler),
@@ -243,6 +261,7 @@ app = google.appengine.ext.webapp.WSGIApplication([
     ('/getnote', NoteWorker),
     ('/invite', InviteHandler),
     ('/_ah/xmpp/message/chat/', XMPPHandler),
+    ('/delete/([^/]+)?', DeleteBlobHandler),
 ], debug=True)
 
 

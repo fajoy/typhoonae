@@ -49,14 +49,15 @@ handlers:
 - url: /serve/([^/]+)?
   script: blobstore.py
 
-- url: /delete/([^/]+)?
-  script: blobstore.py
-
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
 
 - url: /_ah/xmpp/message/chat/
+  script: app.py
+  login: admin
+
+- url: /delete/([^/]+)?
   script: app.py
   login: admin
 

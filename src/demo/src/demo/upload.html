@@ -18,17 +18,5 @@
         <input type="submit" name="submit" value="Submit">
       </form>
     </div>
-    <div>
-      <h3>Stored blobs:</h3>
-      <ul>
-      {% for info in blob_infos %}
-        <li>
-          <a href="/serve/{{info.key}}"
-            >{{ info.filename }} ({{info.size}} bytes)</a>
-          <a href="/delete/{{info.key}}">Delete</a>
-        </li>
-      {% endfor %}
-      </ul>
-    </div>
   </body>
 </html>

@@ -33,6 +33,19 @@
       <a href="/blobstore">File upload</a>
     </div>
     <br />
+    <div>
+      Stored blobs:
+      <ul>
+      {% for info in blobs %}
+        <li>
+          <a href="/serve/{{info.key}}"
+            >{{ info.filename }}</a> ({{info.size}} bytes)
+          <a href="/delete/{{info.key}}">Delete</a>
+        </li>
+      {% endfor %}
+      </ul>
+    </div>
+    <br />
     <div>User: {{ user }} {{ login_or_logout }}</div>
   </body>
 </html>

@@ -43,7 +43,7 @@ redirect_stderr = true
 stdout_logfile = ${buildout:directory}/var/log/ejabberd.log
 
 [include]
-files = ${buildout:directory}/etc/appserver.conf
+files = ${buildout:directory}/etc/*-supervisor.conf
 
 [program:nginx]
 command = ${buildout:directory}/parts/nginx/sbin/nginx -c ${buildout:directory}/parts/nginxctl/nginxctl.conf

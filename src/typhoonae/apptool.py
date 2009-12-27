@@ -419,7 +419,8 @@ def write_supervisor_conf(options, conf, app_root):
     else:
         credentials = ''
 
-    supervisor_conf_stub = open(options.supervisor, 'w')
+    supervisor_conf_stub = open(
+        os.path.join(root, 'etc', conf.application+'-supervisor.conf'), 'w')
     supervisor_conf_stub.write(
         "# Automatically generated supervisor configuration file: don't edit!\n"
         "# Use apptool to modify.\n")
@@ -627,10 +628,6 @@ def main():
                   action="store_true",
                   help="enable HTTP base authentication for logging in",
                   default=False)
-
-    op.add_option("--supervisor", dest="supervisor", metavar="FILE",
-                  help="write supervisor configuration to this file",
-                  default=os.path.join('etc', 'appserver.conf'))
 
     op.add_option("--server_name", dest="server_name", metavar="STRING",
                   help="use this server name", default=socket.getfqdn())

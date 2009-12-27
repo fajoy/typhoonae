@@ -181,7 +181,7 @@ stderr_logfile_maxbytes = 1MB
 
 SUPERVISOR_AMQP_CONFIG = """
 [program:taskworker]
-command = %(bin)s/taskworker --amqp_host=%(amqp_host)s
+command = %(bin)s/taskworker --amqp_host=%(amqp_host)s %(credentials)s
 process_name = taskworker
 directory = %(root)s
 priority = 20
@@ -199,7 +199,7 @@ stdout_logfile = %(var)s/log/deferred_taskworker.log
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:8080 --jid=%(jid)s --password=%(password)s
+command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:8080 --jid=%(jid)s --password=%(password)s %(credentials)s
 process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -381,7 +381,7 @@ def write_nginx_conf(options, conf, app_root):
             addr=addr,
             app_id=conf.application,
             fcgi_params=FCGI_PARAMS,
-            passwd_file=os.path.abspath(options.passwd_file),
+            passwd_file=os.path.join(app_root, 'htpasswd'),
             path='|'.join(urls_require_login),
             port=port
             )
@@ -413,6 +413,11 @@ def write_supervisor_conf(options, conf, app_root):
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
     xmpp_host = options.xmpp_host
+
+    if options.credentials: 
+        credentials = '--credentials=' + options.credentials
+    else:
+        credentials = ''
 
     supervisor_conf_stub = open(options.supervisor, 'w')
     supervisor_conf_stub.write(
@@ -592,6 +597,11 @@ def main():
                   help="path to use for storing Blobstore file stub data",
                   default=os.path.join('var', 'blobstore'))
 
+    op.add_option("--credentials", dest="credentials", metavar="USER:PASSWORD",
+                  help="use the specified credentials for the service "
+                       "admin user",
+                  default=None)
+
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists", default=False)
 
@@ -617,10 +627,6 @@ def main():
                   action="store_true",
                   help="enable HTTP base authentication for logging in",
                   default=False)
-
-    op.add_option("--passwd", dest="passwd_file", metavar="FILE",
-                  help="use this passwd file for authentication",
-                  default=os.path.join('etc', 'htpasswd'))
 
     op.add_option("--supervisor", dest="supervisor", metavar="FILE",
                   help="write supervisor configuration to this file",

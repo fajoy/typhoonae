@@ -58,20 +58,18 @@ def initURLMapping(conf):
 
     url_mapping = []
 
-    # Configure script with login handler
-    login_handler = google.appengine.api.appinfo.URLMap(
-        url='/_ah/login',
-        script='$PYTHON_LIB/typhoonae/handlers/login.py',
-    )
-
-    # Configure script with logout handler
-    logout_handler = google.appengine.api.appinfo.URLMap(
-        url='/_ah/logout',
-        script='$PYTHON_LIB/typhoonae/handlers/login.py'
-    )
+    add_handlers = [
+        google.appengine.api.appinfo.URLMap(url=url, script=script)
+        for url, script in [
+            # Configure script with login handler
+            ('/_ah/login', '$PYTHON_LIB/typhoonae/handlers/login.py'),
+            # Configure script with logout handler
+            ('/_ah/logout', '$PYTHON_LIB/typhoonae/handlers/login.py')
+        ]
+    ]
 
     # Generate URL mapping
-    for handler in [login_handler, logout_handler] + conf.handlers:
+    for handler in add_handlers + conf.handlers:
         script = handler.script
         regexp = handler.url
         if script != None:

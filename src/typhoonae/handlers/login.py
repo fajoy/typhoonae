@@ -16,6 +16,7 @@
 """Login/logout handler."""
 
 import Cookie
+import base64
 import cookielib
 import google.appengine.ext.webapp
 import md5
@@ -89,20 +90,27 @@ def authenticate(email, admin=False):
         urllib2.build_opener(urllib2.HTTPCookieProcessor(cj)))
 
 
+def getSetCookieHeaderValue(email, admin=False):
+    """Returns header value for setting the login cookie."""
+
+    cookie_name = getCookieName()
+    c = Cookie.SimpleCookie()
+    c[cookie_name] = createLoginCookiePayload(email, admin=admin)
+    c[cookie_name]['path'] = '/'
+
+    return str(re.compile('^Set-Cookie: ').sub('', c.output(), count=1))
+
+
 class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):
     """Simple login handler."""
 
     def get(self):
         """Sets the authentication cookie."""
 
-        cookie_name = getCookieName()
-        c = Cookie.SimpleCookie()
-        c[cookie_name] = createLoginCookiePayload('admin@typhoonae', admin=True)
-        c[cookie_name]['path'] = '/'
-        h = re.compile('^Set-Cookie: ').sub('', c.output(), count=1)
+        self.response.headers.add_header(
+            'Set-Cookie', getSetCookieHeaderValue('admin@typhoonae',
+                                                  admin=True))
         self.response.set_status(401)
-        self.response.headers.add_header('Set-Cookie', str(h))
-
         next_url = self.request.get('continue', '/')
         self.response.headers.add_header('Content-Type', 'text/html')
         self.response.out.write(

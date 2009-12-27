@@ -15,6 +15,7 @@
 # limitations under the License.
 """FastCGI script to serve a CGI application."""
 
+import base64
 import blobstore.handlers
 import cStringIO
 import fcgiapp
@@ -28,6 +29,7 @@ import sys
 import typhoonae
 import typhoonae.handlers.login
 
+BASIC_AUTH_PATTERN = re.compile(r'Basic (.*)$')
 DESCRIPTION = ("FastCGI application server.")
 USAGE = "usage: %prog [options] <application root>"
 SERVER_SOFTWARE = "TyphoonAE/0.1.0"
@@ -191,8 +193,18 @@ def serve(conf, options):
                 os.chdir(os.path.dirname(script))
                 break
 
+        http_auth = os.environ.get('HTTP_AUTHORIZATION', False)
+
         try:
-            if (login_required or admin_only) and not email:
+            if http_auth and not email:
+                match = re.match(BASIC_AUTH_PATTERN, http_auth)
+                if match:
+                    user, pw = base64.b64decode(match.group(1)).split(':')
+                    print('Status: 301 Permanently Moved')
+                    print('Set-Cookie: ' + typhoonae.handlers.login.
+                          getSetCookieHeaderValue(user, admin=True))
+                    print('Location: %s\r\n' % os.environ['REQUEST_URI'])
+            elif (login_required or admin_only) and not email:
                 print('Status: 302 Requires login')
                 print('Location: %s\r\n' %
                       google.appengine.api.users.create_login_url(path_info))

@@ -74,7 +74,7 @@ class ExecutionTimeLimit(object):
         raise TimeLimitExceededError
 
 
-def handle_task(msg):
+def handle_task(msg, credentials=None):
     """Decodes received message and processes task."""
 
     task = simplejson.loads(msg.body)
@@ -82,11 +82,16 @@ def handle_task(msg):
     if typhoonae.taskqueue.is_deferred_eta(task['eta']):
         return False
 
+    headers = {'Content-Type': task['content_type'],
+               'X-AppEngine-TaskName': task['name']}
+
+    if credentials:
+        headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
+
     req = urllib2.Request(
         url='http://%(host)s:%(port)s%(url)s' % task,
         data=base64.b64decode(task['payload']),
-        headers={'Content-Type': task['content_type'],
-                 'X-AppEngine-TaskName': task['name']}
+        headers=headers
     )
 
     try:
@@ -110,6 +115,11 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
 
     op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
                   help="use this AMQP host", default='localhost')
+
+    op.add_option("--credentials", dest="credentials", metavar="USER:PASSWORD",
+                  help="use the specified credentials for the service "
+                       "admin user",
+                  default=None)
 
     (options, args) = op.parse_args()
 
@@ -138,7 +148,7 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
     chan.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
 
     def recv_callback(msg):
-        if not handle_task(msg):
+        if not handle_task(msg, options.credentials):
             task = simplejson.loads(msg.body)
             task_dict = dict(task)
 

@@ -38,9 +38,13 @@ class InitTestCase(unittest.TestCase):
         """Sets up apiproxy stubs."""
 
         class TestOptions:
-            xmpp_host = 'localhost'
-            datastore = 'mongodb'
             blobstore_path = 'blobstore'
+            datastore = 'mongodb'
+            smtp_host = 'localhost'
+            smtp_port = 25
+            smtp_user = ''
+            smtp_password = ''
+            xmpp_host = 'localhost'
 
         typhoonae.setupStubs(self.conf, TestOptions())
 

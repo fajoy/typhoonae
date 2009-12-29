@@ -51,11 +51,11 @@ class MemcacheTestCase(unittest.TestCase):
         google.appengine.api.memcache.add('foo', foo)
         assert google.appengine.api.memcache.get('foo') == foo
 
-        tres_bien = u"Très bien"
+        tres_bien = u"Très bien".encode('utf-8')
         google.appengine.api.memcache.add('tres_bien', tres_bien)
         assert google.appengine.api.memcache.get('tres_bien') == tres_bien
 
-        items = [u'foo', 'bar', {1: 'one'}, 42L]
+        items = [u'foo', 'bar', tres_bien, {1: 'one'}, 42L]
         google.appengine.api.memcache.add('items', items)
         assert google.appengine.api.memcache.get('items') == items
 
@@ -75,10 +75,11 @@ class MemcacheTestCase(unittest.TestCase):
         assert (google.appengine.api.memcache.get('greeting', namespace='no') is
             None)
 
-        unicode_data = u'Äquator'
+        unicode_data = ['Äquator'.decode('utf-8'),]
         google.appengine.api.memcache.set('unicode', unicode_data)
-        assert google.appengine.api.memcache.get('unicode') == unicode_data
-        assert type(google.appengine.api.memcache.get('unicode')) == unicode
+        self.assertEqual(
+            unicode_data, google.appengine.api.memcache.get('unicode'))
+        assert type(google.appengine.api.memcache.get('unicode')) == list
 
 
     def testDeletingItem(self):
@@ -162,6 +163,21 @@ class MemcacheTestCase(unittest.TestCase):
         cached_entity = google.appengine.ext.db.model_from_protobuf(
             encoded_entity)
         assert cached_entity.name == 'foobar'
+
+    def testMulti(self):
+        """Stores multiple keys' values at once."""
+
+        google.appengine.api.memcache.set_multi(
+            {'map_key_one': 1, 'map_key_two': u'some value'})
+        values = google.appengine.api.memcache.get_multi(
+            ['map_key_one', 'map_key_two'])
+        assert {'map_key_one': 1, 'map_key_two': u'some value'} == values
+
+        google.appengine.api.memcache.add_multi(
+            {'map_key_one': 'one', 'map_key_two': 2, 'three': u'trois'})
+        values = google.appengine.api.memcache.get_multi(
+            ['map_key_two', 'three'])
+        assert {'map_key_two': u'some value', 'three': u'trois'} == values
 
 
 if __name__ == "__main__":

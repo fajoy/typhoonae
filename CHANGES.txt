@@ -1,8 +1,40 @@
 CHANGES
 =======
 
-Version 0.1.0b2 (2009-??-??)
+Version 0.1.1 (2009-12-28)
+-------------------------- 
+
+  - Supports Google App Engine SDK 1.3.0.
+
+  - Adds support for the new Blobstore API.
+
+  - Adds optional HTTP basic authentication.
+
+  - Fixes an issue where the XMPP/HTTP dispatcher didn't handle unicode.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=15
+
+  - Fixes an issue where memcache.get_multi(keys) raises a KeyError.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=16
+
+  - Fixes an issue where the SCRIPT_NAME variable is missing in the CGI
+    environment.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=18
+
+  - Fixes an issue where the login parameter of URL handler definitions in the
+    app.yaml configuration file got ignored.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=20
+
+  - Adds several new command line options to the apptool and fcgiserver.
+
+
+Version 0.1.0b2 (2009-12-04)
 ----------------------------
+
+  - Using Google App Engine SDK 1.2.8.
 
   - Added BDBDatastore support.
 

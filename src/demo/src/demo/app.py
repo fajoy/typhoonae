@@ -16,18 +16,21 @@
 """Demo application."""
 
 import datetime
+import django.utils.simplejson
 import google.appengine.api.capabilities
 import google.appengine.api.labs.taskqueue
 import google.appengine.api.memcache
 import google.appengine.api.users
 import google.appengine.api.xmpp
+import google.appengine.ext.blobstore
 import google.appengine.ext.db
 import google.appengine.ext.webapp
 import google.appengine.ext.webapp.template
+import google.appengine.ext.webapp.util
 import logging
 import os
 import random
-import wsgiref.handlers
+import urllib
 
 NUM_SHARDS = 20
 
@@ -87,7 +90,7 @@ def get_notes():
             return notes
 
     query = google.appengine.ext.db.GqlQuery(
-        "SELECT * FROM Note ORDER BY date DESC LIMIT 500")
+        "SELECT * FROM Note ORDER BY date DESC LIMIT 100")
 
     notes = ['(%s) %s - %s' %
              (note.key().id(), note.date, note.body) for note in query]
@@ -128,17 +131,17 @@ class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
         increment()
         count = get_count()
         notes = get_notes()
+
+        blobs = reversed(
+            google.appengine.ext.blobstore.BlobInfo.all().fetch(10))
+
         now = datetime.datetime.now()
         eta = now + datetime.timedelta(seconds=5)
         google.appengine.api.labs.taskqueue.add(url='/makenote',
                                                 eta=eta,
                                                 payload="%i delayed" % count)
-        params = {
-            'total_notes': str(len(notes)),
-            'unused': False
-        }
-        google.appengine.api.labs.taskqueue.add(url='/count', params=params)
         vars = dict(
+            blobs=blobs,
             count=count,
             env=os.environ,
             login_or_logout=login_or_logout,
@@ -159,13 +162,6 @@ class CountRequestHandler(google.appengine.ext.webapp.RequestHandler):
         self.response.headers.add_header("Content-Type", "text/plain")
         self.response.out.write('Count: %i' % count)
 
-    def post(self):
-        """Writes a logging message."""
-
-        count = self.request.get('total_notes')
-        if not count: count = 'not available'
-        logging.info("Total number of notes %s" % count)
-
 
 class LogRequestHandler(google.appengine.ext.webapp.RequestHandler):
     """Request handler for making a log entry."""
@@ -185,9 +181,34 @@ class NoteWorker(google.appengine.ext.webapp.RequestHandler):
     def post(self):
         """Handles post."""
 
-        note = Note()
-        note.body = self.request.body
+        note = Note(body=self.request.body)
         note.put()
+
+    def get(self):
+        """Handles get."""
+
+        last_key = self.request.get('last_key')
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM Note ORDER BY date DESC LIMIT 1")
+
+        result = query.get()
+
+        if result != None:
+            key = str(result.key().id_or_name())
+        else:
+            key = None
+
+        if key == None or key == last_key:
+            self.response.set_status(304)
+            return
+
+        self.response.headers.add_header(
+            "Content-Type", "'application/javascript; charset=utf8'")
+
+        data = {'key': key, 'message': result.body}
+
+        self.response.out.write(django.utils.simplejson.dumps(data))
 
 
 class InviteHandler(google.appengine.ext.webapp.RequestHandler):
@@ -220,21 +241,34 @@ class XMPPHandler(google.appengine.ext.webapp.RequestHandler):
         note.body = message.body
         note.put()
 
- 
+
+class DeleteBlobHandler(google.appengine.ext.webapp.RequestHandler):
+    """Deletes blobs."""
+
+    def get(self, resource):
+        """Handles get."""
+
+        resource = str(urllib.unquote(resource))
+        google.appengine.ext.blobstore.delete(resource)
+        self.redirect('/')
+
+
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/', DemoRequestHandler),
     ('/count', CountRequestHandler),
     ('/log', LogRequestHandler),
     ('/makenote', NoteWorker),
+    ('/getnote', NoteWorker),
     ('/invite', InviteHandler),
     ('/_ah/xmpp/message/chat/', XMPPHandler),
+    ('/delete/([^/]+)?', DeleteBlobHandler),
 ], debug=True)
 
 
 def main():
     """The main function."""
 
-    wsgiref.handlers.CGIHandler().run(app)
+    google.appengine.ext.webapp.util.run_wsgi_app(app)
 
 
 if __name__ == '__main__':

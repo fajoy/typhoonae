@@ -15,28 +15,27 @@
 # limitations under the License.
 """Simple XMPP/HTTP dispatcher implementation."""
 
+import base64
 import cookielib
 import logging
 import mimetools
 import optparse
 import sys
 import time
+import typhoonae.handlers.login
 import urllib2
 import xmpp
 
 DESCRIPTION = ("XMPP/HTTP dispatcher.")
 USAGE = "usage: %prog [options]"
 
-cj = cookielib.CookieJar()
-opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-urllib2.install_opener(opener)
 
-
-def post_multipart(url, fields):
+def post_multipart(url, credentials, fields):
     """Posts multipart form data fields.
 
     Args:
         url: Post multipart form data to this URL.
+        credentials: Authentication credentials to be used when posting.
         fields: A list of tuples of the form [(fieldname, value), ...].
     """
 
@@ -45,9 +44,18 @@ def post_multipart(url, fields):
     headers = {'Content-Type': content_type,
                'Content-Length': str(len(body))}
 
-    r = urllib2.Request(url, body, headers)
+    if credentials:
+        headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
 
-    return urllib2.urlopen(r).read()
+    req = urllib2.Request(url, str(body.encode('utf-8')), headers)
+
+    try:
+        res = urllib2.urlopen(req)
+    except urllib2.URLError, err_obj:
+        reason = getattr(err_obj, 'reason', err_obj)
+        logging.error("failed task %s %s" % (task, reason))
+        return
+    return res.read()
 
 
 def encode_multipart_formdata(fields):
@@ -57,20 +65,19 @@ def encode_multipart_formdata(fields):
     """
 
     BOUNDARY = mimetools.choose_boundary()
-    CRLF = '\r\n'
+    CRLF = u'\r\n'
     buffer = []
 
     for (key, value) in fields:
-        buffer.append('--%s' % BOUNDARY)
-        buffer.append('Content-Disposition: form-data; name="%s"' % key)
-        buffer.append('')
-        buffer.append(value)
+        buffer.append(u'--%s' % BOUNDARY)
+        buffer.append(u'Content-Disposition: form-data; name="%s"' % key)
+        buffer.append(u'')
+        buffer.append(value.decode('utf-8'))
 
-    buffer.append('--%s--' % BOUNDARY)
-    buffer.append('')
-    logging.debug(str(buffer))
+    buffer.append(u'--%s--' % BOUNDARY)
+    buffer.append(u'')
     body = CRLF.join(buffer)
-    content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+    content_type = u'multipart/form-data; boundary=%s' % BOUNDARY
 
     return content_type, body
 
@@ -78,20 +85,21 @@ def encode_multipart_formdata(fields):
 class Dispatcher(object):
     """The XMPP/HTTP dispatcher class."""
 
-    def __init__(self, address):
+    def __init__(self, address, credentials):
         """Initializes the dispatcher."""
 
         self.address = address
+        self.credentials = credentials
 
     def __call__(self, conn, message):
         """The dispatcher function."""
 
-        logging.debug(str(message))
         post_multipart('http://%s/_ah/xmpp/message/chat/' % self.address,
-                       [('body', message.getBody()),
-                        ('from', str(message.getFrom())),
-                        ('stanza', str(message)),
-                        ('to', str(message.getTo()))])
+                       self.credentials,
+                       [(u'body', unicode(message.getBody()).encode('utf-8')),
+                        (u'from', unicode(message.getFrom())),
+                        (u'stanza', unicode(message).encode('utf-8')),
+                        (u'to', unicode(message.getTo()))])
 
 
 def loop(conn):
@@ -116,6 +124,11 @@ def main():
     op.add_option("-a", "--address", dest="address", metavar="HOST:PORT",
                   help="the application host and port",
                   default="localhost:8080")
+
+    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
+                  help="use the specified credentials for the service "
+                       "admin user",
+                  default=None)
 
     op.add_option("-j", "--jid", dest="jid", metavar="JID",
                   help="use this Jabber ID", default="demo@localhost")
@@ -159,8 +172,11 @@ def main():
     if auth <> 'sasl':
         logging.warning("SASL authentication on %s failed" % server)
 
-    client.RegisterHandler('message', Dispatcher(options.address))
+    client.RegisterHandler(
+        'message', Dispatcher(options.address, options.credentials))
     client.sendInitPresence()
+
+    typhoonae.handlers.login.authenticate('xmpp@typhoonae', admin=True)
 
     loop(client)
 

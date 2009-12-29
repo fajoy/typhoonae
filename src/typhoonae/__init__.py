@@ -15,13 +15,15 @@
 # limitations under the License.
 """Helper functions for registering App Engine API proxy stubs."""
 
+import blobstore.blobstore_stub
+import blobstore.file_blob_storage
 import capability_stub
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.appinfo
 import google.appengine.api.mail_stub
 import google.appengine.api.urlfetch_stub
 import google.appengine.api.user_service_stub
-import google.appengine.ext.webapp
+import google.appengine.ext.webapp.blobstore_handlers
 import intid
 import logging
 import memcache.memcache_stub
@@ -56,21 +58,18 @@ def initURLMapping(conf):
 
     url_mapping = []
 
-    # Configure script with login handler
-    login = google.appengine.api.appinfo.URLMap(
-        url='/login',
-        script='$PYTHON_LIB/typhoonae/handlers/login.py',
-        login='required'
-    )
-
-    # Configure script with logout handler
-    logout = google.appengine.api.appinfo.URLMap(
-        url='/logout',
-        script='$PYTHON_LIB/typhoonae/handlers/login.py'
-    )
+    add_handlers = [
+        google.appengine.api.appinfo.URLMap(url=url, script=script)
+        for url, script in [
+            # Configure script with login handler
+            ('/_ah/login', '$PYTHON_LIB/typhoonae/handlers/login.py'),
+            # Configure script with logout handler
+            ('/_ah/logout', '$PYTHON_LIB/typhoonae/handlers/login.py')
+        ]
+    ]
 
     # Generate URL mapping
-    for handler in [login, logout] + conf.handlers:
+    for handler in add_handlers + conf.handlers:
         script = handler.script
         regexp = handler.url
         if script != None:
@@ -96,8 +95,11 @@ def initURLMapping(conf):
             if not regexp.endswith('$'):
                 regexp += '$'
             compiled = re.compile(regexp)
-            url_mapping.append((compiled, module, path))
- 
+            login_required = handler.login in ('required', 'admin')
+            admin_only = handler.login in ('admin',)
+            url_mapping.append(
+                (compiled, module, path, login_required, admin_only))
+
     return url_mapping
 
 
@@ -178,7 +180,8 @@ def setupUserService():
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('user',
         google.appengine.api.user_service_stub.UserServiceStub(
-            login_url='/login?=%s', logout_url='/logout?=%s'))
+            login_url='/_ah/login?continue=%s',
+            logout_url='/_ah/logout?continue=%s'))
 
 
 def setupXMPP(host):
@@ -186,6 +189,15 @@ def setupXMPP(host):
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
         xmpp.xmpp_service_stub.XmppServiceStub(host=host))
+
+
+def setupBlobstore(blobstore_path, app_id):
+    """Sets up blobstore service."""
+
+    storage = blobstore.file_blob_storage.FileBlobStorage(
+        blobstore_path, app_id)
+    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+        'blobstore', blobstore.blobstore_stub.BlobstoreServiceStub(storage))
 
 
 def setupStubs(conf, options):
@@ -200,7 +212,8 @@ def setupStubs(conf, options):
                    'dev_appserver.datastore', 'dev_appserver.datastore.history',
                    False, False)
 
-    setupMail('localhost', 25, '', '')
+    setupMail(options.smtp_host, options.smtp_port,
+              options.smtp_user, options.smtp_password)
 
     setupMemcache()
 
@@ -211,6 +224,8 @@ def setupStubs(conf, options):
     setupUserService()
 
     setupXMPP(options.xmpp_host)
+
+    setupBlobstore(options.blobstore_path, conf.application)
 
     try:
         from google.appengine.api.images import images_stub

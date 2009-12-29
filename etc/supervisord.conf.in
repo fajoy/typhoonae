@@ -42,24 +42,8 @@ priority = 10
 redirect_stderr = true
 stdout_logfile = ${buildout:directory}/var/log/ejabberd.log
 
-[program:taskworker]
-command = ${buildout:directory}/bin/taskworker 
-process_name = taskworker
-directory = ${buildout:directory}
-priority = 20
-redirect_stderr = true
-stdout_logfile = ${buildout:directory}/var/log/taskworker.log
-
-[program:deferred_taskworker]
-command = ${buildout:directory}/bin/deferred_taskworker 
-process_name = deferred_taskworker
-directory = ${buildout:directory}
-priority = 20
-redirect_stderr = true
-stdout_logfile = ${buildout:directory}/var/log/deferred_taskworker.log
-
 [include]
-files = ${buildout:directory}/etc/appserver.conf
+files = ${buildout:directory}/etc/*-supervisor.conf
 
 [program:nginx]
 command = ${buildout:directory}/parts/nginx/sbin/nginx -c ${buildout:directory}/parts/nginxctl/nginxctl.conf

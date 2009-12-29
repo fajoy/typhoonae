@@ -26,10 +26,10 @@ The TyphoonAE Python package contains the glue code for a number of independent
 services. We recommend to install them with zc.buildout and the buildout
 configuration which can be downloaded here::
 
-  http://typhoonae.googlecode.com/files/typhoonae-buildout-0.1.0b2.tar.gz
+  http://typhoonae.googlecode.com/files/typhoonae-buildout-0.1.1.tar.gz
 
 Unpack the archive and follow the steps described in the README.txt file. This
-package and the Google App Engine SDK 1.2.7 will also be installed by the
+package and the Google App Engine SDK 1.3.0 will also be installed by the
 buildout.
 
 Visit the project page http://typhoonae.googlecode.com for further information.

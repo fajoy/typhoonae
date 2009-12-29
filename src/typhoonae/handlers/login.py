@@ -16,10 +16,14 @@
 """Login/logout handler."""
 
 import Cookie
+import base64
+import cookielib
 import google.appengine.ext.webapp
 import md5
 import os
 import re
+import socket
+import urllib2
 import wsgiref.handlers
 
 
@@ -53,7 +57,7 @@ def getUserInfo(cookie):
     return email, (admin == 'True'), user_id
 
 
-def createLoginCookie(email, admin):
+def createLoginCookiePayload(email, admin):
     """Creates cookie payload data for login information."""
 
     admin_string = 'False'
@@ -68,23 +72,51 @@ def createLoginCookie(email, admin):
     return '%s:%s:%s' % (email, admin_string, user_id)
 
 
+def createLoginCookie(email, admin):
+    """Creates a login cookie."""
+
+    return cookielib.Cookie(
+        0, getCookieName(), createLoginCookiePayload(email, admin=admin), None,
+        False, socket.getfqdn(), False, False, '/', True, False, None, True, 
+        None, None, {}, rfc2109=False)
+
+
+def authenticate(email, admin=False):
+    """Authenticate user with given email."""
+
+    cj = cookielib.CookieJar()
+    cj.set_cookie(createLoginCookie(email, admin=admin))
+    urllib2.install_opener(
+        urllib2.build_opener(urllib2.HTTPCookieProcessor(cj)))
+
+
+def getSetCookieHeaderValue(email, admin=False):
+    """Returns header value for setting the login cookie."""
+
+    cookie_name = getCookieName()
+    c = Cookie.SimpleCookie()
+    c[cookie_name] = createLoginCookiePayload(email, admin=admin)
+    c[cookie_name]['path'] = '/'
+
+    return str(re.compile('^Set-Cookie: ').sub('', c.output(), count=1))
+
+
 class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):
     """Simple login handler."""
 
     def get(self):
         """Sets the authentication cookie."""
 
-        cookie_name = getCookieName()
-        c = Cookie.SimpleCookie()
-        c[cookie_name] = createLoginCookie('admin@localhost', admin=True)
-        c[cookie_name]['path'] = '/'
-        h = re.compile('^Set-Cookie: ').sub('', c.output(), count=1)
-        self.response.headers.add_header('Set-Cookie', str(h))
-
+        self.response.headers.add_header(
+            'Set-Cookie', getSetCookieHeaderValue('admin@typhoonae',
+                                                  admin=True))
+        self.response.set_status(401)
+        next_url = self.request.get('continue', '/')
         self.response.headers.add_header('Content-Type', 'text/html')
         self.response.out.write(
-            '<html><body>You\'re logged in as admin@localhost! This is a demo '
-            'login handler.<br><a href="/">Return</a></body></html>')
+            '<html><body>You\'re logged in as admin@typhoonae! This is a demo '
+            'login handler.<br><a href="%s">Continue</a>'
+            '</body></html>' % next_url)
 
 
 class LogoutRequestHandler(google.appengine.ext.webapp.RequestHandler):
@@ -104,8 +136,8 @@ class LogoutRequestHandler(google.appengine.ext.webapp.RequestHandler):
 
 
 app = google.appengine.ext.webapp.WSGIApplication([
-    ('/login', LoginRequestHandler),
-    ('/logout', LogoutRequestHandler),
+    ('/_ah/login', LoginRequestHandler),
+    ('/_ah/logout', LogoutRequestHandler),
 ], debug=True)
 
 

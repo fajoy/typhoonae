@@ -20,10 +20,12 @@ import google.appengine.cron
 import optparse
 import os
 import re
+import socket
 import subprocess
 import sys
 import tempfile
-import typhoonae 
+import typhoonae
+import typhoonae.fcgiserver
 
 DESCRIPTION = ("Console script to perform common tasks on configuring an "
                "application.")
@@ -34,8 +36,9 @@ DEFAULT_EXPIRATION = '30d'
 
 NGINX_HEADER = """
 server {
+    client_max_body_size 100m;
     listen      8080;
-    server_name localhost;
+    server_name %(server_name)s;
 
     access_log  %(var)s/log/httpd-access.log;
     error_log   %(var)s/log/httpd-error.log;
@@ -91,6 +94,47 @@ location / {
 }
 """
 
+NGINX_UPLOAD_CONFIG = """
+location /%(upload_url)s {
+    # Pass altered request body to this location
+    upload_pass @%(app_id)s;
+
+    # Store files to this directory
+    # The directory is hashed, subdirectories 0 1 2 3 4 5 6 7 8 9
+    # should exist
+    upload_store %(blobstore_path)s 1;
+
+    # Allow uploaded files to be read only by user
+    upload_store_access user:r;
+
+    # Set specified fields in request body
+    upload_set_form_field $upload_field_name.name "$upload_file_name";
+    upload_set_form_field $upload_field_name.content_type "$upload_content_type";
+    upload_set_form_field $upload_field_name.path "$upload_tmp_path";
+
+    # Inform backend about hash and size of a file
+    upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
+    upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
+
+    upload_pass_form_field ".*";
+
+    upload_cleanup 400 404 499 500-505;
+}
+
+location @%(app_id)s {
+    fastcgi_pass %(addr)s:%(port)s;
+%(fcgi_params)s
+}
+"""
+
+NGINX_DOWNLOAD_CONFIG = """
+location ~ ^/_ah/blobstore/%(app_id)s/(.*) {
+    root %(blobstore_path)s;
+    rewrite ^/_ah/blobstore/%(app_id)s/(.*) /$1 break;
+    internal;
+}
+"""
+
 SUPERVISOR_MONGODB_CONFIG = """
 [program:mongod]
 command = %(bin)s/mongod --dbpath=%(var)s
@@ -101,7 +145,7 @@ redirect_stderr = true
 stdout_logfile = %(var)s/log/mongod.log
 
 [program:intid]
-command = %(bin)s/intid 
+command = %(bin)s/intid
 process_name = intid
 directory = %(root)s
 priority = 20
@@ -122,7 +166,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s %(app_root)s
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -135,9 +179,27 @@ stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
 """
 
+SUPERVISOR_AMQP_CONFIG = """
+[program:taskworker]
+command = %(bin)s/taskworker --amqp_host=%(amqp_host)s %(credentials)s
+process_name = taskworker
+directory = %(root)s
+priority = 20
+redirect_stderr = true
+stdout_logfile = %(var)s/log/taskworker.log
+
+[program:deferred_taskworker]
+command = %(bin)s/deferred_taskworker --amqp_host=%(amqp_host)s
+process_name = deferred_taskworker
+directory = %(root)s
+priority = 20
+redirect_stderr = true
+stdout_logfile = %(var)s/log/deferred_taskworker.log
+"""
+
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --jid=%(jid)s --password=%(password)s
+command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:8080 --jid=%(jid)s --password=%(password)s %(credentials)s
 process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -189,7 +251,7 @@ override_acls.
 
 {access, max_user_sessions, [{10, all}]}.
 
-{access, max_user_offline_messages, [{5000, admin}, {100, all}]}. 
+{access, max_user_offline_messages, [{5000, admin}, {100, all}]}.
 
 {access, local, [{allow, local}]}.
 
@@ -259,9 +321,19 @@ override_acls.
 def write_nginx_conf(options, conf, app_root):
     """Writes nginx server configuration stub."""
 
-    var = os.path.abspath(options.var)
     addr = options.addr
+    app_id = conf.application
+    blobstore_path = os.path.abspath(
+        os.path.join(options.blobstore_path, app_id))
     port = options.port
+    server_name = options.server_name
+    upload_url = options.upload_url
+    var = os.path.abspath(options.var)
+
+    for i in range(10):
+        p = os.path.join(blobstore_path, str(i))
+        if not os.path.isdir(p):
+            os.makedirs(p)
 
     httpd_conf_stub = open(options.nginx, 'w')
     httpd_conf_stub.write("# Automatically generated NGINX configuration file: "
@@ -270,7 +342,7 @@ def write_nginx_conf(options, conf, app_root):
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 
-    secure_urls = []
+    urls_require_login = []
 
     for handler in conf.handlers:
         ltrunc_url = re.sub('^/', '', handler.url)
@@ -300,23 +372,25 @@ def write_nginx_conf(options, conf, app_root):
                 root=app_root
                 )
             )
-        if handler.secure == 'always':
-            if ltrunc_url not in secure_urls:
-                secure_urls.append(ltrunc_url)
+        if handler.login in ('admin', 'required'):
+            if ltrunc_url not in urls_require_login:
+                urls_require_login.append(ltrunc_url)
 
-    if secure_urls:
+    if urls_require_login and options.http_base_auth_enabled:
         httpd_conf_stub.write(NGINX_SECURE_LOCATION % dict(
             addr=addr,
             app_id=conf.application,
             fcgi_params=FCGI_PARAMS,
-            passwd_file=os.path.abspath(options.passwd_file),
-            path='|'.join(secure_urls),
+            passwd_file=os.path.join(app_root, 'htpasswd'),
+            path='|'.join(urls_require_login),
             port=port
             )
         )
 
     vars = locals()
     vars.update(dict(fcgi_params=FCGI_PARAMS))
+    httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % vars)
+    httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_FCGI_CONFIG % vars)
     httpd_conf_stub.write(NGINX_FOOTER)
     httpd_conf_stub.close()
@@ -326,20 +400,37 @@ def write_supervisor_conf(options, conf, app_root):
     """Writes supercisord configuration stub."""
 
     addr = options.addr
+    amqp_host = options.amqp_host
     app_id = conf.application
+    auth_domain = options.auth_domain
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
+    blobstore_path = os.path.abspath(options.blobstore_path)
     datastore = options.datastore.lower()
     port = options.port
     root = os.getcwd()
+    server_name = options.server_name
+    server_software = options.server_software
+    upload_url = options.upload_url
     var = os.path.abspath(options.var)
     xmpp_host = options.xmpp_host
+    smtp_host = options.smtp_host
+    smtp_port = options.smtp_port
+    smtp_user = options.smtp_user
+    smtp_password = options.smtp_password
 
-    supervisor_conf_stub = open(options.supervisor, 'w')
+    if options.credentials: 
+        credentials = '--credentials=' + options.credentials
+    else:
+        credentials = ''
+
+    supervisor_conf_stub = open(
+        os.path.join(root, 'etc', conf.application+'-supervisor.conf'), 'w')
     supervisor_conf_stub.write(
         "# Automatically generated supervisor configuration file: don't edit!\n"
         "# Use apptool to modify.\n")
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
+    supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
 
     if datastore == 'mongodb':
         supervisor_conf_stub.write(SUPERVISOR_MONGODB_CONFIG % locals())
@@ -475,7 +566,7 @@ def write_crontab(options, app_root):
 
         row.command = os.path.join(
             os.path.dirname(os.path.abspath(sys.argv[0])), 'runtask')
-        row.command += ' ' + 'http://localhost:8080' + entry.url
+        row.command += ' http://%s:8080%s' % (options.server_name, entry.url)
 
         row.description = '%s (%s)' % (entry.description, entry.schedule)
 
@@ -500,9 +591,24 @@ def main():
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
+    op.add_option("--auth_domain", dest="auth_domain", metavar="STRING",
+                  help="use this value for the AUTH_DOMAIN environment "
+                  "variable", default='localhost')
+
+    op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
+                  help="use this AMQP host", default='localhost')
+
+    op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
+                  help="path to use for storing Blobstore file stub data",
+                  default=os.path.join('var', 'blobstore'))
+
+    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
+                  help="use the specified credentials for the service "
+                       "admin user",
+                  default=None)
+
     op.add_option("--crontab", dest="set_crontab", action="store_true",
-                  help="set crontab if cron.yaml exists",
-                  default=False)
+                  help="set crontab if cron.yaml exists", default=False)
 
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this datastore", default='mongodb')
@@ -512,8 +618,7 @@ def main():
                   default=os.path.join('etc', 'ejabberd.cfg'))
 
     op.add_option("--fcgi_host", dest="addr", metavar="ADDR",
-                  help="use this FastCGI host",
-                  default='localhost')
+                  help="use this FastCGI host", default='localhost')
 
     op.add_option("--fcgi_port", dest="port", metavar="PORT",
                   help="use this port of the FastCGI host",
@@ -523,20 +628,41 @@ def main():
                   help="write nginx configuration to this file",
                   default=os.path.join('etc', 'server.conf'))
 
-    op.add_option("--passwd", dest="passwd_file", metavar="FILE",
-                  help="use this passwd file for authentication",
-                  default=os.path.join('etc', 'htpasswd'))
+    op.add_option("--http_base_auth", dest="http_base_auth_enabled",
+                  action="store_true",
+                  help="enable HTTP base authentication for logging in",
+                  default=False)
 
-    op.add_option("--supervisor", dest="supervisor", metavar="FILE",
-                  help="write supervisor configuration to this file",
-                  default=os.path.join('etc', 'appserver.conf'))
+    op.add_option("--server_name", dest="server_name", metavar="STRING",
+                  help="use this server name", default=socket.getfqdn())
+
+    op.add_option("--server_software", dest="server_software", metavar="STRING",
+                  help="use this server software identifier",
+                  default=typhoonae.fcgiserver.SERVER_SOFTWARE)
+
+    op.add_option("--upload_url", dest="upload_url", metavar="URI",
+                  help="use this upload URL for the Blobstore configuration "
+                       "(no leading '/')",
+                  default='upload/')
 
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",
                   default=os.environ.get('TMPDIR', '/var'))
 
-    op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
-                  help="use this XMPP host", default='localhost')
+    op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
+                  help="use this XMPP host", default=socket.getfqdn())
+
+    op.add_option("--smtp_host", dest="smtp_host", metavar="ADDR",
+                  help="use this SMTP host", default='localhost')
+
+    op.add_option("--smtp_port", dest="smtp_port", metavar="PORT",
+                  help="use this SMTP port", default='25')
+
+    op.add_option("--smtp_user", dest="smtp_user", metavar="STRING",
+                  help="use this SMTP user", default='')
+
+    op.add_option("--smtp_password", dest="smtp_password", metavar="STRING",
+                  help="use this SMTP password", default='')
 
     (options, args) = op.parse_args()
 

@@ -19,14 +19,18 @@ from __future__ import with_statement
 from amqplib import client_0_8 as amqp
 import base64
 import logging
+import optparse
 import os
 import signal
 import simplejson
 import socket
 import sys
+import typhoonae.handlers.login
 import typhoonae.taskqueue
 import urllib2
 
+DESCRIPTION = ("AMQP client to perform queued tasks.")
+USAGE = "usage: %prog [options]"
 MAX_TRY_COUNT = 10
 MAX_TIME_LIMIT = 30
 
@@ -70,7 +74,7 @@ class ExecutionTimeLimit(object):
         raise TimeLimitExceededError
 
 
-def handle_task(msg):
+def handle_task(msg, credentials=None):
     """Decodes received message and processes task."""
 
     task = simplejson.loads(msg.body)
@@ -78,11 +82,16 @@ def handle_task(msg):
     if typhoonae.taskqueue.is_deferred_eta(task['eta']):
         return False
 
+    headers = {'Content-Type': task['content_type'],
+               'X-AppEngine-TaskName': task['name']}
+
+    if credentials:
+        headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
+
     req = urllib2.Request(
         url='http://%(host)s:%(port)s%(url)s' % task,
         data=base64.b64decode(task['payload']),
-        headers={'Content-Type': task['content_type'],
-                 'X-AppEngine-TaskName': task['name']}
+        headers=headers
     )
 
     try:
@@ -102,6 +111,18 @@ def handle_task(msg):
 def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
     """The main function."""
 
+    op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
+
+    op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
+                  help="use this AMQP host", default='localhost')
+
+    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
+                  help="use the specified credentials for the service "
+                       "admin user",
+                  default=None)
+
+    (options, args) = op.parse_args()
+
     logging.basicConfig(
         format='%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] '
                '%(message)s',
@@ -109,7 +130,7 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
 
     try:
         conn = amqp.Connection(
-            host="localhost:5672",
+            host="%s:5672" % options.amqp_host,
             userid="guest",
             password="guest",
             virtual_host="/",
@@ -127,7 +148,7 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
     chan.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
 
     def recv_callback(msg):
-        if not handle_task(msg):
+        if not handle_task(msg, options.credentials):
             task = simplejson.loads(msg.body)
             task_dict = dict(task)
 
@@ -152,6 +173,8 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
         no_ack=False,
         callback=recv_callback,
         consumer_tag=_consumer_tag)
+
+    typhoonae.handlers.login.authenticate('queue@typhoonae', admin=True)
 
     try:
         while True:

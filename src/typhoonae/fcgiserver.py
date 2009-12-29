@@ -15,8 +15,11 @@
 # limitations under the License.
 """FastCGI script to serve a CGI application."""
 
-import StringIO
+import base64
+import blobstore.handlers
+import cStringIO
 import fcgiapp
+import google.appengine.api.users
 import logging
 import optparse
 import os
@@ -26,11 +29,78 @@ import sys
 import typhoonae
 import typhoonae.handlers.login
 
+BASIC_AUTH_PATTERN = re.compile(r'Basic (.*)$')
 DESCRIPTION = ("FastCGI application server.")
 USAGE = "usage: %prog [options] <application root>"
+SERVER_SOFTWARE = "TyphoonAE/0.1.0"
 
 
 _module_cache = dict()
+
+
+class CGIHandlerChain(object):
+    """CGI handler chain."""
+
+    def __init__(self, *handlers):
+        """Constructor."""
+
+        self.handlers = handlers
+
+    def __call__(self, fp, environ):
+        """Executes CGI handlers."""
+
+        for handler in self.handlers:
+            fp = handler(fp, environ)
+
+        return fp
+
+
+class CGIInAdapter:
+    """Adapter for FastCGI input stream objects."""
+
+    def __init__(self, i):
+        self.i = i
+
+    def close(self):
+        self.i.close()
+
+    def read(self, *args):
+        return self.i.read(*args)
+
+    def readline(self, *args):
+        return self.i.readline()
+
+    def seek(self, *args):
+        return self.i.seek(*args)
+
+
+class CGIOutAdapter:
+    """Adapter for FastCGI output stream objects."""
+
+    def __init__(self, o):
+        self.o = o
+        self.fp = cStringIO.StringIO()
+
+    def __del__(self):
+        del self.fp
+
+    def flush(self):
+        rewriter_chain = CGIHandlerChain(
+            typhoonae.blobstore.handlers.CGIResponseRewriter())
+        fp = rewriter_chain(self.fp, os.environ)
+        try:
+            self.o.write(fp.getvalue())
+            self.o.flush()
+        except IOError:
+            logging.error("Invalid CGI output stream (IOError)")
+        except fcgiapp.error:
+            logging.error("Invalid CGI output stream (FastCGI)")
+        finally:
+            self.fp.flush()
+
+    def write(self, s):
+        self.fp.write(s)
+
 
 def run_module(mod_name, init_globals=None, run_name=None):
     """Execute a module's code without importing it.
@@ -66,11 +136,12 @@ def run_module(mod_name, init_globals=None, run_name=None):
                                   filename, loader, alter_sys=True)
 
 
-def serve(conf):
+def serve(conf, options):
     """Implements the server loop.
 
     Args:
         conf: The application configuration.
+        options: Command line options.
     """
 
     # Inititalize URL mapping
@@ -78,39 +149,8 @@ def serve(conf):
 
     back_ref_pattern = re.compile(r'\\([0-9]*)')
 
-    class StdinAdapter:
-        """Adapter for FastCGI input stream objects."""
-
-        def __init__(self, i):
-            self.i = i
-
-        def read(self, *args):
-            return self.i.read(*args)
-
-        def readline(self, *args):
-            return self.i.readline()
-
-        def seek(self, *args):
-            return self.i.seek(*args)
-
-    class StdoutAdapter:
-        """Adapter for FastCGI output stream objects."""
-
-        def __init__(self, o):
-            self.o = o
-
-        def flush(self):
-            self.o.flush()
-
-        def write(self, s):
-            self.o.write(str(s))
-
     while True:
         (inp, out, unused_err, env) = fcgiapp.Accept()
-
-        # Redirect standard input and output streams
-        sys.stdin = StdinAdapter(inp)
-        sys.stdout = StdoutAdapter(out)
 
         # Initialize application environment
         os_env = dict(os.environ)
@@ -118,8 +158,9 @@ def serve(conf):
         os.environ.update(env)
         os.environ['APPLICATION_ID'] = conf.application
         os.environ['CURRENT_VERSION_ID'] = conf.version + ".1"
-        os.environ['AUTH_DOMAIN'] = 'localhost'
-        os.environ['SERVER_SOFTWARE'] = 'TyphoonAE/0.1.0'
+        os.environ['AUTH_DOMAIN'] = options.auth_domain
+        os.environ['SERVER_SOFTWARE'] = options.server_software
+        os.environ['SCRIPT_NAME'] = ''
         os.environ['TZ'] = 'UTC'
 
         # Get user info and set the user environment variables
@@ -130,24 +171,51 @@ def serve(conf):
             os.environ['USER_IS_ADMIN'] = '1'
         os.environ['USER_ID'] = user_id
 
+        # CGI handler chain
+        cgi_handler_chain = CGIHandlerChain(
+            blobstore.handlers.UploadCGIHandler(upload_url=options.upload_url))
+
+        # Redirect standard input and output streams
+        sys.stdin = cgi_handler_chain(CGIInAdapter(inp), os.environ)
+        sys.stdout = CGIOutAdapter(out)
+
         # Compute script path and set PATH_TRANSLATED environment variable
         path_info = os.environ['PATH_INFO']
-        for pattern, name, script in url_mapping:
+        for pattern, name, script, login_required, admin_only in url_mapping:
             # Check for back reference
             if re.match(pattern, path_info) is not None:
                 m = back_ref_pattern.search(name)
                 if m:
                     ind = int(m.group(1))
                     mod = path_info.split('/')[ind]
-                    name = '.'.join(name.split('.')[0:-1]+[mod])
+                    name = '.'.join(name.split('.')[0:-1] + [mod])
                 os.environ['PATH_TRANSLATED'] = script
                 os.chdir(os.path.dirname(script))
                 break
 
+        http_auth = os.environ.get('HTTP_AUTHORIZATION', False)
+
         try:
-            # Load and run the application module
-            run_module(name, run_name='__main__')
+            if http_auth and not email:
+                match = re.match(BASIC_AUTH_PATTERN, http_auth)
+                if match:
+                    user, pw = base64.b64decode(match.group(1)).split(':')
+                    print('Status: 301 Permanently Moved')
+                    print('Set-Cookie: ' + typhoonae.handlers.login.
+                          getSetCookieHeaderValue(user, admin=True))
+                    print('Location: %s\r\n' % os.environ['REQUEST_URI'])
+            elif (login_required or admin_only) and not email:
+                print('Status: 302 Requires login')
+                print('Location: %s\r\n' %
+                      google.appengine.api.users.create_login_url(path_info))
+            else:
+                # Load and run the application module
+                run_module(name, run_name='__main__')
         finally:
+            # Flush buffers
+            sys.stdout.flush()
+            del sys.stdout
+            del sys.stdin
             # Re-redirect standard input and output streams
             sys.stdin = sys.__stdin__
             sys.stdout = sys.__stdout__
@@ -168,6 +236,14 @@ def main():
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
+    op.add_option("--auth_domain", dest="auth_domain", metavar="STRING",
+                  help="use this value for the AUTH_DOMAIN environment "
+                  "variable", default='localhost')
+
+    op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
+                  help="path to use for storing Blobstore file stub data",
+                  default=os.path.join('var', 'blobstore'))
+
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this datastore", default='mongodb')
 
@@ -175,8 +251,29 @@ def main():
                   help="write logging output to this file",
                   default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))
 
+    op.add_option("--server_software", dest="server_software", metavar="STRING",
+                  help="use this server software identifier",
+                  default=SERVER_SOFTWARE)
+
+    op.add_option("--upload_url", dest="upload_url", metavar="URI",
+                  help="use this upload URL for the Blobstore configuration "
+                       "(no leading '/')",
+                  default='upload/')
+
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
                   help="use this XMPP/Jabber host", default='localhost')
+
+    op.add_option("--smtp_host", dest="smtp_host", metavar="ADDR",
+                  help="use this SMTP host", default='localhost')
+
+    op.add_option("--smtp_port", dest="smtp_port", metavar="PORT",
+                  help="use this SMTP port", default='25')
+
+    op.add_option("--smtp_user", dest="smtp_user", metavar="STRING",
+                  help="use this SMTP user", default='')
+
+    op.add_option("--smtp_password", dest="smtp_password", metavar="STRING",
+                  help="use this SMTP password", default='')
 
     (options, args) = op.parse_args()
 
@@ -201,7 +298,7 @@ def main():
     typhoonae.setupStubs(conf, options)
 
     # Serve the application
-    serve(conf)
+    serve(conf, options)
 
 
 if __name__ == "__main__":

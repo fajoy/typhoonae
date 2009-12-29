@@ -69,3 +69,15 @@ typhoonae.xmpp.ejabberdauth
 
 .. automodule:: typhoonae.xmpp.ejabberdauth
    :members:
+
+typhoonae.blobstore
+===================
+
+.. automodule:: typhoonae.blobstore
+   :members:
+
+typhoonae.blobstore.handlers
+----------------------------
+
+.. automodule:: typhoonae.blobstore.handlers
+   :members:

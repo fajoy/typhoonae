@@ -39,6 +39,7 @@ class ApptoolTestCase(unittest.TestCase):
         """Tests the configuration for scheduled tasks."""
 
         class OptionsMock:
+            server_name = 'localhost'
             set_crontab = False
 
         options = OptionsMock()

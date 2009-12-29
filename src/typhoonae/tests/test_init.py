@@ -39,6 +39,8 @@ class InitTestCase(unittest.TestCase):
 
         class TestOptions:
             xmpp_host = 'localhost'
+            datastore = 'mongodb'
+            blobstore_path = 'blobstore'
 
         typhoonae.setupStubs(self.conf, TestOptions())
 
@@ -46,6 +48,6 @@ class InitTestCase(unittest.TestCase):
         """Initializes the url/script map."""
 
         url_mapping = typhoonae.initURLMapping(self.conf)
-        for pattern, module, path in url_mapping:
+        for pattern, module, path, login_required, admin_only in url_mapping:
             if pattern.match('/foo'):
                 self.assertEqual(module, 'app')

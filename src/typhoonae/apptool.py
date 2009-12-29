@@ -166,7 +166,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s %(app_root)s
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -413,6 +413,10 @@ def write_supervisor_conf(options, conf, app_root):
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
     xmpp_host = options.xmpp_host
+    smtp_host = options.smtp_host
+    smtp_port = options.smtp_port
+    smtp_user = options.smtp_user
+    smtp_password = options.smtp_password
 
     if options.credentials: 
         credentials = '--credentials=' + options.credentials
@@ -647,6 +651,18 @@ def main():
 
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
                   help="use this XMPP host", default=socket.getfqdn())
+
+    op.add_option("--smtp_host", dest="smtp_host", metavar="ADDR",
+                  help="use this SMTP host", default='localhost')
+
+    op.add_option("--smtp_port", dest="smtp_port", metavar="PORT",
+                  help="use this SMTP port", default='25')
+
+    op.add_option("--smtp_user", dest="smtp_user", metavar="STRING",
+                  help="use this SMTP user", default='')
+
+    op.add_option("--smtp_password", dest="smtp_password", metavar="STRING",
+                  help="use this SMTP password", default='')
 
     (options, args) = op.parse_args()
 

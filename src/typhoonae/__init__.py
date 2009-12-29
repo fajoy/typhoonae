@@ -212,7 +212,8 @@ def setupStubs(conf, options):
                    'dev_appserver.datastore', 'dev_appserver.datastore.history',
                    False, False)
 
-    setupMail('localhost', 25, '', '')
+    setupMail(options.smtp_host, options.smtp_port,
+              options.smtp_user, options.smtp_password)
 
     setupMemcache()
 

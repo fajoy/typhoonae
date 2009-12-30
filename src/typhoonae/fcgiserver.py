@@ -32,7 +32,7 @@ import typhoonae.handlers.login
 BASIC_AUTH_PATTERN = re.compile(r'Basic (.*)$')
 DESCRIPTION = ("FastCGI application server.")
 USAGE = "usage: %prog [options] <application root>"
-SERVER_SOFTWARE = "TyphoonAE/0.1.0"
+SERVER_SOFTWARE = "TyphoonAE/0.1.2"
 
 
 _module_cache = dict()

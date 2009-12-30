@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+Version 0.1.2 (2010-??-??)
+--------------------------
+
+  - Adds command line option to configure the SMTP host.
+
+
 Version 0.1.1 (2009-12-28)
 -------------------------- 
 

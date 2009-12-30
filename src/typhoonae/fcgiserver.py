@@ -255,25 +255,25 @@ def main():
                   help="use this server software identifier",
                   default=SERVER_SOFTWARE)
 
-    op.add_option("--upload_url", dest="upload_url", metavar="URI",
-                  help="use this upload URL for the Blobstore configuration "
-                       "(no leading '/')",
-                  default='upload/')
-
-    op.add_option("--xmpp_host", dest="xmpp_host", metavar="HOST",
-                  help="use this XMPP/Jabber host", default='localhost')
-
     op.add_option("--smtp_host", dest="smtp_host", metavar="ADDR",
                   help="use this SMTP host", default='localhost')
 
     op.add_option("--smtp_port", dest="smtp_port", metavar="PORT",
-                  help="use this SMTP port", default='25')
+                  help="use this SMTP port", default=25)
 
     op.add_option("--smtp_user", dest="smtp_user", metavar="STRING",
                   help="use this SMTP user", default='')
 
     op.add_option("--smtp_password", dest="smtp_password", metavar="STRING",
                   help="use this SMTP password", default='')
+
+    op.add_option("--upload_url", dest="upload_url", metavar="URI",
+                  help="use this upload URL for the Blobstore configuration "
+                       "(no leading '/')",
+                  default='upload/')
+
+    op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
+                  help="use this XMPP/Jabber host", default='localhost')
 
     (options, args) = op.parse_args()
 

@@ -16,7 +16,7 @@ percent open source.
 
 The basic idea of this document is to give a brief explanation on the
 principles and design descisions behind TyphoonAE. You can learn how to install
-your own app engine runnig your GAE applications.
+your own App Engine runnig your GAE applications.
 
 If you are interested in developing TyphoonAE itself, this book contains a
 refrence guide. You'll get an architecture overview and an introduction to the

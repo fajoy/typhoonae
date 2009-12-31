@@ -53,7 +53,7 @@ class FileBlobStorage(
         try:
             blob_info = google.appengine.api.datastore.Get(blob_key)
         except google.appengine.api.datastore_errors.EntityNotFoundError:
-            return
+            return ''
 
         blob_path = blob_info['path']
 

@@ -51,6 +51,7 @@ class TestModel(google.appengine.ext.db.Model):
 
     contents = google.appengine.ext.db.StringProperty(required=True)
     lowered_contents = LowerCaseProperty(contents)
+    number = google.appengine.ext.db.IntegerProperty()
 
 
 class TestIntidClient(object):
@@ -175,6 +176,44 @@ class DatastoreMongoTestCase(unittest.TestCase):
         cursor = query.fetch(3)
         self.assertEqual([u'america', u'England', u'Spain'],
                          [e.contents for e in cursor])
+
+    def testInQueries(self):
+        """Does some IN queries."""
+
+        entity = TestModel(contents=u'some contents', number=1)
+        entity.put()
+        count = (TestModel.all()
+                 .filter('number IN', [1, 3])
+        ).count()
+        self.assertEqual(1, count)
+
+        count = (TestModel.all()
+                 .filter('number IN', [0, 4])
+        ).count()
+        self.assertEqual(0, count)
+
+        count = (TestModel.all()
+                 .filter('number IN', [1, 3])
+                 .filter('number IN', [1, 4])
+        ).count()
+        self.assertEqual(1, count)
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM TestModel WHERE number IN :1 LIMIT 10", [3])
+        cursor = query.fetch(10)
+        self.assertEqual(0, len(cursor))
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM TestModel WHERE number IN :1 LIMIT 10", [4])
+        cursor = query.fetch(10)
+        self.assertEqual(0, len(cursor))
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM TestModel WHERE number IN :1 "
+            "AND number IN :2 ORDER BY number DESC",
+            [1, 2], [1])
+        cursor = query.fetch(10)
+        self.assertEqual(1, len(cursor))
 
 
 if __name__ == "__main__":

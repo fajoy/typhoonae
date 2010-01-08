@@ -52,6 +52,7 @@ class TestModel(google.appengine.ext.db.Model):
     contents = google.appengine.ext.db.StringProperty(required=True)
     lowered_contents = LowerCaseProperty(contents)
     number = google.appengine.ext.db.IntegerProperty()
+    more = google.appengine.ext.db.ListProperty(int, required=True)
 
 
 class TestIntidClient(object):
@@ -180,7 +181,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def testInQueries(self):
         """Does some IN queries."""
 
-        entity = TestModel(contents=u'some contents', number=1)
+        entity = TestModel(contents=u'some contents', number=1, more=[1, 4])
         entity.put()
         count = (TestModel.all()
                  .filter('number IN', [1, 3])
@@ -214,6 +215,19 @@ class DatastoreMongoTestCase(unittest.TestCase):
             [1, 2], [1])
         cursor = query.fetch(10)
         self.assertEqual(1, len(cursor))
+
+        # This test seems to fail due to a GAE Python bug.
+        # See http://code.google.com/p/googleappengine/issues/detail?id=2611
+        # for further details.
+        #
+        # To be commented in after the bug is fixed.
+        #
+        #count = (TestModel.all()
+        #         .filter('more =', 1)
+        #         .filter('more IN', [1, 2])
+        #         .filter('more IN', [0, 1])
+        #).count()
+        #self.assertEqual(1, count)
 
 
 if __name__ == "__main__":

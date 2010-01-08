@@ -91,7 +91,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
             'datastore_v3')
 
         query = google.appengine.ext.db.GqlQuery(
-            "SELECT * FROM TestModel LIMIT 2000")
+            "SELECT * FROM TestModel LIMIT 1000")
 
         for entity in query:
             entity.delete()
@@ -100,7 +100,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
         """Writes an entity to and gets an entity from the datastore."""
 
         query = google.appengine.ext.db.GqlQuery(
-            "SELECT * FROM TestModel LIMIT 2000")
+            "SELECT * FROM TestModel LIMIT 1000")
 
         for entity in query:
             entity.delete()
@@ -125,15 +125,39 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def testAllocatingIDs(self):
         """Allocates a number of IDs."""
 
-        for i in xrange(0, 2000):
+        for i in xrange(0, 1000):
             test_key = TestModel(contents='some string').put()
 
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
-        assert query.count() == 2000
+        assert query.count() == 1000
 
         start, end = google.appengine.ext.db.allocate_ids(test_key, 2000)
-        self.assertEqual(start, 2001)
-        self.assertEqual(end, 4001)
+        self.assertEqual(start, 1001)
+        self.assertEqual(end, 3001)
+
+    def testBatching(self):
+        """Counts in batches with __key__ as offset."""
+
+        for i in xrange(0, 1000):
+            TestModel(contents='some string').put()
+        for i in xrange(0, 1000):
+            TestModel(contents='some string').put()
+
+        keys = []
+        # Maybe we have a compatibility problem here, because order by
+        # __key__ should be the default.
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT __key__ FROM TestModel ORDER BY __key__")
+        cursor = query.fetch(1000)
+        while len(cursor) == 1000:
+            keys.extend(cursor)
+            query = google.appengine.ext.db.GqlQuery(
+                "SELECT __key__ FROM TestModel "
+                "WHERE __key__ > :1 ORDER BY __key__", cursor[-1])
+            cursor = query.fetch(1000)
+        keys.extend(cursor)
+ 
+        self.assertEqual(2000, len(keys))
 
     def testFilter(self):
         """Filters queries."""

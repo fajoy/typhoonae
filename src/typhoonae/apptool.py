@@ -37,7 +37,7 @@ DEFAULT_EXPIRATION = '30d'
 NGINX_HEADER = """
 server {
     client_max_body_size 100m;
-    listen      8080;
+    listen      %(http_port)s;
     server_name %(server_name)s;
 
     access_log  %(var)s/log/httpd-access.log;
@@ -199,7 +199,7 @@ stdout_logfile = %(var)s/log/deferred_taskworker.log
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:8080 --jid=%(jid)s --password=%(password)s %(credentials)s
+command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:%(http_port)s --jid=%(jid)s --password=%(password)s %(credentials)s
 process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -325,6 +325,7 @@ def write_nginx_conf(options, conf, app_root):
     app_id = conf.application
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
+    http_port = options.http_port
     port = options.port
     server_name = options.server_name
     upload_url = options.upload_url
@@ -406,6 +407,7 @@ def write_supervisor_conf(options, conf, app_root):
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
     datastore = options.datastore.lower()
+    http_port = options.http_port
     port = options.port
     root = os.getcwd()
     server_name = options.server_name
@@ -566,7 +568,8 @@ def write_crontab(options, app_root):
 
         row.command = os.path.join(
             os.path.dirname(os.path.abspath(sys.argv[0])), 'runtask')
-        row.command += ' http://%s:8080%s' % (options.server_name, entry.url)
+        row.command += ' http://%s:%s%s' % (
+            options.server_name, options.http_port, entry.url)
 
         row.description = '%s (%s)' % (entry.description, entry.schedule)
 
@@ -624,14 +627,18 @@ def main():
                   help="use this port of the FastCGI host",
                   default='8081')
 
-    op.add_option("--nginx", dest="nginx", metavar="FILE",
-                  help="write nginx configuration to this file",
-                  default=os.path.join('etc', 'server.conf'))
-
     op.add_option("--http_base_auth", dest="http_base_auth_enabled",
                   action="store_true",
                   help="enable HTTP base authentication for logging in",
                   default=False)
+
+    op.add_option("--http_port", dest="http_port", metavar="PORT",
+                  help="port for the HTTP server to listen on",
+                  default=8080)
+
+    op.add_option("--nginx", dest="nginx", metavar="FILE",
+                  help="write nginx configuration to this file",
+                  default=os.path.join('etc', 'server.conf'))
 
     op.add_option("--server_name", dest="server_name", metavar="STRING",
                   help="use this server name", default=socket.getfqdn())

@@ -92,6 +92,34 @@ server {
     access_log  /tmp/var/log/httpd-access.log;
     error_log   /tmp/var/log/httpd-error.log;
 
+location ~* ^/(.*\.(gif|jpg|png))$ {
+    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    rewrite ^/(.*\.(gif|jpg|png))$ /static/$1 break;
+    expires 5h;
+}
+
+location ~* ^/favicon.ico$ {
+    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    rewrite ^/favicon.ico$ /static/favicon.ico break;
+    expires 30d;
+}
+
+location ~ ^/(static)/ {
+    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    expires 30d;
+}
+
+location ~ ^/(foo)/ {
+    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    expires 30d;
+}
+
+location ~* ^/$ {
+    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    rewrite ^/$ /index.html break;
+    expires 30d;
+}
+
 location /upload/ {
     # Pass altered request body to this location
     upload_pass @sample;

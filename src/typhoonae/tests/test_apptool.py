@@ -56,7 +56,7 @@ class ApptoolTestCase(unittest.TestCase):
         tab = typhoonae.apptool.write_crontab(options, self.app_root)
         self.assertEqual([
                 ('*/1', '*', '*', '*', '*', os.path.join(
-                    os.getcwd(), 'src/typhoonae/tests/', 'runtask') +
+                    os.getcwd(), 'bin', 'runtask') +
                     ' http://localhost:8080/a',
                  ' # Test A (every 1 minutes)', 'Test A (every 1 minutes)')],
                  tab)
@@ -161,7 +161,3 @@ location / {
             f.close()
         finally:
             os.unlink(options.nginx)
-
-
-if __name__ == "__main__":
-    unittest.main()

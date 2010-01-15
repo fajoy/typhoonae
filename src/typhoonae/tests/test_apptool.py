@@ -91,23 +91,23 @@ class ApptoolTestCase(unittest.TestCase):
     root %(app_root)s;
     rewrite ^/favicon.ico$ /static/favicon.ico break;
     expires 30d;
-}""" % {'app_root': os.getcwd()}in config)
+}""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~ ^/(static)/ {
     root %(app_root)s;
     expires 30d;
-}""" % {'app_root': os.getcwd()}in config)
+}""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~ ^/(foo)/ {
     root %(app_root)s;
     expires 30d;
-}""" % {'app_root': os.getcwd()}in config)
+}""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~* ^/$ {
     root %(app_root)s;
     rewrite ^/$ /index.html break;
     expires 30d;
-}""" % {'app_root': os.getcwd()}in config)
+}""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location /upload/ {
     # Pass altered request body to this location

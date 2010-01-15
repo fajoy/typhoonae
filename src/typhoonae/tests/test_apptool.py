@@ -81,46 +81,35 @@ class ApptoolTestCase(unittest.TestCase):
                 options, self.conf, self.app_root)
             f = open(options.nginx, 'r')
             config = f.read()
-            self.assertEqual("""# Automatically generated NGINX configuration file: don't edit!
-# Use apptool to modify.
-
-server {
-    client_max_body_size 100m;
-    listen      8080;
-    server_name host.local;
-
-    access_log  /tmp/var/log/httpd-access.log;
-    error_log   /tmp/var/log/httpd-error.log;
-
-location ~* ^/(.*\.(gif|jpg|png))$ {
+            self.assertTrue("""location ~* ^/(.*\.(gif|jpg|png))$ {
     root %(app_root)s;
     rewrite ^/(.*\.(gif|jpg|png))$ /static/$1 break;
     expires 5h;
-}
+}""" % {'app_root': os.getcwd()} in config)
 
-location ~* ^/favicon.ico$ {
+            self.assertTrue("""location ~* ^/favicon.ico$ {
     root %(app_root)s;
     rewrite ^/favicon.ico$ /static/favicon.ico break;
     expires 30d;
-}
+}""" % {'app_root': os.getcwd()}in config)
 
-location ~ ^/(static)/ {
+            self.assertTrue("""location ~ ^/(static)/ {
     root %(app_root)s;
     expires 30d;
-}
+}""" % {'app_root': os.getcwd()}in config)
 
-location ~ ^/(foo)/ {
+            self.assertTrue("""location ~ ^/(foo)/ {
     root %(app_root)s;
     expires 30d;
-}
+}""" % {'app_root': os.getcwd()}in config)
 
-location ~* ^/$ {
+            self.assertTrue("""location ~* ^/$ {
     root %(app_root)s;
     rewrite ^/$ /index.html break;
     expires 30d;
-}
+}""" % {'app_root': os.getcwd()}in config)
 
-location /upload/ {
+            self.assertTrue("""location /upload/ {
     # Pass altered request body to this location
     upload_pass @sample;
 
@@ -185,7 +174,7 @@ location / {
 }
 
 }
-""" % {'app_root': os.getcwd()}, config)
+""" % {'app_root': os.getcwd()} in config)
             f.close()
         finally:
             os.unlink(options.nginx)

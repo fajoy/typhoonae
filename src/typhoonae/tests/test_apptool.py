@@ -93,29 +93,29 @@ server {
     error_log   /tmp/var/log/httpd-error.log;
 
 location ~* ^/(.*\.(gif|jpg|png))$ {
-    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    root %(app_root)s;
     rewrite ^/(.*\.(gif|jpg|png))$ /static/$1 break;
     expires 5h;
 }
 
 location ~* ^/favicon.ico$ {
-    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    root %(app_root)s;
     rewrite ^/favicon.ico$ /static/favicon.ico break;
     expires 30d;
 }
 
 location ~ ^/(static)/ {
-    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    root %(app_root)s;
     expires 30d;
 }
 
 location ~ ^/(foo)/ {
-    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    root %(app_root)s;
     expires 30d;
 }
 
 location ~* ^/$ {
-    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    root %(app_root)s;
     rewrite ^/$ /index.html break;
     expires 30d;
 }
@@ -185,7 +185,7 @@ location / {
 }
 
 }
-""", config)
+""" % {'app_root': os.getcwd()}, config)
             f.close()
         finally:
             os.unlink(options.nginx)

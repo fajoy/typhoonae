@@ -6,6 +6,12 @@ Version 0.1.2 (2010-??-??)
 
   - Adds command line options to configure the HTTP port and SMTP host.
 
+  - Fixes two issues where some static_dir and static_files handler options
+    where misinterpreted.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=23
+    - http://code.google.com/p/typhoonae/issues/detail?id=24
+
 
 Version 0.1.1 (2009-12-28)
 -------------------------- 

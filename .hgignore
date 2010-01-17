@@ -13,7 +13,7 @@ syntax: regexp
 ^doc/build/
 ^downloads/
 ^eggs/
-^etc/appserver.conf
+^etc/demo-supervisor.conf
 ^etc/ejabberd.cfg
 ^etc/server.conf
 ^etc/supervisord.conf

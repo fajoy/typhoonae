@@ -20,6 +20,9 @@ handlers:
 - url: /foo
   static_dir: bar
 
+- url: /images
+  static_dir: static/images
+
 - url: /
   static_files: index.html
   upload: index.html

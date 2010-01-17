@@ -50,7 +50,7 @@ NGINX_FOOTER = """
 
 NGINX_STATIC_LOCATION = """
 location ~ ^/(%(path)s)/ {
-    root %(root)s;
+    root %(root)s;%(rewrite)s
     expires %(expires)s;
 }
 """
@@ -348,27 +348,36 @@ def write_nginx_conf(options, conf, app_root):
     for handler in conf.handlers:
         ltrunc_url = re.sub('^/', '', handler.url)
         if handler.GetHandlerType() == 'static_dir':
-            l = handler.static_dir.split('/')
-            if len(l) > 1:
-                root = app_root + '/' + '/'.join(l[1:])
+            if ltrunc_url != handler.static_dir:
+                rewrite = '^/(%s)/(.*)$ /%s/$2 break;' % (ltrunc_url,
+                                                          handler.static_dir)
+                rewrite = '\n    rewrite ' + rewrite
             else:
-                root = app_root
+                rewrite = ''
+            l = handler.static_dir.split('/')
             httpd_conf_stub.write(NGINX_STATIC_LOCATION % dict(
                 expires=(handler.expiration or
                          conf.default_expiration or
                          DEFAULT_EXPIRATION),
                 path=ltrunc_url,
-                root=root
+                rewrite=rewrite,
+                root=app_root
                 )
             )
         if handler.GetHandlerType() == 'static_files':
-            rewrite = '^%s$ /%s' % (handler.url,
-                                    handler.static_files.replace('\\', '$'))
+            if handler.url == '/':
+                url = '/(%s)' % handler.upload.split('/')[-1]
+                files = handler.static_files.replace(handler.upload, '$1')
+            else:
+                url = handler.url
+                files = handler.static_files.replace('\\', '$')
+                
+            rewrite = '^%s$ /%s' % (url, files)
             httpd_conf_stub.write(NGINX_REGEX_LOCATION % dict(
                 expires=(handler.expiration or
                          conf.default_expiration or
                          DEFAULT_EXPIRATION),
-                regex=handler.url,
+                regex=url,
                 rewrite=rewrite,
                 root=app_root
                 )

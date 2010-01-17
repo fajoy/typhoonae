@@ -100,12 +100,19 @@ class ApptoolTestCase(unittest.TestCase):
 
             self.assertTrue("""location ~ ^/(foo)/ {
     root %(app_root)s;
+    rewrite ^/(foo)/(.*)$ /bar/$2 break;
     expires 30d;
 }""" % {'app_root': os.getcwd()} in config)
 
-            self.assertTrue("""location ~* ^/$ {
+            self.assertTrue("""location ~ ^/(images)/ {
+    root /Users/tobias/projects/appengine/typhoonae/src/typhoonae/tests/sample;
+    rewrite ^/(images)/(.*)$ /static/images/$2 break;
+    expires 30d;
+}""" % {'app_root': os.getcwd()} in config)
+
+            self.assertTrue("""location ~* ^/(index.html)$ {
     root %(app_root)s;
-    rewrite ^/$ /index.html break;
+    rewrite ^/(index.html)$ /$1 break;
     expires 30d;
 }""" % {'app_root': os.getcwd()} in config)
 

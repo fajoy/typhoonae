@@ -25,12 +25,25 @@ from typhoonae.websocket import websocket_service_pb2
 
 
 __all__ = [
+    'WEBSOCKET_HEADER',
+    'WEBSOCKET_HANDLER_URL',
+    'BadArgumentError',
     'create_websocket_url',
+    'Message',
+    'send_message',
 ]
+
+WEBSOCKET_HEADER = "X-TyphoonAE-WebSocket"
+
+WEBSOCKET_HANDLER_URL = "%(protocol)s://%(host)s:%(port)s/%(success_path)s"
 
 
 class Error(Exception):
     """Base error class for this module."""
+
+
+class BadArgumentError(Error):
+    """Raised when a method gets a bad argument."""
 
 
 def create_websocket_url(success_path='',
@@ -57,3 +70,52 @@ def create_websocket_url(success_path='',
         raise Error()
 
     return response.url
+
+
+def Message(object):
+    """Class to represent a Web Socket message."""
+
+    def __init__(self, body):
+        """Constructor.
+
+        Args:
+            body: A string containg the message body.
+        """
+        self.__body = body
+
+    @property
+    def body(self):
+        return self.__body
+
+
+def send_message(sockets, body, _make_sync_call=apiproxy_stub_map.MakeSyncCall):
+    """Sends a message to the Web Socket.
+
+    Args:
+        sockets: A list of connected Web Sockets.
+        body: The message body.
+        _make_sync_call: Used for dependency injection.
+    """
+
+    if isinstance(sockets, basestring):
+        sockets = [sockets]
+
+    if not isinstance(sockets, list):
+        raise BadArgumentError(
+            "first argument of the send_message method must be a list.")
+
+    for sock in sockets:
+        if not sock:
+            raise BadArgumentError("must specify sockets.")
+
+    request = websocket_service_pb2.WebSocketMessageRequest()
+    response = websocket_service_pb2.WebSocketMessageResponse()
+
+    request.message.body = body
+
+    try:
+        _make_sync_call("websocket", "SendMessage", request, response)
+    except apiproxy_errors.ApplicationError, e:
+        raise Error()
+
+    return

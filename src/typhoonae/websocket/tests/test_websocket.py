@@ -30,10 +30,10 @@ class WebSocketTestCase(unittest.TestCase):
 
         # Test environment.
         os.environ.update({
-            "SERVER_NAME":"host",
-            "SERVER_PORT":"8080",
-            "SERVER_PROTOCOL":"http",
-            "APPLICATION_ID":"app"
+            'SERVER_NAME':'host',
+            'SERVER_PORT':'8080',
+            'SERVER_PROTOCOL':'http',
+            'APPLICATION_ID':'app'
         })
 
         # Set up API proxy stub.
@@ -57,7 +57,18 @@ class WebSocketTestCase(unittest.TestCase):
         """Tries to obtain a valid Web Socket URL."""
 
         self.assertEqual(
-            "http://host:8080/", typhoonae.websocket.create_websocket_url())
+            'http://host:8080/',
+            typhoonae.websocket.create_websocket_url())
+
         self.assertEqual(
-            "http://host:8080/foo",
+            'http://host:8080/foo',
             typhoonae.websocket.create_websocket_url('/foo'))
+
+    def test_send_message(self):
+        """Sends a message to a Web Socket."""
+
+        typhoonae.websocket.send_message('1', 'My first message.')
+
+        self.assertRaises(
+            typhoonae.websocket.BadArgumentError,
+            typhoonae.websocket.send_message, 1, 'My second message.')

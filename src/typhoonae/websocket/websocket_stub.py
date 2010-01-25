@@ -18,11 +18,14 @@
 import google.appengine.api.apiproxy_stub
 import os
 import re
+import typhoonae.websocket
 
 
-__all__ = ['Error', 'ConfigurationError', 'WebSocketServiceStub']
-
-WEBSOCKET_HANDLER_URL = "%(protocol)s://%(host)s:%(port)s/%(success_path)s"
+__all__ = [
+    'Error',
+    'ConfigurationError',
+    'WebSocketServiceStub'
+]
 
 
 class Error(Exception):
@@ -77,4 +80,19 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             port=cls._GetEnviron('SERVER_PORT'),
             success_path=re.sub('^/', '', request.success_path))
 
-        response.url = WEBSOCKET_HANDLER_URL % url_parts
+        response.url = typhoonae.websocket.WEBSOCKET_HANDLER_URL % url_parts
+
+    def _Dynamic_SendMessage(self, request, response):
+        """Implementation of WebSocketService::SendMessage().
+
+        Args:
+            request: A WebSocketMessageRequest instance.
+            response: A WebSocketMessageResponse instance.
+        """
+
+        body = request.message.body
+
+        # Implement send message here.
+
+        response.status.code = (typhoonae.websocket.websocket_service_pb2.
+                                WebSocketMessageResponse.NO_ERROR)

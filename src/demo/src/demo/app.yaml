@@ -23,9 +23,9 @@ handlers:
 - url: /media
   static_dir: files
 
-- url: /websocket.html
-  static_files: websocket.html
-  upload: websocket.html
+- url: /static.html
+  static_files: static.html
+  upload: static.html
 
 - url: /
   script: app.py
@@ -55,6 +55,9 @@ handlers:
 
 - url: /serve/([^/]+)?
   script: blobstore.py
+
+- url: /websocket
+  script: websocket.py
 
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py

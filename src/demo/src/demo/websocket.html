@@ -11,7 +11,7 @@ var ws;
  
 if ("WebSocket" in window) {
     debug("Trying to connect websocket...");
-    ws = new WebSocket("ws://localhost:8888/demo");
+    ws = new WebSocket("{{ websocket_url }}");
  
     ws.onopen = function() {
         debug("connected...");

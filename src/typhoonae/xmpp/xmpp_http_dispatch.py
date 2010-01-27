@@ -16,7 +16,6 @@
 """Simple XMPP/HTTP dispatcher implementation."""
 
 import base64
-import cookielib
 import logging
 import mimetools
 import optparse

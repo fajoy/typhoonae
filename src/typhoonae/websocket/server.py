@@ -46,7 +46,7 @@ def main(app_id='demo', port=8888):
     """
     application = tornado.web.Application([
         (r"/broadcast", BroadcastHandler),
-        (r"/%s" % app_id, WebSocketHandler),
+        (r"/%s/?" % app_id, WebSocketHandler),
     ])
 
     http_server = tornado.httpserver.HTTPServer(application)

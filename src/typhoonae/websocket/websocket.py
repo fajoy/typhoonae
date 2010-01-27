@@ -35,7 +35,7 @@ __all__ = [
 
 WEBSOCKET_HEADER = "X-TyphoonAE-WebSocket"
 
-WEBSOCKET_HANDLER_URL = "%(protocol)s://%(host)s:%(port)s/%(success_path)s"
+WEBSOCKET_HANDLER_URL = "%(protocol)s://%(host)s:%(port)s/%(app_id)s/%(success_path)s"
 
 
 class Error(Exception):

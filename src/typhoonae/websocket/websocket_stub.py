@@ -39,13 +39,19 @@ class ConfigurationError(Error):
 class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     """TyphoonAE's WebSocket service stub."""
 
-    def __init__(self, service_name='websocket'):
+    def __init__(self, service_name='websocket', port=8888):
         """Constructor.
 
         Args:
             service_name: Service name expected for all calls.
         """
         super(WebSocketServiceStub, self).__init__(service_name)
+        self._port = port
+
+    def _GetPort(self):
+        """Returns service port."""
+
+        return self._port
 
     @staticmethod
     def _GetEnviron(name):
@@ -65,8 +71,7 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         except KeyError:
             raise ConfigurationError('%s is not set in environment.' % name)
 
-    @classmethod
-    def _Dynamic_CreateWebSocketURL(cls, request, response):
+    def _Dynamic_CreateWebSocketURL(self, request, response):
         """Implementation of WebSocketService::CreateWebSocketURL().
 
         Args:
@@ -75,9 +80,10 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         """
 
         url_parts = dict(
-            protocol=cls._GetEnviron('SERVER_PROTOCOL'),
-            host=cls._GetEnviron('SERVER_NAME'),
-            port=cls._GetEnviron('SERVER_PORT'),
+            protocol='ws',
+            host=self._GetEnviron('SERVER_NAME'),
+            port=self._GetPort(),
+            app_id=self._GetEnviron('APPLICATION_ID'),
             success_path=re.sub('^/', '', request.success_path))
 
         response.url = typhoonae.websocket.WEBSOCKET_HANDLER_URL % url_parts

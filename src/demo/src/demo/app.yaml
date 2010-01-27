@@ -23,9 +23,9 @@ handlers:
 - url: /media
   static_dir: files
 
-- url: /
-  static_files: static.html
-  upload: static.html
+- url: /websocket.html
+  static_files: websocket.html
+  upload: websocket.html
 
 - url: /
   script: app.py

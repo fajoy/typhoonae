@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+<title>Web Socket</title>
+<link rel="stylesheet" href="/static/styles.css" type="text/css" media="all" />
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<script>
+$(document).ready(function() {
+var ws;
+ 
+if ("WebSocket" in window) {
+    debug("Trying to connect websocket...");
+    ws = new WebSocket("ws://localhost:8888/demo");
+ 
+    ws.onopen = function() {
+        debug("connected...");
+    };
+ 
+    run = function() {
+        var val=$("#i1").val();
+        $("#i1").val("");
+        ws.send(val);
+        return true;
+    };
+ 
+    ws.onmessage = function(evt) {
+        $("#out").append(evt.data + "<br>");
+    };
+ 
+    ws.onclose = function() {
+        debug("socket closed.");
+    };
+} else {
+    alert("You have no web sockets");
+};
+ 
+function debug(str) {
+    $("#debug").append(str + "<br>");
+};
+});
+</script>
+</head>
+<body>
+  <h1><img src="logo.png" alt="TyphoonAE" title="TyphoonAE" />Web Socket</h1>
+ 
+  <fieldset>
+    <legend>debug</legend>
+    <div id="debug"></div>
+  </fieldset>
+ 
+  <fieldset>
+    <legend>output</legend>
+    <div id="out"></div>
+  </fieldset>
+ 
+  <fieldset>
+    <legend>entry</legend>
+    <p>Message: <input id="i1" onchange="run()" size ="42"></p>
+  </fieldset>
+ 
+</body>
+</html>

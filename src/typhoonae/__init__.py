@@ -31,6 +31,7 @@ import mongodb.datastore_mongo_stub
 import os
 import re
 import taskqueue.taskqueue_stub
+import websocket.websocket_stub
 import xmpp.xmpp_service_stub
 
 
@@ -200,6 +201,13 @@ def setupBlobstore(blobstore_path, app_id):
         'blobstore', blobstore.blobstore_stub.BlobstoreServiceStub(storage))
 
 
+def setupWebSocket():
+    """Sets up Web Socket service."""
+
+    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+        'websocket', websocket.websocket_stub.WebSocketServiceStub())
+
+
 def setupStubs(conf, options):
     """Sets up api proxy stubs."""
 
@@ -226,6 +234,8 @@ def setupStubs(conf, options):
     setupXMPP(options.xmpp_host)
 
     setupBlobstore(options.blobstore_path, conf.application)
+
+    setupWebSocket()
 
     try:
         from google.appengine.api.images import images_stub

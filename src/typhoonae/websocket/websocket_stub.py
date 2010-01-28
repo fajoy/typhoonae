@@ -105,7 +105,7 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         google.appengine.api.urlfetch.make_fetch_call(
             rpc, "http://localhost:%s/message" % self._GetPort(),
             headers={typhoonae.websocket.WEBSOCKET_HEADER: socket},
-            payload=body,
+            payload=body.encode('utf-8'),
             method='POST')
 
         try:

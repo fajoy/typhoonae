@@ -31,6 +31,8 @@ def post_multipart(url, credentials, fields):
 
     content_type, body = encode_multipart_formdata(fields)
 
+    body = body.encode('utf-8')
+
     headers = {'Content-Type': content_type,
                typhoonae.websocket.WEBSOCKET_HEADER: '',
                'Content-Length': str(len(body))}
@@ -64,7 +66,7 @@ def encode_multipart_formdata(fields):
         buffer.append(u'--%s' % BOUNDARY)
         buffer.append(u'Content-Disposition: form-data; name="%s"' % key)
         buffer.append(u'')
-        buffer.append(value.decode('utf-8'))
+        buffer.append(value)
 
     buffer.append(u'--%s--' % BOUNDARY)
     buffer.append(u'')

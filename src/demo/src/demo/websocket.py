@@ -18,7 +18,6 @@
 import google.appengine.ext.webapp
 import google.appengine.ext.webapp.template
 import google.appengine.ext.webapp.util
-import logging
 import typhoonae.websocket
 import urllib
 

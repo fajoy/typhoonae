@@ -18,6 +18,7 @@
 import google.appengine.ext.webapp
 import google.appengine.ext.webapp.template
 import google.appengine.ext.webapp.util
+import logging
 import typhoonae.websocket
 import urllib
 
@@ -35,8 +36,20 @@ class MainHandler(google.appengine.ext.webapp.RequestHandler):
         self.response.out.write(output)
 
 
+class WebSocketHandler(google.appengine.ext.webapp.RequestHandler):
+    """Handles Web Socket requests."""
+
+    def post(self):
+        """Handles post."""
+
+        message = typhoonae.websocket.Message(self.request.POST)
+        typhoonae.websocket.send_message(
+            [message.socket], 'Received: "%s"' % message.body)
+
+
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/websocket', MainHandler),
+    ('/_ah/websocket/message/', WebSocketHandler),
 ], debug=True)
 
 

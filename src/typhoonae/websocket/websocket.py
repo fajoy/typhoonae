@@ -72,20 +72,25 @@ def create_websocket_url(success_path='',
     return response.url
 
 
-def Message(object):
+class Message(object):
     """Class to represent a Web Socket message."""
 
-    def __init__(self, body):
+    def __init__(self, vars):
         """Constructor.
 
         Args:
-            body: A string containg the message body.
+            vars: A dict-like object to extract message arguments from.
         """
-        self.__body = body
+        self.__body = vars['body']
+        self.__socket = vars['from']
 
     @property
     def body(self):
         return self.__body
+
+    @property
+    def socket(self):
+        return self.__socket
 
 
 def send_message(sockets, body, _make_sync_call=apiproxy_stub_map.MakeSyncCall):
@@ -108,14 +113,15 @@ def send_message(sockets, body, _make_sync_call=apiproxy_stub_map.MakeSyncCall):
         if not sock:
             raise BadArgumentError("must specify sockets.")
 
-    request = websocket_service_pb2.WebSocketMessageRequest()
-    response = websocket_service_pb2.WebSocketMessageResponse()
+        request = websocket_service_pb2.WebSocketMessageRequest()
+        response = websocket_service_pb2.WebSocketMessageResponse()
 
-    request.message.body = body
+        request.message.body = body
+        request.message.socket = sock
 
-    try:
-        _make_sync_call("websocket", "SendMessage", request, response)
-    except apiproxy_errors.ApplicationError, e:
-        raise Error()
+        try:
+            _make_sync_call("websocket", "SendMessage", request, response)
+        except apiproxy_errors.ApplicationError, e:
+            raise Error()
 
     return

@@ -16,6 +16,7 @@
 """Unit tests for TyphoonAE's WebSocket API and service stub."""
 
 import google.appengine.api.apiproxy_stub_map
+import google.appengine.api.urlfetch_stub
 import os
 import typhoonae.websocket
 import typhoonae.websocket.websocket_stub
@@ -34,13 +35,17 @@ class WebSocketTestCase(unittest.TestCase):
             'APPLICATION_ID':'app'
         })
 
-        # Set up API proxy stub.
+        # Set up API proxy stubs.
         google.appengine.api.apiproxy_stub_map.apiproxy = \
             google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'websocket',
             typhoonae.websocket.websocket_stub.WebSocketServiceStub())
+
+        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+            'urlfetch',
+            google.appengine.api.urlfetch_stub.URLFetchServiceStub())
 
     def test_get_stub(self):
         """Tests whether the stub is correctly registered."""

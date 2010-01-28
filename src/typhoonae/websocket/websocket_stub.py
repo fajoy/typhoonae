@@ -16,6 +16,7 @@
 """TyphoonAE's WebSocket service stub."""
 
 import google.appengine.api.apiproxy_stub
+import google.appengine.api.urlfetch
 import os
 import re
 import typhoonae.websocket
@@ -44,6 +45,7 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
         Args:
             service_name: Service name expected for all calls.
+            port: Port number of the Web Socket service.
         """
         super(WebSocketServiceStub, self).__init__(service_name)
         self._port = port
@@ -97,8 +99,25 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         """
 
         body = request.message.body
+        socket = request.message.socket
 
-        # Implement send message here.
+        rpc = google.appengine.api.urlfetch.create_rpc()
+        google.appengine.api.urlfetch.make_fetch_call(
+            rpc, "http://localhost:%s/message" % self._GetPort(),
+            headers={typhoonae.websocket.WEBSOCKET_HEADER: socket},
+            payload=body,
+            method='POST')
 
-        response.status.code = (typhoonae.websocket.websocket_service_pb2.
-                                WebSocketMessageResponse.NO_ERROR)
+        try:
+            result = rpc.get_result()
+            if result.status_code == 200:
+                response.status.code = (
+                    typhoonae.websocket.websocket_service_pb2.
+                    WebSocketMessageResponse.NO_ERROR)
+
+        except google.appengine.api.urlfetch.DownloadError:
+            response.status.code = (
+                typhoonae.websocket.websocket_service_pb2.
+                WebSocketMessageResponse.OTHER_ERROR)
+
+        rpc.wait()

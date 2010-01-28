@@ -67,6 +67,10 @@ handlers:
   script: app.py
   login: admin
 
+- url: /_ah/websocket/message/
+  script: websocket.py
+  login: admin
+
 - url: /delete/([^/]+)?
   script: app.py
   login: admin

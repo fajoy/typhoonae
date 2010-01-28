@@ -4,6 +4,7 @@ import base64
 import logging
 import mimetools
 import optparse
+import threading
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
@@ -37,7 +38,7 @@ def post_multipart(url, credentials, fields):
     if credentials:
         headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
 
-    req = urllib2.Request(url, str(body.encode('utf-8')), headers)
+    req = urllib2.Request(url, body, headers)
 
     try:
         res = urllib2.urlopen(req)
@@ -45,6 +46,7 @@ def post_multipart(url, credentials, fields):
         reason = getattr(e, 'reason', e)
         logging.error(reason)
         return
+    logging.info('message posted')
     return res.read()
 
 
@@ -95,6 +97,29 @@ class MessageHandler(tornado.web.RequestHandler):
                 del WEB_SOCKET
 
 
+class Poster(threading.Thread):
+    """Poster thread for non-blocking message delivery."""
+
+    def __init__(self, body, socket):
+        """Constructor.
+
+        Args:
+            body: The message body.
+            socket: String which represents the socket id.
+        """
+        super(Poster, self).__init__()
+        self.__body = body
+        self.__socket = socket
+
+    def run(self):
+        """Post message."""
+
+        post_multipart(
+            'http://%s/_ah/websocket/message/' % ADDRESS,
+            None,
+            [(u'body', self.__body), (u'from', self.__socket)])
+
+
 class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
     """Dispatcher for incoming web socket requests."""
 
@@ -107,11 +132,8 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
         WEB_SOCKETS[self.stream.socket.fileno()] = self
 
     def on_message(self, message):
-        sock_id = str(self.stream.socket.fileno())
-        post_multipart('http://%s/_ah/websocket/message/' % ADDRESS,
-                       None,
-                       [(u'body', message),
-                        (u'from', sock_id)])
+        poster = Poster(message, str(self.stream.socket.fileno()))
+        poster.start()
         self.receive_message(self.on_message)
 
 

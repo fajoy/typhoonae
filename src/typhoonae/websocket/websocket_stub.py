@@ -101,7 +101,7 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         body = request.message.body
         socket = request.message.socket
 
-        rpc = google.appengine.api.urlfetch.create_rpc()
+        rpc = google.appengine.api.urlfetch.create_rpc(deadline=1)
         google.appengine.api.urlfetch.make_fetch_call(
             rpc, "http://localhost:%s/message" % self._GetPort(),
             headers={typhoonae.websocket.WEBSOCKET_HEADER: socket},
@@ -119,5 +119,3 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             response.status.code = (
                 typhoonae.websocket.websocket_service_pb2.
                 WebSocketMessageResponse.OTHER_ERROR)
-
-        rpc.wait()

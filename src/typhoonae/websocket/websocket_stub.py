@@ -74,7 +74,7 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             raise ConfigurationError('%s is not set in environment.' % name)
 
     def _Dynamic_CreateWebSocketURL(self, request, response):
-        """Implementation of WebSocketService::CreateWebSocketURL().
+        """Implementation of WebSocketService::create_websocket_url().
 
         Args:
             request: A fully initialized CreateWebSocketURLRequest instance.
@@ -91,7 +91,7 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         response.url = typhoonae.websocket.WEBSOCKET_HANDLER_URL % url_parts
 
     def _Dynamic_SendMessage(self, request, response):
-        """Implementation of WebSocketService::SendMessage().
+        """Implementation of WebSocketService::send_message().
 
         Args:
             request: A WebSocketMessageRequest instance.

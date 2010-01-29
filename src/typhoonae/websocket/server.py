@@ -15,7 +15,7 @@ import urllib2
 
 
 ADDRESS = 'host:port'
-DESCRIPTION = ("Web Socket Service.")
+DESCRIPTION = "Web Socket Service."
 USAGE = "usage: %prog [options]"
 WEB_SOCKETS = {}
 
@@ -48,7 +48,7 @@ def post_multipart(url, credentials, fields):
         reason = getattr(e, 'reason', e)
         logging.error(reason)
         return
-    logging.info('message posted')
+
     return res.read()
 
 

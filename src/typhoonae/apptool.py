@@ -206,6 +206,15 @@ redirect_stderr = true
 stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 """
 
+SUPERVISOR_WEBSOCKET_CONFIG = """
+[program:websocket]
+command = %(bin)s/websocket --address=%(server_name)s:%(http_port)s
+process_name = websocket
+priority = 999
+redirect_stderr = true
+stdout_logfile = %(var)s/log/websocket.log
+"""
+
 EJABBERD_CONFIG = """
 override_local.
 
@@ -458,6 +467,9 @@ def write_supervisor_conf(options, conf, app_root):
             if service == 'xmpp_message':
                 supervisor_conf_stub.write(
                     SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG % locals())
+            elif service == 'websocket':
+                supervisor_conf_stub.write(
+                    SUPERVISOR_WEBSOCKET_CONFIG % locals())
 
     supervisor_conf_stub.close()
 

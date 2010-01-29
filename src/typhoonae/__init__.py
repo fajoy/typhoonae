@@ -23,6 +23,7 @@ import google.appengine.api.appinfo
 import google.appengine.api.mail_stub
 import google.appengine.api.urlfetch_stub
 import google.appengine.api.user_service_stub
+import google.appengine.api.validation
 import google.appengine.ext.webapp.blobstore_handlers
 import intid
 import logging
@@ -40,6 +41,14 @@ end_request_hook = None
 
 def getAppConfig(directory='.'):
     """Returns a configuration object."""
+
+    attrs = google.appengine.api.appinfo.AppInfoExternal.ATTRIBUTES
+
+    attrs[google.appengine.api.appinfo.SERVICES] = (
+        google.appengine.api.validation.Optional(
+            google.appengine.api.validation.Repeated(
+                google.appengine.api.validation.Regex(
+                    r'(mail|xmpp_message|websocket)'))))
 
     path = os.path.join(directory, 'app.yaml')
     conf_file = open(path, 'r')

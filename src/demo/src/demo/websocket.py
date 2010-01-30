@@ -28,17 +28,28 @@ class MainHandler(google.appengine.ext.webapp.RequestHandler):
     def get(self):
         """Handles get."""
 
-        websocket_url = typhoonae.websocket.create_websocket_url()
+        websocket_url = typhoonae.websocket.create_websocket_url('/foo/bar')
 
         output = google.appengine.ext.webapp.template.render(
             'websocket.html', {'websocket_url': websocket_url})
         self.response.out.write(output)
 
 
-class WebSocketHandler(google.appengine.ext.webapp.RequestHandler):
+class HandshakeHandler(google.appengine.ext.webapp.RequestHandler):
+    """Handles Web Socket handshake requests."""
+
+    def post(self, path):
+        """Handles post."""
+
+        message = typhoonae.websocket.Message(self.request.POST)
+        typhoonae.websocket.send_message(
+            [message.socket], 'Received handshake.')
+
+
+class MessageHandler(google.appengine.ext.webapp.RequestHandler):
     """Handles Web Socket requests."""
 
-    def post(self):
+    def post(self, path):
         """Handles post."""
 
         message = typhoonae.websocket.Message(self.request.POST)
@@ -48,7 +59,8 @@ class WebSocketHandler(google.appengine.ext.webapp.RequestHandler):
 
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/websocket', MainHandler),
-    ('/_ah/websocket/message/', WebSocketHandler),
+    ('/_ah/websocket/handshake/(.*)', HandshakeHandler),
+    ('/_ah/websocket/message/(.*)', MessageHandler),
 ], debug=True)
 
 

@@ -68,7 +68,11 @@ handlers:
   script: app.py
   login: admin
 
-- url: /_ah/websocket/message/
+- url: /_ah/websocket/handshake/(.*)
+  script: websocket.py
+  login: admin
+
+- url: /_ah/websocket/message/(.*)
   script: websocket.py
   login: admin
 

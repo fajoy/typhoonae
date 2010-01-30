@@ -4,6 +4,7 @@ import base64
 import logging
 import mimetools
 import optparse
+import re
 import threading
 import tornado.httpserver
 import tornado.ioloop
@@ -14,10 +15,15 @@ import typhoonae.websocket.tornado_handler
 import urllib2
 
 
-ADDRESS = 'host:port'
 DESCRIPTION = "Web Socket Service."
-USAGE = "usage: %prog [options]"
+USAGE       = "usage: %prog [options]"
 WEB_SOCKETS = {}
+
+HANDSHAKE = 1 << 0
+MESSAGE   = 1 << 1
+
+HANDSHAKE_URL = 'http://%s/_ah/websocket/handshake/%s'
+MESSAGE_URL   = 'http://%s/_ah/websocket/message/%s'
 
 
 def post_multipart(url, credentials, fields):
@@ -96,30 +102,36 @@ class MessageHandler(tornado.web.RequestHandler):
             try:
                 WEB_SOCKETS[int(id)].write_message(self.request.body)
             except IOError:
-                del WEB_SOCKET
+                del WEB_SOCKETS[int(id)]
 
 
-class Poster(threading.Thread):
-    """Poster thread for non-blocking message delivery."""
+class Dispatcher(threading.Thread):
+    """Dispatcher thread for non-blocking message delivery."""
 
-    def __init__(self, body, socket):
+    def __init__(self, socket, request_type, param_path, body=''):
         """Constructor.
 
         Args:
-            body: The message body.
             socket: String which represents the socket id.
+            request_type: The request type.
+            param_path: Parameter path.
+            body: The message body.
         """
-        super(Poster, self).__init__()
-        self.__body = body
-        self.__socket = socket
+        super(Dispatcher, self).__init__()
+        self._socket = socket
+        self._type = request_type
+        self._path = param_path
+        self._body = body
 
     def run(self):
         """Post message."""
 
+        if self._type == HANDSHAKE:
+            url = HANDSHAKE_URL % (ADDRESS, self._path)
+        elif self._type == MESSAGE:
+            url = MESSAGE_URL % (ADDRESS, self._path)
         post_multipart(
-            'http://%s/_ah/websocket/message/' % ADDRESS,
-            None,
-            [(u'body', self.__body), (u'from', self.__socket)])
+            url, None, [(u'body', self._body), (u'from', self._socket)])
 
 
 class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
@@ -129,13 +141,18 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
         super(WebSocketHandler, self).__init__(*args, **kw)
         logging.info('initializing %s' % self)
 
-    def open(self):
+    def open(self, param_path):
+        sock_id = self.stream.socket.fileno()
+        WEB_SOCKETS[sock_id] = self
+        dispatcher = Dispatcher(str(sock_id), HANDSHAKE, param_path)
+        dispatcher.start()
         self.receive_message(self.on_message)
-        WEB_SOCKETS[self.stream.socket.fileno()] = self
 
     def on_message(self, message):
-        poster = Poster(message, str(self.stream.socket.fileno()))
-        poster.start()
+        param_path = re.match(r'/%s/(.*)' % APP_ID, self.request.uri).group(1)
+        dispatcher = Dispatcher(
+            str(self.stream.socket.fileno()), MESSAGE, param_path, message)
+        dispatcher.start()
         self.receive_message(self.on_message)
 
 
@@ -145,7 +162,7 @@ def main(app_id='demo', port=8888):
     Args:
         port: The port to listen on.
     """
-    global ADDRESS
+    global ADDRESS, APP_ID
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
@@ -156,13 +173,14 @@ def main(app_id='demo', port=8888):
     (options, args) = op.parse_args()
 
     ADDRESS = options.address
+    APP_ID = app_id
 
     typhoonae.handlers.login.authenticate('websocket@typhoonae', admin=True)
 
     application = tornado.web.Application([
         (r"/broadcast", BroadcastHandler),
         (r"/message", MessageHandler),
-        (r"/%s/?" % app_id, WebSocketHandler),
+        (r"/%s/(.*)" % app_id, WebSocketHandler),
     ])
 
     http_server = tornado.httpserver.HTTPServer(application)

@@ -5,7 +5,7 @@ api_version: 1
 
 inbound_services:
 - xmpp_message
-- websocket
+- websocket_message
 
 handlers:
 

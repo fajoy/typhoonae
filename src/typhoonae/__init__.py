@@ -48,7 +48,7 @@ def getAppConfig(directory='.'):
         google.appengine.api.validation.Optional(
             google.appengine.api.validation.Repeated(
                 google.appengine.api.validation.Regex(
-                    r'(mail|xmpp_message|websocket)'))))
+                    r'(mail|xmpp_message|websocket_message)'))))
 
     path = os.path.join(directory, 'app.yaml')
     conf_file = open(path, 'r')

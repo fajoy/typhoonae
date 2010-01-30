@@ -467,7 +467,7 @@ def write_supervisor_conf(options, conf, app_root):
             if service == 'xmpp_message':
                 supervisor_conf_stub.write(
                     SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG % locals())
-            elif service == 'websocket':
+            elif service == 'websocket_message':
                 supervisor_conf_stub.write(
                     SUPERVISOR_WEBSOCKET_CONFIG % locals())
 

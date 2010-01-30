@@ -1,6 +1,5 @@
 """Web Socket server implementation which uses tornado."""
 
-import base64
 import logging
 import mimetools
 import optparse
@@ -26,12 +25,11 @@ HANDSHAKE_URL = 'http://%s/_ah/websocket/handshake/%s'
 MESSAGE_URL   = 'http://%s/_ah/websocket/message/%s'
 
 
-def post_multipart(url, credentials, fields):
+def post_multipart(url, fields):
     """Posts multipart form data fields.
 
     Args:
         url: Post multipart form data to this URL.
-        credentials: Authentication credentials to be used when posting.
         fields: A list of tuples of the form [(fieldname, value), ...].
     """
 
@@ -42,9 +40,6 @@ def post_multipart(url, credentials, fields):
     headers = {'Content-Type': content_type,
                typhoonae.websocket.WEBSOCKET_HEADER: '',
                'Content-Length': str(len(body))}
-
-    if credentials:
-        headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
 
     req = urllib2.Request(url, body, headers)
 
@@ -130,8 +125,7 @@ class Dispatcher(threading.Thread):
             url = HANDSHAKE_URL % (ADDRESS, self._path)
         elif self._type == MESSAGE:
             url = MESSAGE_URL % (ADDRESS, self._path)
-        post_multipart(
-            url, None, [(u'body', self._body), (u'from', self._socket)])
+        post_multipart(url, [(u'body', self._body), (u'from', self._socket)])
 
 
 class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):

@@ -57,16 +57,16 @@ handlers:
 - url: /serve/([^/]+)?
   script: blobstore.py
 
-- url: /websocket
-  script: websocket.py
-
-- url: /remote_api
-  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
+- url: /delete/([^/]+)?
+  script: app.py
   login: admin
 
 - url: /_ah/xmpp/message/chat/
   script: app.py
   login: admin
+
+- url: /websocket
+  script: websocket.py
 
 - url: /_ah/websocket/handshake/(.*)
   script: websocket.py
@@ -76,8 +76,8 @@ handlers:
   script: websocket.py
   login: admin
 
-- url: /delete/([^/]+)?
-  script: app.py
+- url: /remote_api
+  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin
 
 - url: .*

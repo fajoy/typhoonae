@@ -11,6 +11,7 @@ import tornado.web
 import typhoonae.handlers.login
 import typhoonae.websocket
 import typhoonae.websocket.tornado_handler
+import urllib
 import urllib2
 
 
@@ -150,12 +151,8 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
         self.receive_message(self.on_message)
 
 
-def main(app_id='demo', port=8888):
-    """The main function.
-
-    Args:
-        port: The port to listen on.
-    """
+def main():
+    """The main function."""
     global ADDRESS, APP_ID
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
@@ -164,21 +161,24 @@ def main(app_id='demo', port=8888):
                   help="the application host and port",
                   default="localhost:8080")
 
+    op.add_option("--app_id", dest="app_id", metavar="STRING",
+                  help="the application id", default="")
+
     (options, args) = op.parse_args()
 
     ADDRESS = options.address
-    APP_ID = app_id
+    APP_ID = options.app_id
 
     typhoonae.handlers.login.authenticate('websocket@typhoonae', admin=True)
 
     application = tornado.web.Application([
         (r"/broadcast", BroadcastHandler),
         (r"/message", MessageHandler),
-        (r"/%s/(.*)" % app_id, WebSocketHandler),
+        (r"/%s/(.*)" % urllib.quote(APP_ID), WebSocketHandler),
     ])
 
     http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(port)
+    http_server.listen(8888)
     tornado.ioloop.IOLoop.instance().start()
 
 

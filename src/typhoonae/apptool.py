@@ -208,7 +208,7 @@ stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
 [program:websocket]
-command = %(bin)s/websocket --address=%(server_name)s:%(http_port)s
+command = %(bin)s/websocket --address=%(server_name)s:%(http_port)s --app_id=%(app_id)s
 process_name = websocket
 priority = 999
 redirect_stderr = true

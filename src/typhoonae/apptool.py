@@ -561,6 +561,9 @@ def write_crontab(options, app_root):
 
     tab = read_crontab(options)
 
+    if not cron_info.cron:
+        return tab
+
     for entry in cron_info.cron:
         parser = google.appengine.cron.groc.CreateParser(entry.schedule)
         parser.timespec()

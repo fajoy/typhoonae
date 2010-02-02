@@ -14,6 +14,10 @@ Version 0.1.2 (2010-??-??)
     - http://code.google.com/p/typhoonae/issues/detail?id=23
     - http://code.google.com/p/typhoonae/issues/detail?id=24
 
+  - Fixes an issue where an incomplete cron.yaml file caused apptool to fail.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=25
+
 
 Version 0.1.1 (2009-12-28)
 -------------------------- 

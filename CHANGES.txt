@@ -22,6 +22,10 @@ Version 0.1.2 (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=28
 
+  - Fixes an issue where the Blobstore API wasn't fully implemented.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=29
+
 
 Version 0.1.1 (2009-12-28)
 -------------------------- 

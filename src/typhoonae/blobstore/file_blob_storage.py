@@ -19,6 +19,7 @@ import errno
 import google.appengine.api.blobstore
 import google.appengine.api.blobstore.blobstore_stub
 import google.appengine.api.datastore
+import google.appengine.api.datastore_types
 import os
 
 
@@ -60,6 +61,21 @@ class FileBlobStorage(
         f = os.path.join(self._storage_directory, self._app_id,
                          blob_path[-1], blob_path)
         return f
+
+    def OpenBlob(self, blob_key):
+        """Open blob file for streaming.
+
+        Args:
+            blob_key: Blob-key of existing blob to open for reading.
+
+        Returns:
+            Open file stream for reading blob from disk.
+        """
+        if isinstance(blob_key, basestring):
+            blob_key = google.appengine.api.datastore_types.Key.from_path(
+                '__BlobInfo__', blob_key)
+ 
+        return open(self._FileForBlob(blob_key), 'rb')
 
     def DeleteBlob(self, blob_key):
         """Delete blob data from disk.

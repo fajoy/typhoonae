@@ -17,6 +17,9 @@
 
 import cStringIO
 import google.appengine.api.apiproxy_stub_map
+import google.appengine.api.datastore_types
+import google.appengine.ext.blobstore
+import google.appengine.ext.db
 import os
 import typhoonae.blobstore.handlers
 import typhoonae.mongodb.datastore_mongo_stub
@@ -95,6 +98,19 @@ Submit
 
         handler = typhoonae.blobstore.handlers.UploadCGIHandler()
         fp = handler(fp, environ)
+
+    def testBlobKey(self):
+        """Tests whether a valid BlobKey can be stored in the datastore."""
+
+        class MyModel(google.appengine.ext.db.Model):
+            file = google.appengine.ext.blobstore.BlobReferenceProperty()
+
+        entity = MyModel()
+        result = google.appengine.ext.blobstore.BlobInfo.all().fetch(1)
+        entity.file = result.pop()
+        entity.put()
+
+        self.assertEqual(1538106L, entity.file.size)
 
 
 if __name__ == "__main__":

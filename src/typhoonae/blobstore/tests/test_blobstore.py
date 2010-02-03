@@ -17,11 +17,15 @@
 
 import cStringIO
 import google.appengine.api.apiproxy_stub_map
+import google.appengine.api.datastore
 import google.appengine.api.datastore_types
 import google.appengine.ext.blobstore
 import google.appengine.ext.db
+import logging
 import os
 import typhoonae.blobstore.handlers
+import typhoonae.blobstore.blobstore_stub
+import typhoonae.blobstore.file_blob_storage
 import typhoonae.mongodb.datastore_mongo_stub
 import unittest
 
@@ -58,8 +62,29 @@ class BlobstoreTestCase(unittest.TestCase):
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'datastore_v3', datastore)
 
+        try:
+            from google.appengine.api.images import images_stub
+            google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+                'images',
+                images_stub.ImagesServiceStub())
+        except ImportError, e:
+            logging.warning(
+                'Could not initialize images API; you are likely '
+                'missing the Python "PIL" module. ImportError: %s', e)
+            from google.appengine.api.images import images_not_implemented_stub
+            google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+                'images',
+                images_not_implemented_stub.ImagesNotImplementedServiceStub())
 
-    def testUploadCGIHandler(self):
+        storage = typhoonae.blobstore.file_blob_storage.FileBlobStorage(
+            os.path.dirname(__file__), 'test')
+
+        self.storage = storage
+
+        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+            'blobstore',
+            typhoonae.blobstore.blobstore_stub.BlobstoreServiceStub(storage))
+
         environ = dict()
         environ['REQUEST_URI'] = environ['PATH_INFO'] = \
             '/upload/agRkZW1vchsLEhVfX0Jsb2JVcGxvYWRTZXNzaW9uX18YAQw'
@@ -70,23 +95,23 @@ class BlobstoreTestCase(unittest.TestCase):
         buf = """------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="file.name"
 
-myimage.jpg
+test.png
 ------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="file.content_type"
 
-image/jpeg
+image/png
 ------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="file.path"
 
-/some/path/to/blobstore/8/0000000018
+/test.png
 ------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="file.md5"
 
-5820acc74923923093dbe8d42963f37c
+da945dc0237f4efeed952c249a0d3805
 ------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="file.size"
 
-1538106
+3943
 ------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="submit"
 
@@ -98,6 +123,24 @@ Submit
 
         handler = typhoonae.blobstore.handlers.UploadCGIHandler()
         fp = handler(fp, environ)
+
+    def tearDown(self):
+        """Clean up."""
+
+        query = google.appengine.ext.blobstore.BlobInfo.all()
+        cursor = query.fetch(10)
+
+        for b in cursor:
+            key = google.appengine.api.datastore_types.Key.from_path(
+                '__BlobInfo__', str(b.key()))
+            google.appengine.api.datastore.Delete(key)
+
+    def testBlobInfo(self):
+        """Tests retreiving a BlobInfo entity."""
+
+        result = google.appengine.ext.blobstore.BlobInfo.all().fetch(1)
+        self.assertEqual(google.appengine.ext.blobstore.BlobInfo,
+                         type(result.pop()))
 
     def testBlobKey(self):
         """Tests whether a valid BlobKey can be stored in the datastore."""
@@ -111,9 +154,29 @@ Submit
         entity.put()
 
         fetched_entity = MyModel.all().fetch(1).pop()
-        self.assertEqual(1538106L, fetched_entity.file.size)
+        self.assertEqual(3943L, fetched_entity.file.size)
         self.assertEqual(google.appengine.api.datastore_types.BlobKey,
                          type(fetched_entity.file.key()))
+
+    def testOpenBlob(self):
+        """Opens a blob file for streaming."""
+
+        query = google.appengine.ext.blobstore.BlobInfo.all()
+        key = str(query.fetch(1).pop().key())
+        self.storage.OpenBlob(key)
+
+
+    def testImage(self):
+        """Creates an image object from blob data."""
+
+        from google.appengine.api.images import Image
+        query = google.appengine.ext.blobstore.BlobInfo.all()
+        key = str(query.fetch(1).pop().key())
+        img = Image(blob_key=key)
+        img.resize(width=200)
+        data = img.execute_transforms()
+        thumbnail = Image(data)
+        self.assertEqual(200, thumbnail.width)
 
 
 if __name__ == "__main__":

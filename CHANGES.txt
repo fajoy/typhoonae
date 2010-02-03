@@ -18,6 +18,10 @@ Version 0.1.2 (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=25
 
+  - Fixes an issue where BlobKey types can't be stored in the mongoDB datastore.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=28
+
 
 Version 0.1.1 (2009-12-28)
 -------------------------- 

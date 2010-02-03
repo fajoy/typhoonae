@@ -110,7 +110,10 @@ Submit
         entity.file = result.pop()
         entity.put()
 
-        self.assertEqual(1538106L, entity.file.size)
+        fetched_entity = MyModel.all().fetch(1).pop()
+        self.assertEqual(1538106L, fetched_entity.file.size)
+        self.assertEqual(google.appengine.api.datastore_types.BlobKey,
+                         type(fetched_entity.file.key()))
 
 
 if __name__ == "__main__":

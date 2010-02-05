@@ -247,9 +247,15 @@ def main():
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this datastore", default='mongodb')
 
+    op.add_option("--email", dest="email", metavar="EMAIL",
+                  help="the username to use", default='')
+
     op.add_option("--log", dest="logfile", metavar="FILE",
                   help="write logging output to this file",
                   default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))
+
+    op.add_option("--password", dest="password", metavar="PASSWORD",
+                  help="the password to use", default='')
 
     op.add_option("--server_software", dest="server_software", metavar="STRING",
                   help="use this server software identifier",

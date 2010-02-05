@@ -6,6 +6,8 @@ Version 0.1.2 (2010-??-??)
 
   - Adds experimental Web Socket service API.
 
+  - Adds support for remote datastore.
+
   - Adds command line options to configure the HTTP port and SMTP host.
 
   - Fixes two issues where some static_dir and static_files handler options

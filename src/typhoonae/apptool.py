@@ -17,6 +17,7 @@
 
 import google.appengine.api.croninfo
 import google.appengine.cron
+import getpass
 import optparse
 import os
 import re
@@ -166,7 +167,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s %(app_root)s
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s%(email_and_password)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -425,6 +426,7 @@ def write_supervisor_conf(options, conf, app_root):
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
     datastore = options.datastore.lower()
+    email_and_password = ''
     http_port = options.http_port
     port = options.port
     root = os.getcwd()
@@ -449,15 +451,18 @@ def write_supervisor_conf(options, conf, app_root):
         "# Automatically generated supervisor configuration file: don't edit!\n"
         "# Use apptool to modify.\n")
 
-    supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
-    supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
-
     if datastore == 'mongodb':
         supervisor_conf_stub.write(SUPERVISOR_MONGODB_CONFIG % locals())
     elif datastore == 'bdbdatastore':
         supervisor_conf_stub.write(SUPERVISOR_BDBDATASTORE_CONFIG % locals())
+    elif datastore == 'remote':
+        email_and_password = ' --email=%s --password=%s' % (
+                                            options.email, options.password)
     else:
         raise RuntimeError, "unknown datastore"
+
+    supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
+    supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
 
     jid = conf.application + '@' + xmpp_host
     password = conf.application
@@ -644,6 +649,9 @@ def main():
                   help="write ejabberd configuration to this file",
                   default=os.path.join('etc', 'ejabberd.cfg'))
 
+    op.add_option("--email", dest="email", metavar="EMAIL",
+                  help="the username to use", default='')
+
     op.add_option("--fcgi_host", dest="addr", metavar="ADDR",
                   help="use this FastCGI host", default='localhost')
 
@@ -663,6 +671,9 @@ def main():
     op.add_option("--nginx", dest="nginx", metavar="FILE",
                   help="write nginx configuration to this file",
                   default=os.path.join('etc', 'server.conf'))
+
+    op.add_option("--password", dest="password", metavar="PASSWORD",
+                  help="the password to use", default='')
 
     op.add_option("--server_name", dest="server_name", metavar="STRING",
                   help="use this server name", default=socket.getfqdn())
@@ -705,6 +716,12 @@ def main():
 
     if not os.path.isabs(app_root):
         app_root = os.path.normpath(os.path.join(os.getcwd(), app_root))
+
+    if options.datastore == 'remote':
+        if not options.email:
+            options.email = raw_input('Email: ')
+        if not options.password:
+            options.password = getpass.getpass('Password: ')
 
     conf = typhoonae.getAppConfig(app_root)
 

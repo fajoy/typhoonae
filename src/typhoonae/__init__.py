@@ -36,6 +36,8 @@ import websocket.websocket_stub
 import xmpp.xmpp_service_stub
 
 
+SUPPORTED_DATASTORES = frozenset(['mongodb', 'bdbdatastore'])
+
 end_request_hook = None
 
 
@@ -217,17 +219,34 @@ def setupWebSocket():
         'websocket', websocket.websocket_stub.WebSocketServiceStub())
 
 
+def setupRemoteDatastore(app_id, email, password):
+    """Enables remote API mode for all datastore operations."""
+
+    from google.appengine.ext.remote_api import remote_api_stub
+    remote_api_stub.ConfigureRemoteApi(
+        app_id, '/remote_api', lambda:(email, password),
+        servername=app_id+'.appspot.com', services=['datastore_v3'])
+    remote_api_stub.MaybeInvokeAuthentication()
+
+
 def setupStubs(conf, options):
     """Sets up api proxy stubs."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy = \
         google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
+    if options.datastore == 'remote':
+        setupRemoteDatastore(conf.application, options.email, options.password)
+
     setupCapability()
 
-    setupDatastore(options.datastore.lower(), conf.application,
-                   'dev_appserver.datastore', 'dev_appserver.datastore.history',
-                   False, False)
+    if options.datastore in SUPPORTED_DATASTORES:
+        setupDatastore(options.datastore.lower(),
+                       conf.application,
+                       'dev_appserver.datastore',
+                       'dev_appserver.datastore.history',
+                       False,
+                       False)
 
     setupMail(options.smtp_host, options.smtp_port,
               options.smtp_user, options.smtp_password)

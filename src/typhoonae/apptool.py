@@ -167,7 +167,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s%(email_and_password)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s %(app_root)s
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -182,7 +182,7 @@ stderr_logfile_maxbytes = 1MB
 
 SUPERVISOR_AMQP_CONFIG = """
 [program:taskworker]
-command = %(bin)s/taskworker --amqp_host=%(amqp_host)s %(credentials)s
+command = %(bin)s/taskworker --amqp_host=%(amqp_host)s --credentials=%(credentials)s
 process_name = taskworker
 directory = %(root)s
 priority = 20
@@ -200,7 +200,7 @@ stdout_logfile = %(var)s/log/deferred_taskworker.log
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:%(http_port)s --jid=%(jid)s --password=%(password)s %(credentials)s
+command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:%(http_port)s --jid=%(jid)s --password=%(password)s --credentials=%(credentials)s
 process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -209,7 +209,7 @@ stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
 [program:websocket]
-command = %(bin)s/websocket --address=%(server_name)s:%(http_port)s --app_id=%(app_id)s %(credentials)s
+command = %(bin)s/websocket --address=%(server_name)s:%(http_port)s --app_id=%(app_id)s --credentials=%(credentials)s
 process_name = websocket
 priority = 999
 redirect_stderr = true
@@ -425,9 +425,11 @@ def write_supervisor_conf(options, conf, app_root):
     auth_domain = options.auth_domain
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
+    credentials = options.credentials
     datastore = options.datastore.lower()
-    email_and_password = ''
+    email = options.email
     http_port = options.http_port
+    password = options.password
     port = options.port
     root = os.getcwd()
     server_name = options.server_name
@@ -440,11 +442,6 @@ def write_supervisor_conf(options, conf, app_root):
     smtp_user = options.smtp_user
     smtp_password = options.smtp_password
 
-    if options.credentials: 
-        credentials = '--credentials=' + options.credentials
-    else:
-        credentials = ''
-
     supervisor_conf_stub = open(
         os.path.join(root, 'etc', conf.application+'-supervisor.conf'), 'w')
     supervisor_conf_stub.write(
@@ -456,8 +453,7 @@ def write_supervisor_conf(options, conf, app_root):
     elif datastore == 'bdbdatastore':
         supervisor_conf_stub.write(SUPERVISOR_BDBDATASTORE_CONFIG % locals())
     elif datastore == 'remote':
-        email_and_password = ' --email=%s --password=%s' % (
-                                            options.email, options.password)
+        pass
     else:
         raise RuntimeError, "unknown datastore"
 
@@ -637,7 +633,7 @@ def main():
     op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
                   help="use the specified credentials for the service "
                        "admin user",
-                  default=None)
+                  default='')
 
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists", default=False)
@@ -718,6 +714,7 @@ def main():
         app_root = os.path.normpath(os.path.join(os.getcwd(), app_root))
 
     if options.datastore == 'remote':
+        # Prompt for email and password when not set.
         if not options.email:
             options.email = raw_input('Email: ')
         if not options.password:

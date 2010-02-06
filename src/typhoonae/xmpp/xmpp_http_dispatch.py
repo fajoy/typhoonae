@@ -15,7 +15,6 @@
 # limitations under the License.
 """Simple XMPP/HTTP dispatcher implementation."""
 
-import base64
 import logging
 import mimetools
 import optparse

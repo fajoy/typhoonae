@@ -73,7 +73,7 @@ class ExecutionTimeLimit(object):
         raise TimeLimitExceededError
 
 
-def handle_task(msg, credentials=None):
+def handle_task(msg):
     """Decodes received message and processes task."""
 
     task = simplejson.loads(msg.body)
@@ -83,9 +83,6 @@ def handle_task(msg, credentials=None):
 
     headers = {'Content-Type': task['content_type'],
                'X-AppEngine-TaskName': task['name']}
-
-    if credentials:
-        headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
 
     req = urllib2.Request(
         url='http://%(host)s:%(port)s%(url)s' % task,
@@ -115,11 +112,6 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
     op.add_option("--amqp_host", dest="amqp_host", metavar="ADDR",
                   help="use this AMQP host", default='localhost')
 
-    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
-                  help="use the specified credentials for the service "
-                       "admin user",
-                  default=None)
-
     (options, args) = op.parse_args()
 
     logging.basicConfig(
@@ -147,7 +139,7 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
     chan.queue_bind(queue=queue, exchange=exchange, routing_key=routing_key)
 
     def recv_callback(msg):
-        if not handle_task(msg, options.credentials):
+        if not handle_task(msg):
             task = simplejson.loads(msg.body)
             task_dict = dict(task)
 

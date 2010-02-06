@@ -1,6 +1,5 @@
 """Web Socket server implementation which uses tornado."""
 
-import base64
 import logging
 import mimetools
 import optparse

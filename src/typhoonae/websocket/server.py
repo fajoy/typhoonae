@@ -157,7 +157,8 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
 
 def main():
     """The main function."""
-    global ADDRESS, APP_ID, CREDENTIALS
+
+    global ADDRESS, APP_ID
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 

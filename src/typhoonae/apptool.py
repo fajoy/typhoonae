@@ -75,6 +75,7 @@ FCGI_PARAMS = """\
     fastcgi_param SERVER_NAME $server_name;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
+    %(add_params)s
     fastcgi_pass_header Authorization;
     fastcgi_intercept_errors off;\
 """
@@ -182,7 +183,7 @@ stderr_logfile_maxbytes = 1MB
 
 SUPERVISOR_AMQP_CONFIG = """
 [program:taskworker]
-command = %(bin)s/taskworker --amqp_host=%(amqp_host)s --credentials=%(credentials)s
+command = %(bin)s/taskworker --amqp_host=%(amqp_host)s
 process_name = taskworker
 directory = %(root)s
 priority = 20
@@ -200,7 +201,7 @@ stdout_logfile = %(var)s/log/deferred_taskworker.log
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --address=%(server_name)s:%(http_port)s --jid=%(jid)s --password=%(password)s --credentials=%(credentials)s
+command = %(bin)s/xmpp_http_dispatch --address=%(internal_server_name)s:%(internal_http_port)s --jid=%(jid)s --password=%(password)s
 process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -209,7 +210,7 @@ stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
 [program:websocket]
-command = %(bin)s/websocket --address=%(server_name)s:%(http_port)s --app_id=%(app_id)s --credentials=%(credentials)s
+command = %(bin)s/websocket --address=%(internal_server_name)s:%(internal_http_port)s --app_id=%(app_id)s
 process_name = websocket
 priority = 999
 redirect_stderr = true
@@ -328,10 +329,11 @@ override_acls.
 """
 
 
-def write_nginx_conf(options, conf, app_root):
+def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     """Writes nginx server configuration stub."""
 
     addr = options.addr
+    add_params = []
     app_id = conf.application
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
@@ -341,15 +343,25 @@ def write_nginx_conf(options, conf, app_root):
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
 
+    if internal:
+        http_port = '8770'
+        server_name = 'localhost'
+        add_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
+
     for i in range(10):
         p = os.path.join(blobstore_path, str(i))
         if not os.path.isdir(p):
             os.makedirs(p)
 
-    httpd_conf_stub = open(options.nginx, 'w')
-    httpd_conf_stub.write("# Automatically generated NGINX configuration file: "
-                          "don't edit!\n"
-                          "# Use apptool to modify.\n")
+    httpd_conf_stub = open(options.nginx, mode)
+
+    if not internal:
+        httpd_conf_stub.write(
+            "# Automatically generated NGINX configuration file: don't edit!\n"
+            "# Use apptool to modify.\n")
+    elif internal:
+        httpd_conf_stub.write(
+            "# Internal configuration.\n")
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 
@@ -396,11 +408,11 @@ def write_nginx_conf(options, conf, app_root):
             if ltrunc_url not in urls_require_login:
                 urls_require_login.append(ltrunc_url)
 
-    if urls_require_login and options.http_base_auth_enabled:
+    if urls_require_login and options.http_base_auth_enabled and not internal:
         httpd_conf_stub.write(NGINX_SECURE_LOCATION % dict(
             addr=addr,
             app_id=conf.application,
-            fcgi_params=FCGI_PARAMS,
+            fcgi_params=FCGI_PARAMS % {'add_params': '\n'.join(add_params)},
             passwd_file=os.path.join(app_root, 'htpasswd'),
             path='|'.join(urls_require_login),
             port=port
@@ -408,7 +420,8 @@ def write_nginx_conf(options, conf, app_root):
         )
 
     vars = locals()
-    vars.update(dict(fcgi_params=FCGI_PARAMS))
+    vars.update(
+        dict(fcgi_params=FCGI_PARAMS % {'add_params': '\n'.join(add_params)}))
     httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_FCGI_CONFIG % vars)
@@ -425,10 +438,11 @@ def write_supervisor_conf(options, conf, app_root):
     auth_domain = options.auth_domain
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
-    credentials = options.credentials
     datastore = options.datastore.lower()
     email = options.email
     http_port = options.http_port
+    internal_http_port = 8770
+    internal_server_name = 'localhost'
     password = options.password
     port = options.port
     root = os.getcwd()
@@ -630,11 +644,6 @@ def main():
                   help="path to use for storing Blobstore file stub data",
                   default=os.path.join('var', 'blobstore'))
 
-    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
-                  help="use the specified credentials for the service "
-                       "admin user",
-                  default='')
-
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists", default=False)
 
@@ -657,7 +666,7 @@ def main():
 
     op.add_option("--http_base_auth", dest="http_base_auth_enabled",
                   action="store_true",
-                  help="enable HTTP base authentication for logging in",
+                  help="enable HTTP base authentication",
                   default=False)
 
     op.add_option("--http_port", dest="http_port", metavar="PORT",
@@ -723,6 +732,7 @@ def main():
     conf = typhoonae.getAppConfig(app_root)
 
     write_nginx_conf(options, conf, app_root)
+    write_nginx_conf(options, conf, app_root, internal=True, mode='a')
     write_supervisor_conf(options, conf, app_root)
     write_ejabberd_conf(options)
     write_crontab(options, app_root)

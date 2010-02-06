@@ -9,7 +9,6 @@ import threading
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
-import typhoonae.handlers.login
 import typhoonae.websocket
 import typhoonae.websocket.tornado_handler
 import urllib
@@ -27,12 +26,11 @@ HANDSHAKE_URL = 'http://%s/_ah/websocket/handshake/%s'
 MESSAGE_URL   = 'http://%s/_ah/websocket/message/%s'
 
 
-def post_multipart(url, credentials, fields):
+def post_multipart(url, fields):
     """Posts multipart form data fields.
 
     Args:
         url: Post multipart form data to this URL.
-        credentials: Authentication credentials to be used when posting.
         fields: A list of tuples of the form [(fieldname, value), ...].
     """
 
@@ -43,9 +41,6 @@ def post_multipart(url, credentials, fields):
     headers = {'Content-Type': content_type,
                typhoonae.websocket.WEBSOCKET_HEADER: '',
                'Content-Length': str(len(body))}
-
-    if credentials:
-        headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
 
     req = urllib2.Request(url, body, headers)
 
@@ -109,8 +104,7 @@ class MessageHandler(tornado.web.RequestHandler):
 class Dispatcher(threading.Thread):
     """Dispatcher thread for non-blocking message delivery."""
 
-    def __init__(
-            self, socket, request_type, param_path, body='', credentials=None):
+    def __init__(self, socket, request_type, param_path, body=''):
         """Constructor.
 
         Args:
@@ -118,14 +112,12 @@ class Dispatcher(threading.Thread):
             request_type: The request type.
             param_path: Parameter path.
             body: The message body.
-            credentials: Authentication credentials to be used when posting.
         """
         super(Dispatcher, self).__init__()
         self._socket = socket
         self._type = request_type
         self._path = param_path
         self._body = body
-        self._credentials = credentials
 
     def run(self):
         """Post message."""
@@ -134,10 +126,7 @@ class Dispatcher(threading.Thread):
             url = HANDSHAKE_URL % (ADDRESS, self._path)
         elif self._type == MESSAGE:
             url = MESSAGE_URL % (ADDRESS, self._path)
-        post_multipart(
-            url,
-            self._credentials,
-            [(u'body', self._body), (u'from', self._socket)])
+        post_multipart(url, [(u'body', self._body), (u'from', self._socket)])
 
 
 class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
@@ -150,8 +139,7 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
     def open(self, param_path):
         sock_id = self.stream.socket.fileno()
         WEB_SOCKETS[sock_id] = self
-        dispatcher = Dispatcher(
-            str(sock_id), HANDSHAKE, param_path, credentials=CREDENTIALS)
+        dispatcher = Dispatcher(str(sock_id), HANDSHAKE, param_path)
         dispatcher.start()
         self.receive_message(self.on_message)
 
@@ -162,8 +150,7 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
             str(sock_id),
             MESSAGE,
             param_path,
-            body=message,
-            credentials=CREDENTIALS)
+            body=message)
         dispatcher.start()
         self.receive_message(self.on_message)
 
@@ -181,18 +168,10 @@ def main():
     op.add_option("--app_id", dest="app_id", metavar="STRING",
                   help="the application id", default="")
 
-    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
-                  help="use the specified credentials for the service "
-                       "admin user",
-                  default=None)
-
     (options, args) = op.parse_args()
 
     ADDRESS = options.address
     APP_ID = options.app_id
-    CREDENTIALS = options.credentials
-
-    typhoonae.handlers.login.authenticate('websocket@typhoonae', admin=True)
 
     application = tornado.web.Application([
         (r"/broadcast", BroadcastHandler),

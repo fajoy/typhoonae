@@ -31,6 +31,9 @@ import typhoonae.taskqueue
 
 MAX_CONNECTION_RETRIES = 1
 
+INTERNAL_SERVER_NAME = 'localhost'
+INTERNAL_PORT = '8770'
+
 
 class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     """Task queue service stub."""
@@ -84,11 +87,11 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         task_dict = dict(
             content_type=content_type,
             eta=request.eta_usec()/1000000,
-            host=os.environ['SERVER_NAME'],
+            host=INTERNAL_SERVER_NAME,
             method=request.method(),
             name=request.task_name(),
             payload=base64.b64encode(request.body()),
-            port=os.environ['SERVER_PORT'],
+            port=INTERNAL_PORT,
             queue=request.queue_name(),
             try_count=1,
             url=request.url(),

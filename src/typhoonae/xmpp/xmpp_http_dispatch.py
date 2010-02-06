@@ -21,7 +21,6 @@ import mimetools
 import optparse
 import sys
 import time
-import typhoonae.handlers.login
 import urllib2
 import xmpp
 
@@ -29,12 +28,11 @@ DESCRIPTION = ("XMPP/HTTP dispatcher.")
 USAGE = "usage: %prog [options]"
 
 
-def post_multipart(url, credentials, fields):
+def post_multipart(url, fields):
     """Posts multipart form data fields.
 
     Args:
         url: Post multipart form data to this URL.
-        credentials: Authentication credentials to be used when posting.
         fields: A list of tuples of the form [(fieldname, value), ...].
     """
 
@@ -43,16 +41,13 @@ def post_multipart(url, credentials, fields):
     headers = {'Content-Type': content_type,
                'Content-Length': str(len(body))}
 
-    if credentials:
-        headers['Authorization'] = 'Basic %s' % base64.b64encode(credentials)
-
     req = urllib2.Request(url, str(body.encode('utf-8')), headers)
 
     try:
         res = urllib2.urlopen(req)
     except urllib2.URLError, err_obj:
         reason = getattr(err_obj, 'reason', err_obj)
-        logging.error("failed task %s %s" % (task, reason))
+        logging.error("failed message %s" % reason)
         return
     return res.read()
 
@@ -84,17 +79,15 @@ def encode_multipart_formdata(fields):
 class Dispatcher(object):
     """The XMPP/HTTP dispatcher class."""
 
-    def __init__(self, address, credentials):
+    def __init__(self, address):
         """Initializes the dispatcher."""
 
         self.address = address
-        self.credentials = credentials
 
     def __call__(self, conn, message):
         """The dispatcher function."""
 
         post_multipart('http://%s/_ah/xmpp/message/chat/' % self.address,
-                       self.credentials,
                        [(u'body', unicode(message.getBody()).encode('utf-8')),
                         (u'from', unicode(message.getFrom())),
                         (u'stanza', unicode(message).encode('utf-8')),
@@ -122,12 +115,7 @@ def main():
 
     op.add_option("-a", "--address", dest="address", metavar="HOST:PORT",
                   help="the application host and port",
-                  default="localhost:8080")
-
-    op.add_option("--credentials", dest="credentials", metavar="EMAIL:PASSWORD",
-                  help="use the specified credentials for the service "
-                       "admin user",
-                  default=None)
+                  default="localhost:8770")
 
     op.add_option("-j", "--jid", dest="jid", metavar="JID",
                   help="use this Jabber ID", default="demo@localhost")
@@ -171,11 +159,8 @@ def main():
     if auth <> 'sasl':
         logging.warning("SASL authentication on %s failed" % server)
 
-    client.RegisterHandler(
-        'message', Dispatcher(options.address, options.credentials))
+    client.RegisterHandler('message', Dispatcher(options.address))
     client.sendInitPresence()
-
-    typhoonae.handlers.login.authenticate('xmpp@typhoonae', admin=True)
 
     loop(client)
 

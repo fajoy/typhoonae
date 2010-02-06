@@ -25,7 +25,6 @@ import signal
 import simplejson
 import socket
 import sys
-import typhoonae.handlers.login
 import typhoonae.taskqueue
 import urllib2
 
@@ -173,8 +172,6 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
         no_ack=False,
         callback=recv_callback,
         consumer_tag=_consumer_tag)
-
-    typhoonae.handlers.login.authenticate('queue@typhoonae', admin=True)
 
     try:
         while True:

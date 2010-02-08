@@ -90,6 +90,9 @@ class DatastoreMongoTestCase(unittest.TestCase):
         self.stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
             'datastore_v3')
 
+    def tearDown(self):
+        """Removes test entities."""
+
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel LIMIT 1000")
 
@@ -249,6 +252,15 @@ class DatastoreMongoTestCase(unittest.TestCase):
                  .filter('more IN', [0, 1])
         ).count()
         self.assertEqual(1, count)
+
+    def testCursors(self):
+        """Tests the cursor API."""
+
+        for i in xrange(0, 100):
+            TestModel(contents='foobar %i' % i).put()
+
+        query = TestModel.all()
+        # TODO: Implement cursor tests here.
 
 
 if __name__ == "__main__":

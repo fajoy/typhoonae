@@ -240,18 +240,15 @@ class DatastoreMongoTestCase(unittest.TestCase):
         cursor = query.fetch(10)
         self.assertEqual(1, len(cursor))
 
-        # This test seems to fail due to a GAE Python bug.
+        # This test failed in earlier GAE Python releases.
         # See http://code.google.com/p/googleappengine/issues/detail?id=2611
         # for further details.
-        #
-        # To be commented in after the bug is fixed.
-        #
-        #count = (TestModel.all()
-        #         .filter('more =', 1)
-        #         .filter('more IN', [1, 2])
-        #         .filter('more IN', [0, 1])
-        #).count()
-        #self.assertEqual(1, count)
+        count = (TestModel.all()
+                 .filter('more =', 1)
+                 .filter('more IN', [1, 2])
+                 .filter('more IN', [0, 1])
+        ).count()
+        self.assertEqual(1, count)
 
 
 if __name__ == "__main__":

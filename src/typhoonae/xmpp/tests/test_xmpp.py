@@ -101,7 +101,7 @@ class XmppHttpDispatcherTestCase(unittest.TestCase):
         """Makes a call to our dispatcher."""
 
         dispatcher = typhoonae.xmpp.xmpp_http_dispatch.Dispatcher(
-            'localhost:9876', None)
+            'localhost:9876')
 
         message = MockMessage()
         dispatcher(None, message)

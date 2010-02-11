@@ -154,6 +154,7 @@ location @sample {
     fastcgi_param SERVER_NAME $server_name;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
+    
     fastcgi_pass_header Authorization;
     fastcgi_intercept_errors off;
 }
@@ -176,6 +177,7 @@ location / {
     fastcgi_param SERVER_NAME $server_name;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
+    
     fastcgi_pass_header Authorization;
     fastcgi_intercept_errors off;
 }

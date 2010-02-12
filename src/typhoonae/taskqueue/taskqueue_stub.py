@@ -93,7 +93,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             payload=base64.b64encode(request.body()),
             port=INTERNAL_PORT,
             queue=request.queue_name(),
-            try_count=1,
+            try_count=0,
             url=request.url(),
         )
 

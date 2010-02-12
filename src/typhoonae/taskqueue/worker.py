@@ -82,7 +82,8 @@ def handle_task(msg):
         return False
 
     headers = {'Content-Type': task['content_type'],
-               'X-AppEngine-TaskName': task['name']}
+               'X-AppEngine-TaskName': task['name'],
+               'X-AppEngine-TaskRetryCount': task['try_count']}
 
     req = urllib2.Request(
         url='http://%(host)s:%(port)s%(url)s' % task,

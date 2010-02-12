@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,25 +15,24 @@
 # limitations under the License.
 """Helper functions for registering App Engine API proxy stubs."""
 
-import blobstore.blobstore_stub
-import blobstore.file_blob_storage
-import capability_stub
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.appinfo
 import google.appengine.api.mail_stub
 import google.appengine.api.urlfetch_stub
 import google.appengine.api.user_service_stub
 import google.appengine.api.validation
-import google.appengine.ext.webapp.blobstore_handlers
-import intid
 import logging
-import memcache.memcache_stub
-import mongodb.datastore_mongo_stub
 import os
 import re
-import taskqueue.taskqueue_stub
-import websocket.websocket_stub
-import xmpp.xmpp_service_stub
+import typhoonae.blobstore.blobstore_stub
+import typhoonae.blobstore.file_blob_storage
+import typhoonae.capability_stub
+import typhoonae.intid
+import typhoonae.memcache.memcache_stub
+import typhoonae.mongodb.datastore_mongo_stub
+import typhoonae.taskqueue.taskqueue_stub
+import typhoonae.websocket.websocket_stub
+import typhoonae.xmpp.xmpp_service_stub
 
 
 SUPPORTED_DATASTORES = frozenset(['mongodb', 'bdbdatastore'])
@@ -119,7 +118,7 @@ def setupCapability():
     """Sets up cabability service."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-        'capability_service', capability_stub.CapabilityServiceStub())
+        'capability_service', typhoonae.capability_stub.CapabilityServiceStub())
 
 
 def setupDatastore(name, app_id, datastore, history, require_indexes, trusted):
@@ -133,9 +132,10 @@ def setupDatastore(name, app_id, datastore, history, require_indexes, trusted):
         datastore_path = os.path.join(tmp_dir, datastore)
         history_path = os.path.join(tmp_dir, history)
 
-        datastore = mongodb.datastore_mongo_stub.DatastoreMongoStub(
+        datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
             app_id, datastore_path, history_path,
-            require_indexes=require_indexes, intid_client=intid.IntidClient())
+            require_indexes=require_indexes,
+            intid_client=typhoonae.intid.IntidClient())
     elif name == 'bdbdatastore':
         from notdot.bdbdatastore import socket_apiproxy_stub
         datastore = socket_apiproxy_stub.RecordingSocketApiProxyStub(
@@ -170,14 +170,15 @@ def setupMemcache():
     """Sets up memcache."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('memcache',
-        memcache.memcache_stub.MemcacheServiceStub())
+        typhoonae.memcache.memcache_stub.MemcacheServiceStub())
 
 
 def setupTaskQueue(root_path='.'):
     """Sets up task queue."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('taskqueue',
-        taskqueue.taskqueue_stub.TaskQueueServiceStub(root_path=root_path))
+        typhoonae.taskqueue.taskqueue_stub.TaskQueueServiceStub(
+            root_path=root_path))
 
 
 def setupURLFetchService():
@@ -200,23 +201,24 @@ def setupXMPP(host):
     """Sets up XMPP."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
-        xmpp.xmpp_service_stub.XmppServiceStub(host=host))
+        typhoonae.xmpp.xmpp_service_stub.XmppServiceStub(host=host))
 
 
 def setupBlobstore(blobstore_path, app_id):
     """Sets up blobstore service."""
 
-    storage = blobstore.file_blob_storage.FileBlobStorage(
+    storage = typhoonae.blobstore.file_blob_storage.FileBlobStorage(
         blobstore_path, app_id)
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-        'blobstore', blobstore.blobstore_stub.BlobstoreServiceStub(storage))
+        'blobstore',
+        typhoonae.blobstore.blobstore_stub.BlobstoreServiceStub(storage))
 
 
 def setupWebSocket():
     """Sets up Web Socket service."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-        'websocket', websocket.websocket_stub.WebSocketServiceStub())
+        'websocket', typhoonae.websocket.websocket_stub.WebSocketServiceStub())
 
 
 def setupRemoteDatastore(app_id, email, password):

@@ -257,7 +257,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
         """Tests the cursor API."""
 
         for i in xrange(0, 100):
-            TestModel(contents='foobar %i' % i).put()
+            TestModel(contents='Foobar', number=i).put()
 
         query = TestModel.all()
         # TODO: Implement cursor tests here.

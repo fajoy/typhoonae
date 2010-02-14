@@ -226,6 +226,11 @@ class DatastoreMongoTestCase(unittest.TestCase):
         ).count()
         self.assertEqual(1, count)
 
+        count = (TestModel.all()
+                 .filter('contents IN', [u'some contents', u'foo'])
+        ).count()
+        self.assertEqual(1, count)
+
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel WHERE number IN :1 LIMIT 10", [3])
         cursor = query.fetch(10)

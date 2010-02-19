@@ -11,15 +11,15 @@ If you've already written a `Google App Engine
 <http://code.google.com/appengine>`_ application and deployed it successfully
 to the appspot you're probably asking how cool it'd be to get all that stuff
 running on your own hardware `at home`. Or you plan to build your own scalable
-app engine with high-performance, distributed services powered by one hundred
+App Engine with high-performance, distributed services powered by one hundred
 percent open source.
 
 The basic idea of this document is to give a brief explanation on the
-principles and design descisions behind TyphoonAE. You can learn how to install
-your own App Engine runnig your GAE applications.
+principles and design decisions behind TyphoonAE. You can learn how to install
+your own App Engine running your GAE applications.
 
 If you are interested in developing TyphoonAE itself, this book contains a
-refrence guide. You'll get an architecture overview and an introduction to the
+reference guide. You'll get an architecture overview and an introduction to the
 software under the hood of TyphoonAE.
 
 The philosophy behind TyphoonAE

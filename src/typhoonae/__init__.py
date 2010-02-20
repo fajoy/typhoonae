@@ -226,7 +226,7 @@ def setupRemoteDatastore(app_id, email, password):
 
     from google.appengine.ext.remote_api import remote_api_stub
     remote_api_stub.ConfigureRemoteApi(
-        app_id, '/remote_api', lambda:(email, password),
+        app_id, '/remote_api', lambda:(email, password), secure=True,
         servername=app_id+'.appspot.com', services=['datastore_v3'])
     remote_api_stub.MaybeInvokeAuthentication()
 

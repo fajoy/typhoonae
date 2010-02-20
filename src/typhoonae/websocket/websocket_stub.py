@@ -28,8 +28,6 @@ __all__ = [
     'WebSocketServiceStub'
 ]
 
-BROADCAST = 'broadcast'
-
 
 class Error(Exception):
   """Base websocket error type."""

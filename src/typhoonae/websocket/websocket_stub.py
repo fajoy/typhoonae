@@ -28,6 +28,8 @@ __all__ = [
     'WebSocketServiceStub'
 ]
 
+BROADCAST = 'broadcast'
+
 
 class Error(Exception):
   """Base websocket error type."""
@@ -90,6 +92,46 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
         response.url = typhoonae.websocket.WEBSOCKET_HANDLER_URL % url_parts
 
+    def _SendMessage(self, body, socket, broadcast=False):
+        """Sends a Web Socket message.
+
+        Args:
+            body: The message body.
+            socket: A socket.
+            broadcast: This flag determines whether a message should be sent to
+                all active sockets but the sender.
+        """
+
+        rpc = google.appengine.api.urlfetch.create_rpc(deadline=1)
+
+        path = 'message'
+        if broadcast:
+            path = 'broadcast'
+
+        google.appengine.api.urlfetch.make_fetch_call(
+            rpc, "http://localhost:%s/%s" % (self._GetPort(), path),
+            headers={typhoonae.websocket.WEBSOCKET_HEADER: socket},
+            payload=body.encode('utf-8'),
+            method='POST')
+
+        status = (
+            typhoonae.websocket.websocket_service_pb2.
+            WebSocketMessageResponse.OTHER_ERROR)
+
+        try:
+            result = rpc.get_result()
+            if result.status_code == 200:
+                status = (
+                    typhoonae.websocket.websocket_service_pb2.
+                    WebSocketMessageResponse.NO_ERROR)
+
+        except google.appengine.api.urlfetch.DownloadError:
+            status = (
+                typhoonae.websocket.websocket_service_pb2.
+                WebSocketMessageResponse.OTHER_ERROR)
+
+        return status
+
     def _Dynamic_SendMessage(self, request, response):
         """Implementation of WebSocketService::send_message().
 
@@ -98,24 +140,20 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             response: A WebSocketMessageResponse instance.
         """
 
-        body = request.message.body
-        socket = request.message.socket
+        status = self._SendMessage(
+            request.message.body, request.message.socket)
 
-        rpc = google.appengine.api.urlfetch.create_rpc(deadline=1)
-        google.appengine.api.urlfetch.make_fetch_call(
-            rpc, "http://localhost:%s/message" % self._GetPort(),
-            headers={typhoonae.websocket.WEBSOCKET_HEADER: socket},
-            payload=body.encode('utf-8'),
-            method='POST')
+        response.status.code = status
 
-        try:
-            result = rpc.get_result()
-            if result.status_code == 200:
-                response.status.code = (
-                    typhoonae.websocket.websocket_service_pb2.
-                    WebSocketMessageResponse.NO_ERROR)
+    def _Dynamic_BroadcastMessage(self, request, response):
+        """Implementation of WebSocketService::broadcast_message().
 
-        except google.appengine.api.urlfetch.DownloadError:
-            response.status.code = (
-                typhoonae.websocket.websocket_service_pb2.
-                WebSocketMessageResponse.OTHER_ERROR)
+        Args:
+            request: A WebSocketMessageRequest instance.
+            response: A WebSocketMessageResponse instance.
+        """
+
+        status = self._SendMessage(
+            request.message.body, None, broadcast=True)
+
+        response.status.code = status

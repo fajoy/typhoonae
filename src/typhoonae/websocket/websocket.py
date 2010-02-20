@@ -31,6 +31,7 @@ __all__ = [
     'create_websocket_url',
     'Message',
     'send_message',
+    'broadcast_message',
 ]
 
 WEBSOCKET_HEADER = "X-TyphoonAE-WebSocket"
@@ -123,5 +124,26 @@ def send_message(sockets, body, _make_sync_call=apiproxy_stub_map.MakeSyncCall):
             _make_sync_call("websocket", "SendMessage", request, response)
         except apiproxy_errors.ApplicationError, e:
             raise Error()
+
+    return
+
+
+def broadcast_message(body, _make_sync_call=apiproxy_stub_map.MakeSyncCall):
+    """Sends a message to all active Web Sockets.
+
+    Args:
+        body: The message body.
+        _make_sync_call: Used for dependency injection.
+    """
+
+    request = websocket_service_pb2.WebSocketMessageRequest()
+    response = websocket_service_pb2.WebSocketMessageResponse()
+
+    request.message.body = body
+
+    try:
+        _make_sync_call("websocket", "BroadcastMessage", request, response)
+    except apiproxy_errors.ApplicationError, e:
+        raise Error()
 
     return

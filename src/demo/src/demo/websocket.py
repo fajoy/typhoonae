@@ -53,8 +53,7 @@ class MessageHandler(google.appengine.ext.webapp.RequestHandler):
         """Handles post."""
 
         message = typhoonae.websocket.Message(self.request.POST)
-        typhoonae.websocket.send_message(
-            [message.socket], 'Received: "%s"' % message.body)
+        typhoonae.websocket.broadcast_message(message.body)
 
 
 app = google.appengine.ext.webapp.WSGIApplication([

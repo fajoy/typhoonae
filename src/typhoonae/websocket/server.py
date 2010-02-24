@@ -133,7 +133,6 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
 
     def __init__(self, *args, **kw):
         super(WebSocketHandler, self).__init__(*args, **kw)
-        logging.info('initializing %s' % self)
 
     def open(self, param_path):
         sock_id = self.stream.socket.fileno()

@@ -47,14 +47,19 @@ class WebSocketTestCase(unittest.TestCase):
             'urlfetch',
             google.appengine.api.urlfetch_stub.URLFetchServiceStub())
 
-    def test_get_stub(self):
+    def test_stub(self):
         """Tests whether the stub is correctly registered."""
 
         stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
             'websocket')
+
         self.assertEqual(
             typhoonae.websocket.websocket_stub.WebSocketServiceStub,
             stub.__class__)
+
+        self.assertRaises(
+            typhoonae.websocket.websocket_stub.ConfigurationError,
+            stub._GetEnviron, 'unknown')
 
     def test_create_websocket_url(self):
         """Tries to obtain a valid Web Socket URL."""
@@ -66,6 +71,15 @@ class WebSocketTestCase(unittest.TestCase):
         self.assertEqual(
             'ws://host:8888/app/foo',
             typhoonae.websocket.create_websocket_url('/foo'))
+
+    def test_message(self):
+        """Simply cretes a Web Socket message instance."""
+
+        message = typhoonae.websocket.Message(
+            {'from': 0, 'body': 'Message body'})
+
+        self.assertEqual(0, message.socket)
+        self.assertEqual('Message body', message.body)
 
     def test_send_message(self):
         """Sends a message to a Web Socket."""

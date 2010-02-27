@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,39 @@
 
 import BaseHTTPServer
 import SimpleHTTPServer
+import google.appengine.api.apiproxy_stub_map
+import google.appengine.api.urlfetch_stub
 import cgi
 import httplib
 import os
 import threading
 import typhoonae.xmpp.xmpp_http_dispatch
+import typhoonae.xmpp.xmpp_service_stub
 import unittest
+
+
+class XmppServiceTestCase(unittest.TestCase):
+    """Testing the XMPP service API proxy stub."""
+
+    def setUp(self):
+        """Register TyphoonAE's XMPP service API proxy stub."""
+
+        # Set up API proxy stubs.
+        google.appengine.api.apiproxy_stub_map.apiproxy = \
+            google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
+
+        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+            'xmpp',
+            typhoonae.xmpp.xmpp_service_stub.XmppServiceStub())
+
+    def test_stub(self):
+        """Tests whether the stub is correctly registered."""
+
+        stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub('xmpp')
+
+        self.assertEqual(
+            typhoonae.typhoonae.xmpp.xmpp_service_stub.XmppServiceStub,
+            stub.__class__)
 
 
 class StoppableHttpRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
@@ -65,6 +92,7 @@ def stop_server(port):
     conn = httplib.HTTPConnection("localhost:%d" % port)
     conn.request("QUIT", "/")
     conn.getresponse()
+    conn.close()
 
 
 class MockMessage(object):
@@ -86,23 +114,47 @@ class XmppHttpDispatcherTestCase(unittest.TestCase):
     def setUp(self):
         """Sets up a test HTTP server."""
 
-        self.server = StoppableHttpServer(('localhost', 9876),
-                                          StoppableHttpRequestHandler)
-        server_thread = threading.Thread(target=self.server.serve_forever)
-        server_thread.setDaemon(True)
-        server_thread.start()
-
     def tearDown(self):
         """Tears the test HTTP server down."""
 
-        stop_server(9876)
-
     def testDispatcher(self):
         """Makes a call to our dispatcher."""
+
+        server = StoppableHttpServer(
+            ('localhost', 9876), StoppableHttpRequestHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.setDaemon(True)
+        server_thread.start()
 
         dispatcher = typhoonae.xmpp.xmpp_http_dispatch.Dispatcher(
             'localhost:9876')
 
         message = MockMessage()
         dispatcher(None, message)
-        assert 'test@nowhere.net' in str(self.server.buffer)
+        assert 'test@nowhere.net' in str(server.buffer)
+
+        typhoonae.xmpp.xmpp_http_dispatch.post_multipart(
+            'http://localhost:9876',
+            [(u'body', u'Some body contents.'),])
+
+        stop_server(9876)
+
+    def testPostMultipart(self):
+        """Tries to post multipart form data."""
+
+        typhoonae.xmpp.xmpp_http_dispatch.post_multipart(
+            'http://localhost:8765',
+            [(u'body', u'Some body contents.'),])
+
+    def testLoop(self):
+        """Tests the main loop."""
+
+        class MockConnection(object):
+            _counter = 0
+            @classmethod
+            def Process(cls, i):
+                if cls._counter > 0:
+                    raise KeyboardInterrupt
+                cls._counter += 1
+
+        typhoonae.xmpp.xmpp_http_dispatch.loop(MockConnection())

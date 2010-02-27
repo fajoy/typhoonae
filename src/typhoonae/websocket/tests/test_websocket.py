@@ -75,3 +75,8 @@ class WebSocketTestCase(unittest.TestCase):
         self.assertRaises(
             typhoonae.websocket.BadArgumentError,
             typhoonae.websocket.send_message, 1, 'My second message.')
+
+    def test_broadcast_message(self):
+        """Sends a broadcast message request to the Web Socket service."""
+
+        typhoonae.websocket.broadcast_message('My broadcast message.')

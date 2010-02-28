@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,6 +63,10 @@ class MemcacheTestCase(unittest.TestCase):
         google.appengine.api.memcache.add('number', number)
         assert google.appengine.api.memcache.get('number') == number
 
+        long_number = long(20)
+        google.appengine.api.memcache.add('long', long_number)
+        assert google.appengine.api.memcache.get('long') == long_number
+
         yes = True
         google.appengine.api.memcache.add('yes', yes)
         assert google.appengine.api.memcache.get('yes') == yes
@@ -81,7 +85,6 @@ class MemcacheTestCase(unittest.TestCase):
             unicode_data, google.appengine.api.memcache.get('unicode'))
         assert type(google.appengine.api.memcache.get('unicode')) == list
 
-
     def testDeletingItem(self):
         """Tries to set and delete a key and its value."""
 
@@ -90,6 +93,11 @@ class MemcacheTestCase(unittest.TestCase):
         assert google.appengine.api.memcache.get('data') == data
         google.appengine.api.memcache.delete('data')
         assert google.appengine.api.memcache.get('data') == None
+
+    def testDeletingUnknownKey(self):
+        """Tries to delete an unknown key."""
+
+        google.appengine.api.memcache.delete('unknown')
 
     def testExpirationTime(self):
         """Adds an expireing item."""
@@ -127,6 +135,11 @@ class MemcacheTestCase(unittest.TestCase):
         assert google.appengine.api.memcache.get('counter') == 3
         google.appengine.api.memcache.decr('counter')
         assert google.appengine.api.memcache.get('counter') == 2
+
+        google.appengine.api.memcache.set('lcounter', long(20))
+        assert google.appengine.api.memcache.get('lcounter') == long(20)
+        google.appengine.api.memcache.incr('lcounter')
+        assert google.appengine.api.memcache.get('lcounter') == long(21)
 
     def testFlushAll(self):
         """Flushes the whole cache."""
@@ -179,6 +192,16 @@ class MemcacheTestCase(unittest.TestCase):
             ['map_key_two', 'three'])
         assert {'map_key_two': u'some value', 'three': u'trois'} == values
 
+    def testStats(self):
+        """Tries to get memcache stats.
+
+        TODO: This is not implemented right now.
+        """
+
+        self.assertRaises(
+            NotImplementedError,
+            google.appengine.api.memcache.get_stats)
+        
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,7 +18,9 @@
 import datetime
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.apiproxy_stub_map
+import google.appengine.api.datastore
 import google.appengine.api.datastore_types
+import google.appengine.api.users
 import google.appengine.ext.db
 import os
 import time
@@ -76,6 +78,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
         """Register typhoonae's datastore API proxy stub."""
 
         os.environ['APPLICATION_ID'] = 'test'
+        os.environ['AUTH_DOMAIN'] = 'bar.net'
 
         google.appengine.api.apiproxy_stub_map.apiproxy = \
                     google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
@@ -99,6 +102,31 @@ class DatastoreMongoTestCase(unittest.TestCase):
         for entity in query:
             entity.delete()
 
+    def testDatastoreTypes(self):
+        """Puts and gets different basic datastore types."""
+
+        datastore_types = google.appengine.api.datastore_types
+
+        entity = google.appengine.api.datastore.Entity('TestKind')
+
+        entity.update({
+            'rating': datastore_types.Rating(1),
+            'category': datastore_types.Category('bugs'),
+            'key': datastore_types.Key.from_path('foo', 'bar'),
+            'user': google.appengine.api.users.User('foo@bar.net'),
+            'text': datastore_types.Text('some text'),
+            'blob': datastore_types.Blob('data'),
+            'bytestring': datastore_types.ByteString('data'),
+            'im': datastore_types.IM('http://example.com/', 'Larry97'),
+            'geopt': datastore_types.GeoPt(1.1234, -1.1234),
+            'email': datastore_types.Email('foo@bar.net'),
+            'blobkey': datastore_types.BlobKey('27f5a7'),
+        })
+
+        google.appengine.api.datastore.Put(entity)
+        e = google.appengine.api.datastore.Get(entity)
+        google.appengine.api.datastore.Delete(entity)
+
     def testPuttingAndGettingEntity(self):
         """Writes an entity to and gets an entity from the datastore."""
 
@@ -113,6 +141,16 @@ class DatastoreMongoTestCase(unittest.TestCase):
         assert TestModel.all().fetch(1)[0].contents == 'foo'
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
         self.assertEqual(query.count(), 1)
+
+    def testQueryHistory(self):
+        """Tries to retreive query history information."""
+
+        entity = TestModel(contents='some data')
+        entity.put()
+        query = TestModel.all()
+        assert query.get().contents == u'some data'
+        history = self.stub.QueryHistory()
+        assert history.keys().pop().kind() == 'TestModel'
 
     def testUnicode(self):
         """Writes an entity with unicode contents."""

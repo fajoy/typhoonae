@@ -84,8 +84,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
                     google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
         datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
-            'test', '', '', require_indexes=False,
-            intid_client=TestIntidClient())
+            'test', '', require_indexes=False, intid_client=TestIntidClient())
 
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'datastore_v3', datastore)

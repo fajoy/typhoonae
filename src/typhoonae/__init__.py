@@ -133,7 +133,7 @@ def setupDatastore(name, app_id, datastore, history, require_indexes, trusted):
         history_path = os.path.join(tmp_dir, history)
 
         datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
-            app_id, datastore_path, history_path,
+            app_id, datastore_path,
             require_indexes=require_indexes,
             intid_client=typhoonae.intid.IntidClient())
     elif name == 'bdbdatastore':

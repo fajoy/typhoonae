@@ -59,7 +59,6 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
   def __init__(self,
                app_id,
                datastore_file,
-               history_file,
                require_indexes=False,
                service_name='datastore_v3',
                intid_client=None):
@@ -70,7 +69,6 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     Args:
       app_id: string
       datastore_file: ignored
-      history_file: ignored
       require_indexes: bool, default False.  If True, composite indexes must
           exist in index.yaml for queries that need them.
       service_name: Service name expected for all calls.

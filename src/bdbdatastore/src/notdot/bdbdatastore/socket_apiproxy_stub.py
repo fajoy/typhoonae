@@ -2,6 +2,7 @@ import rpc_pb2
 import socket
 import struct
 
+from google.appengine.api import apiproxy_stub
 from google.appengine.datastore import datastore_pb
 from google.appengine.runtime import apiproxy_errors
 
@@ -52,13 +53,13 @@ _ExceptionsMap = {
 }
 
 
-class SocketApiProxyStub(object):
+class SocketApiProxyStub(apiproxy_stub.APIProxyStub):
   def __init__(self, endpoint, max_request_size=MAX_REQUEST_SIZE):
     self._endpoint = endpoint
     self._max_request_size = max_request_size
     self._sock = None
     self._next_rpc_id = 0
-  
+
   def closeSession(self):
     if self._sock:
       self._sock.close()

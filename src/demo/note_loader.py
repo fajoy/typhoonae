@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Simple notes loader."""
+"""Simple notes loader and exporter."""
 
 import google.appengine.ext.db
 import google.appengine.tools.bulkloader
@@ -27,10 +27,20 @@ class Note(google.appengine.ext.db.Model):
 
 
 class NoteLoader(google.appengine.tools.bulkloader.Loader):
-    """Simple loader class."""
+    """Loader class."""
 
     def __init__(self):
         google.appengine.tools.bulkloader.Loader.__init__(
             self, 'Note', [('body', str),])
 
+
+class NoteExporter(google.appengine.tools.bulkloader.Exporter):
+    """Exporter class."""
+
+    def __init__(self):
+        google.appengine.tools.bulkloader.Exporter.__init__(
+            self, 'Note', [('body', str, None), ('date', str, None)])
+
+
 loaders = [NoteLoader]
+exporters = [NoteExporter]

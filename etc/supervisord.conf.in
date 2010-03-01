@@ -23,7 +23,7 @@ process_name = memcached
 directory = ${buildout:directory}/bin
 priority = 10
 redirect_stderr = true
-environment = LD_LIBRARY_PATH=${buildout:directory}/parts/libevent/lib
+environment = LD_LIBRARY_PATH="${buildout:directory}/parts/libevent/lib"
 stdout_logfile = ${buildout:directory}/var/log/memcached.log
 
 [program:rabbitmq]
@@ -50,5 +50,5 @@ command = ${buildout:directory}/parts/nginx/sbin/nginx -c ${buildout:directory}/
 process_name = nginx
 directory = ${buildout:directory}/parts/nginx/sbin
 priority = 30
-environment = LD_LIBRARY_PATH=${buildout:directory}/parts/pcre/lib
+environment = LD_LIBRARY_PATH="${buildout:directory}/parts/pcre/lib"
 redirect_stderr = true

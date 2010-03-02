@@ -9,7 +9,7 @@ Google's API.
 
 
 The Stack
----------
+=========
 
 The key components are::
 
@@ -30,9 +30,9 @@ directory.
 
 
 Copyright and license
----------------------
+=====================
 
-Copyright 2009 Tobias Rodäbel
+Copyright 2009, 2010 Tobias Rodäbel
 
 This software is released under the Apache License, Version 2.0. You may obtain
 a copy of the License at
@@ -40,8 +40,66 @@ a copy of the License at
   http://www.apache.org/licenses/LICENSE-2.0
 
 
+Before you install
+==================
+
+Python interpreter
+------------------
+
+It is possible to run TyphoonAE's Python parts with Python 2.5.x and 2.6.x, but
+it is recommended to use a version which is supported by the Google App Engine
+SDK. See http://code.google.com/intl/de/appengine/docs/python/overview.html for
+further information.
+
+We recommend to install TyphoonAE into a virtualenv in order to obtain
+isolation from any 'system' packages you've got installed in your Python
+version. If you are using OS X it is not recommended to use the system's
+Python. Here is how to build your own suitable Python.
+
+Google App Engine SDK
+---------------------
+
+You don't have to install the Google App Engine SDK, because zc.buildout will
+install it for you.
+
+Other requirements
+------------------
+
+Most of the required libraries and programs will be installed by zc.buildout.
+See the buildout.cfg file.
+
+The buildout needs Python and the tools contained in /bin and /usr/bin of a
+standard installation of the Linux operating environment. You should ensure
+that these directories are on your PATH and following programs can be found::
+
+  * Python 2.5.2+ (3.x is not supported!)
+  * gcc and g++
+  * make
+  * JAVA
+  * locally installed sendmail (if you want to send emails)
+
+On Debian Lenny you will need to have the following packages installed::
+
+  * libncurses5-dev
+  * libssl-dev
+  * python-dev
+  * libexpat-dev (libexpat1-dev)
+  * gettext
+
+The images api uses the Python Imaging Library to transform images. TyphoonAE's
+buildout does not set up PIL for you. You'll need to download the PIL module
+and install it. For instance, on Debian use apt-get to install the
+python-imaging package.
+
+Mac OS X Snow Leopard
+---------------------
+
+In order to install Erlang/OTP on Mac OS X Snow Leopard uncomment the reagrding
+extra options in the buildout.cfg file.
+
+
 Running the cloud out of the box
---------------------------------
+================================
 
 Build the whole stack by typing the following commands::
 
@@ -62,7 +120,7 @@ You can access the application using a web browser with the following URL::
 
 
 Loading some data into the demo application
--------------------------------------------
+===========================================
 
 The appcfg tool (original script from the SDK) can upload and download data to
 and from your application's datastore.
@@ -74,11 +132,11 @@ directory and can be tested by typing::
 
 
 Google's development application server
----------------------------------------
+=======================================
 
-You may recognize the dev_appserver script in the bin directory after building
-the environment. It's included to check whether your application runs with the
-installed original SDK.
+You may have recognized the dev_appserver script in the bin directory after
+building the environment. It's included to check whether your application runs
+with the installed original SDK.
 
 It can be used as expected::
 
@@ -86,7 +144,7 @@ It can be used as expected::
 
 
 Testing
--------
+=======
 
 Stop all appserver processes before running the test suite. The tests expect
 following services up and running::

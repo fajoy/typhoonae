@@ -8,6 +8,8 @@ Version 0.1.3 (2010-??-??)
 
   - Adds support for Datastore Query Cursors.
 
+  - The apptool takes a new option to configure an application for development.
+
 
 Version 0.1.2 (2010-02-08)
 --------------------------

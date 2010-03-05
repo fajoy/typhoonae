@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
-# Copyright 2007 Google Inc., 2008-2009 10gen Inc.
+# Copyright 2007 Google Inc., 2008-2009 10gen Inc., 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
 # limitations under the License.
 #
 
-"""
-MongoDB backed stub for the Python datastore API.
+"""MongoDB backed stub for the Python datastore API.
 
 Transactions are unsupported.
 """
@@ -46,6 +45,8 @@ datastore_pb.Query.__hash__ = lambda self: hash(self.Encode())
 _MAXIMUM_RESULTS = 1000
 _MAX_QUERY_OFFSET = 1000
 _MAX_QUERY_COMPONENTS = 100
+_MAX_BATCH_SIZE = 20
+_CURSOR_SEPARATOR = '\\CURSEP\\'
 
 
 class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
@@ -100,20 +101,20 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__queries = {}
 
   def MakeSyncCall(self, service, call, request, response):
-    """ The main RPC entry point. service must be 'datastore_v3'. So far, the
-    supported calls are 'Get', 'Put', 'RunQuery', 'Next', and 'Count'.
+    """ The main RPC entry point. service must be 'datastore_v3'.
+
+    So far, the supported calls are 'Get', 'Put', 'Delete', 'RunQuery', 'Next',
+    'AllocateIds' and 'Count'.
     """
-    super(DatastoreMongoStub, self).MakeSyncCall(service,
-                                                call,
-                                                request,
-                                                response)
+    super(DatastoreMongoStub, self).MakeSyncCall(
+        service, call, request, response)
 
     explanation = []
     assert response.IsInitialized(explanation), explanation
 
   def QueryHistory(self):
-    """Returns a dict that maps Query PBs to times they've been run.
-    """
+    """Returns a dict that maps Query PBs to times they've been run."""
+
     return dict((pb, times) for pb, times in self.__query_history.items()
                 if pb.app() == self.__app_id)
 
@@ -161,8 +162,10 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       return {
         'class': 'list',
         'list': list_for_db,
-        'ascending_sort_key': self.__create_mongo_value_for_value(sorted_list[0]),
-        'descending_sort_key': self.__create_mongo_value_for_value(sorted_list[-1]),
+        'ascending_sort_key': self.__create_mongo_value_for_value(
+          sorted_list[0]),
+        'descending_sort_key': self.__create_mongo_value_for_value(
+          sorted_list[-1]),
         }
     if isinstance(value, users.User):
       return {
@@ -216,13 +219,15 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       if mongo_value['class'] == 'key':
         return self.__key_for_id(mongo_value['path'])
       if mongo_value['class'] == 'list':
-        return [self.__create_value_for_mongo_value(v) for v in mongo_value['list']]
+        return [self.__create_value_for_mongo_value(v)
+                for v in mongo_value['list']]
       if mongo_value['class'] == 'user':
         return users.User(email=mongo_value["email"])
       if mongo_value['class'] == 'text':
         return datastore_types.Text(mongo_value['string'])
       if mongo_value['class'] == 'im':
-        return datastore_types.IM(mongo_value['protocol'], mongo_value['address'])
+        return datastore_types.IM(mongo_value['protocol'],
+                                  mongo_value['address'])
       if mongo_value['class'] == 'geopt':
         return datastore_types.GeoPt(mongo_value['lat'], mongo_value['lon'])
       if mongo_value['class'] == 'email':
@@ -246,7 +251,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
   def __entity_for_mongo_document(self, document):
     key = self.__key_for_id(document.pop("_id"))
-    entity = datastore.Entity(kind=key.kind(), parent=key.parent(), name=key.name())
+    entity = datastore.Entity(
+      kind=key.kind(), parent=key.parent(), name=key.name())
 
     for k in document.keys():
       v = self.__create_value_for_mongo_value(document[k])
@@ -291,18 +297,18 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
   def _Dynamic_Get(self, get_request, get_response):
     for key in get_request.key_list():
-        collection = self.__collection_for_key(key)
-        id = self.__id_for_key(key)
+      collection = self.__collection_for_key(key)
+      id = self.__id_for_key(key)
 
-        group = get_response.add_entity()
-        document = self.__db[collection].find_one({"_id": id})
-        if document is None:
-          entity = None
-        else:
-          entity = self.__entity_for_mongo_document(document)
+      group = get_response.add_entity()
+      document = self.__db[collection].find_one({"_id": id})
+      if document is None:
+        entity = None
+      else:
+        entity = self.__entity_for_mongo_document(document)
 
-        if entity:
-          group.mutable_entity().CopyFrom(entity)
+      if entity:
+        group.mutable_entity().CopyFrom(entity)
 
   def _Dynamic_Delete(self, delete_request, delete_response):
     for key in delete_request.key_list():
@@ -381,6 +387,60 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     raise apiproxy_errors.ApplicationError(
       datastore_pb.Error.BAD_REQUEST, "Can't handle operation %r." % operation)
 
+  def _MinimalQueryInfo(self, query):
+    """Extract the minimal set of information for query matching.
+
+    Args:
+      query: datastore_pb.Query instance from which to extract info.
+
+    Returns:
+      datastore_pb.Query instance suitable for matching against when
+      validating cursors.
+    """
+    query_info = datastore_pb.Query()
+    query_info.set_app(query.app())
+
+    for filter in query.filter_list():
+      query_info.filter_list().append(filter)
+    for order in query.order_list():
+      query_info.order_list().append(order)
+
+    if query.has_ancestor():
+      query_info.mutable_ancestor().CopyFrom(query.ancestor())
+
+    for attr in ('kind', 'name_space', 'search_query', 'offset', 'limit'):
+      query_has_attr = getattr(query, 'has_%s' % attr)
+      query_attr = getattr(query, attr)
+      query_info_set_attr = getattr(query_info, 'set_%s' % attr)
+      if query_has_attr():
+        query_info_set_attr(query_attr())
+
+    return query_info
+
+  def _DecodeCompiledCursor(self, compiled_cursor):
+    """Converts a compiled_cursor into a cursor_entity.
+
+    Args:
+      compiled_cursor: Cursor instance to decode.
+
+    Returns:
+      (offset, query_pb, cursor_entity, inclusive)
+    """
+    assert len(compiled_cursor.position_list()) == 1
+
+    position = compiled_cursor.position(0)
+    entity_pb = datastore_pb.EntityProto()
+    (count, query_info_encoded, entity_encoded) = position.start_key().split(
+      _CURSOR_SEPARATOR)
+    query_info_pb = datastore_pb.Query()
+    query_info_pb.ParseFromString(query_info_encoded)
+    entity_pb.ParseFromString(entity_encoded)
+    offset = int(count) + query_info_pb.offset()
+    return (offset,
+            query_info_pb,
+            datastore.Entity._FromPb(entity_pb, True),
+            position.start_inclusive())
+
   def _Dynamic_RunQuery(self, query, query_result):
     if query.has_offset() and query.offset() > _MAX_QUERY_OFFSET:
       raise apiproxy_errors.ApplicationError(
@@ -404,7 +464,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     query_result.set_more_results(False)
 
     if self.__require_indexes:
-      required, kind, ancestor, props, num_eq_filters = datastore_index.CompositeIndexForQuery(query)
+      (required, kind, ancestor, props, num_eq_filters) = (
+        datastore_index.CompositeIndexForQuery(query))
       if required:
         index = entity_pb.CompositeIndex()
         index.mutable_definition().set_entity_type(kind)
@@ -436,7 +497,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     prototype = self.__db[collection].find_one()
     if prototype is None:
       return
-    prototype = datastore.Entity._FromPb(self.__entity_for_mongo_document(prototype))
+    prototype = datastore.Entity._FromPb(
+      self.__entity_for_mongo_document(prototype))
 
     spec = {}
 
@@ -459,10 +521,14 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       filter_val_list = [datastore_types.FromPropertyPb(filter_prop)
                          for filter_prop in filt.property_list()]
 
-      (key, value) = self.__filter_binding(prop, filter_val_list[0], op, prototype)
+      (key, value) = self.__filter_binding(prop,
+                                           filter_val_list[0],
+                                           op,
+                                           prototype)
 
       if key in spec:
-        if not isinstance(spec[key], types.DictType) and not isinstance(value, types.DictType):
+        if (not isinstance(spec[key], types.DictType)
+            and not isinstance(value, types.DictType)):
           if spec[key] != value:
             return
         elif not isinstance(spec[key], types.DictType):
@@ -475,6 +541,12 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       else:
         spec[key] = value
 
+    offset = 0
+    # Cursor magic
+    if query.has_compiled_cursor():
+      offset, query_pb, unused_spec, incl = self._DecodeCompiledCursor(
+        query.compiled_cursor())
+
     cursor = self.__db[collection].find(spec)
 
     order = self.__translate_order_for_mongo(query.order_list(), prototype)
@@ -483,7 +555,9 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     if order:
       cursor = cursor.sort(order)
 
-    if query.has_offset():
+    if offset:
+      cursor = cursor.skip(offset)
+    elif query.has_offset():
       cursor = cursor.skip(query.offset())
     if query.has_limit():
       cursor = cursor.limit(query.limit())
@@ -493,6 +567,26 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__next_cursor += 1
     self.__cursor_lock.release()
     self.__queries[cursor_index] = cursor
+
+    # Cursor magic
+    compiled_cursor = query_result.mutable_compiled_cursor()
+    position = compiled_cursor.add_position()
+    query_info = self._MinimalQueryInfo(query)
+    cloned_cursor = cursor.clone()
+    if not query.has_limit():
+      cloned_cursor.limit(_MAX_BATCH_SIZE)
+    try:
+      results = list(cloned_cursor)
+      start_key = _CURSOR_SEPARATOR.join((
+        str(len(results) + offset),
+        query_info.Encode(),
+        self.__entity_for_mongo_document(results[-1]).Encode()
+      ))
+      position.set_start_key(str(start_key))
+      position.set_start_inclusive(False)
+    except IndexError:
+      pass 
+    del cloned_cursor
 
     query_result.mutable_cursor().set_cursor(cursor_index)
     query_result.set_more_results(True)
@@ -510,16 +604,14 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
                                              'Cursor %d not found' % cursor)
 
-    count = next_request.count()
-    # Possible HACK, but fixes the bug that we get no results for simple
+    # Possible HACK, but fixes an issue where we get no results for simple
     # queries (without fetch(n)) since SDK version 1.2.4
-    if count == 0:
-        count = 1
+    count = next_request.count() or 1
 
     for _ in range(count):
       try:
         query_result.result_list().append(
-            self.__entity_for_mongo_document(cursor.next()))
+          self.__entity_for_mongo_document(cursor.next()))
       except StopIteration:
         return
     query_result.set_more_results(True)
@@ -575,7 +667,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     collection = index.definition().entity_type()
     spec = []
     for prop in index.definition().property_list():
-      spec.append((translate_name(prop.name()), translate_direction(prop.direction())))
+      spec.append(
+        (translate_name(prop.name()), translate_direction(prop.direction())))
 
     return (collection, spec)
 
@@ -593,7 +686,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
   def __has_index(self, index):
     (collection, spec) = self.__collection_and_spec_for_index(index)
-    if self.__db[collection]._gen_index_name(spec) in self.__db[collection].index_information().keys():
+    if (self.__db[collection]._gen_index_name(spec)
+        in self.__db[collection].index_information().keys()):
       return True
     return False
 
@@ -612,7 +706,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       self.__db[collection].create_index(spec)
       if self.__db.error():
         raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
-                                               "Error creating index. Maybe too many indexes?")
+                                               'Error creating index. Maybe '
+                                               'too many indexes?')
 
     # NOTE just give it a dummy id. we don't use these for anything...
     id_response.set_value(1)
@@ -620,7 +715,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
   def _Dynamic_GetIndices(self, app_str, composite_indices):
     if app_str.value() != self.__db.name():
       raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
-                                             "Getting indexes for a different app unsupported.")
+                                             'Getting indexes for a different '
+                                             'app unsupported.')
 
     def from_index_name(name):
       elements = name.split("_")

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
         """Removes test entities."""
 
         query = google.appengine.ext.db.GqlQuery(
-            "SELECT * FROM TestModel LIMIT 1000")
+            "SELECT * FROM TestModel")
 
         for entity in query:
             entity.delete()
@@ -169,7 +169,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
             test_key = TestModel(contents='some string').put()
 
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
-        assert query.count() == 1000
+        self.assertEqual(1000, query.count())
 
         start, end = google.appengine.ext.db.allocate_ids(test_key, 2000)
         self.assertEqual(start, 1001)
@@ -188,14 +188,14 @@ class DatastoreMongoTestCase(unittest.TestCase):
         # __key__ should be the default.
         query = google.appengine.ext.db.GqlQuery(
             "SELECT __key__ FROM TestModel ORDER BY __key__")
-        cursor = query.fetch(1000)
-        while len(cursor) == 1000:
-            keys.extend(cursor)
+        result = query.fetch(1000)
+        while len(result) == 1000:
+            keys.extend(result)
             query = google.appengine.ext.db.GqlQuery(
                 "SELECT __key__ FROM TestModel "
-                "WHERE __key__ > :1 ORDER BY __key__", cursor[-1])
-            cursor = query.fetch(1000)
-        keys.extend(cursor)
+                "WHERE __key__ > :1 ORDER BY __key__", result[-1])
+            result = query.fetch(1000)
+        keys.extend(result)
  
         self.assertEqual(2000, len(keys))
 
@@ -216,8 +216,8 @@ class DatastoreMongoTestCase(unittest.TestCase):
         entity = TestModel(contents='Some contents')
         entity.put()
         query = TestModel.all(keys_only=True)
-        cursor = query.fetch(1)
-        assert type(cursor[0]) == google.appengine.api.datastore_types.Key
+        result = query.fetch(1)
+        assert type(result[0]) == google.appengine.api.datastore_types.Key
 
     def testDerivedProperty(self):
         """Query by derived property."""
@@ -226,8 +226,8 @@ class DatastoreMongoTestCase(unittest.TestCase):
         entity.put()
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel WHERE lowered_contents = :1", 'foo bar')
-        cursor = query.fetch(1)
-        assert cursor[0].contents == 'Foo Bar'
+        result = query.fetch(1)
+        assert result[0].contents == 'Foo Bar'
 
     def testSorting(self):
         """Sort query."""
@@ -238,9 +238,12 @@ class DatastoreMongoTestCase(unittest.TestCase):
             entity.put()
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel ORDER BY lowered_contents ASC")
-        cursor = query.fetch(3)
+
+        self.assertEqual(3, query.count())
+
+        result = query.fetch(3)
         self.assertEqual([u'america', u'England', u'Spain'],
-                         [e.contents for e in cursor])
+                         [e.contents for e in result])
 
     def testInQueries(self):
         """Does some IN queries."""
@@ -270,20 +273,20 @@ class DatastoreMongoTestCase(unittest.TestCase):
 
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel WHERE number IN :1 LIMIT 10", [3])
-        cursor = query.fetch(10)
-        self.assertEqual(0, len(cursor))
+        result = query.fetch(10)
+        self.assertEqual(0, len(result))
 
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel WHERE number IN :1 LIMIT 10", [4])
-        cursor = query.fetch(10)
-        self.assertEqual(0, len(cursor))
+        result = query.fetch(10)
+        self.assertEqual(0, len(result))
 
         query = google.appengine.ext.db.GqlQuery(
             "SELECT * FROM TestModel WHERE number IN :1 "
             "AND number IN :2 ORDER BY number DESC",
             [1, 2], [1])
-        cursor = query.fetch(10)
-        self.assertEqual(1, len(cursor))
+        result = query.fetch(10)
+        self.assertEqual(1, len(result))
 
         # This test failed in earlier GAE Python releases.
         # See http://code.google.com/p/googleappengine/issues/detail?id=2611
@@ -298,11 +301,58 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def testCursors(self):
         """Tests the cursor API."""
 
-        for i in xrange(0, 100):
+        for i in xrange(0, 1000):
             TestModel(contents='Foobar', number=i).put()
 
+        # Set up a simple query
         query = TestModel.all()
-        # TODO: Implement cursor tests here.
+
+        self.assertEqual(1000, query.count())
+        self.assertEqual(500, query.count(limit=500))
+
+        # Fetch some results
+        a = query.fetch(500)
+        b = query.fetch(500, offset=100)
+
+        # Perform query with cursor
+        cursor = query.cursor()
+        query.with_cursor(cursor)
+        c = query.fetch(300)
+
+        query.with_cursor(query.cursor())
+        d = query.fetch(200)
+
+        self.assertEqual(0L, a[0].number)
+        self.assertEqual(499L, a[-1].number)
+        self.assertEqual(100L, b[0].number)
+        self.assertEqual(599L, b[-1].number)
+        self.assertEqual(600L, c[0].number)
+        self.assertEqual(899L, c[-1].number)
+        self.assertEqual(900L, d[0].number)
+        self.assertEqual(999L, d[-1].number)
+
+    def testCursorsWithSort(self):
+        """Tests cursor on sorted results."""
+
+        values = ['Spain', 'england', 'France', 'germany']
+
+        for value in values:
+            entity = TestModel(contents=value)
+            entity.put()
+
+        query = TestModel.all().order('lowered_contents')
+
+        self.assertEqual(4, query.count())
+
+        a = query.fetch(2)
+
+        cursor = query.cursor()
+        query.with_cursor(cursor)
+
+        b = query.fetch(2)
+
+        self.assertEqual([u'england', u'France'], [e.contents for e in a])
+        self.assertEqual([u'germany', u'Spain'], [e.contents for e in b])
 
 
 if __name__ == "__main__":

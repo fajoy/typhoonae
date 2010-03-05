@@ -168,7 +168,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(app_root)s
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s%(app_root)s
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -439,6 +439,7 @@ def write_supervisor_conf(options, conf, app_root):
     bin = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
     datastore = options.datastore.lower()
+    develop_mode = options.develop_mode
     email = options.email
     http_port = options.http_port
     internal_http_port = 8770
@@ -455,6 +456,20 @@ def write_supervisor_conf(options, conf, app_root):
     smtp_port = options.smtp_port
     smtp_user = options.smtp_user
     smtp_password = options.smtp_password
+
+    additional_options = []
+
+    if develop_mode:
+        additional_options.append(('debug', None))
+
+    add_opts = ' '.join(
+        ['--%s' % opt for opt, arg in additional_options if arg is None])
+
+    add_opts += ' '.join(
+        ['--%s=%s' % (opt, arg) for opt, arg in additional_options if arg])
+
+    if add_opts:
+        add_opts += ' '
 
     supervisor_conf_stub = open(
         os.path.join(root, 'etc', conf.application+'-supervisor.conf'), 'w')
@@ -649,6 +664,9 @@ def main():
 
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this datastore", default='mongodb')
+
+    op.add_option("--develop", dest="develop_mode", action="store_true",
+                  help="configure application for development", default=False)
 
     op.add_option("--ejabberd", dest="ejabberd", metavar="FILE",
                   help="write ejabberd configuration to this file",

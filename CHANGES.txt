@@ -10,6 +10,10 @@ Version 0.1.3 (2010-??-??)
 
   - The apptool takes a new option to configure an application for development.
 
+  - Fixes an issue where memcache batch support wasn't implemented.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=34
+
 
 Version 0.1.2 (2010-02-08)
 --------------------------

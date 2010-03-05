@@ -20,6 +20,7 @@ import google.appengine.api.apiproxy_stub
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.datastore
 import google.appengine.api.datastore_types
+import google.appengine.api.labs.taskqueue
 import google.appengine.api.users
 import google.appengine.ext.db
 import os
@@ -71,6 +72,16 @@ class TestIntidClient(object):
         pass
 
 
+class TaskQueueServiceStubMock(google.appengine.api.apiproxy_stub.APIProxyStub):
+    """Task queue service stub for testing purposes."""
+
+    def __init__(self, service_name='taskqueue', root_path=None):
+        super(TaskQueueServiceStubMock, self).__init__(service_name)
+
+    def _Dynamic_Add(self, request, unused_response):
+        pass
+
+
 class DatastoreMongoTestCase(unittest.TestCase):
     """Testing the typhoonae datastore mongo."""
 
@@ -91,6 +102,9 @@ class DatastoreMongoTestCase(unittest.TestCase):
 
         self.stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
             'datastore_v3')
+
+        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+            'taskqueue', TaskQueueServiceStubMock())
 
     def tearDown(self):
         """Removes test entities."""
@@ -353,6 +367,30 @@ class DatastoreMongoTestCase(unittest.TestCase):
 
         self.assertEqual([u'england', u'France'], [e.contents for e in a])
         self.assertEqual([u'germany', u'Spain'], [e.contents for e in b])
+
+    def testTransactions(self):
+        """Tests transactions.
+
+        Transactions are not supported by mongoDB but shouldn't raise an
+        exception.
+        """
+
+        def my_transaction():
+            entity = TestModel(contents='Foobar', number=42)
+            entity.put()
+
+        google.appengine.ext.db.run_in_transaction(my_transaction)
+
+        self.assertEqual(42, TestModel.all().get().number)
+
+    def testTransactionalTasks(self):
+        """Tests tasks within transactions."""
+
+        def my_transaction():
+            google.appengine.api.labs.taskqueue.add(
+                url='/path/to/my/worker', transactional=True)
+
+        google.appengine.ext.db.run_in_transaction(my_transaction)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,14 +26,16 @@ import pylibmc
 DEFAULT_ADDR = '127.0.0.1'
 DEFAULT_PORT = 11211
 
-MemcacheSetResponse      = (google.appengine.api.memcache.memcache_service_pb.
-                            MemcacheSetResponse)
-MemcacheSetRequest       = (google.appengine.api.memcache.memcache_service_pb.
-                            MemcacheSetRequest)
-MemcacheIncrementRequest = (google.appengine.api.memcache.memcache_service_pb.
-                            MemcacheIncrementRequest)
-MemcacheDeleteResponse   = (google.appengine.api.memcache.memcache_service_pb.
-                            MemcacheDeleteResponse)
+MemcacheSetResponse       = (google.appengine.api.memcache.memcache_service_pb.
+                             MemcacheSetResponse)
+MemcacheSetRequest        = (google.appengine.api.memcache.memcache_service_pb.
+                             MemcacheSetRequest)
+MemcacheIncrementRequest  = (google.appengine.api.memcache.memcache_service_pb.
+                             MemcacheIncrementRequest)
+MemcacheIncrementResponse = (google.appengine.api.memcache.memcache_service_pb.
+                             MemcacheIncrementResponse)
+MemcacheDeleteResponse    = (google.appengine.api.memcache.memcache_service_pb.
+                             MemcacheDeleteResponse)
 
 
 def getKey(key, namespace=None):
@@ -138,14 +140,18 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
             response.add_delete_status(delete_status)
 
-    def _Dynamic_Increment(self, request, response):
-        """Implementation of MemcacheService::Increment().
+    def _Increment(self, namespace, request):
+        """Internal function for incrementing from a MemcacheIncrementRequest.
 
         Args:
-            request: A MemcacheIncrementRequest.
-            response: A MemcacheIncrementResponse.
+            namespace: A string containing the namespace for the request,
+                if any. Pass an empty string if there is no namespace.
+            request: A MemcacheIncrementRequest instance.
+
+        Returns:
+            An integer or long if the offset was successful, None on error.
         """
-        key = getKey(request.key(), request.name_space())
+        key = getKey(request.key(), namespace)
         value = self._cache.get(key)
         if value is None:
             flags, stored_value = (google.appengine.api.memcache.TYPE_INT, '0')
@@ -164,7 +170,38 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         new_stored_value = cPickle.dumps([flags, str(new_value)])
         self._cache.set(key, new_stored_value)
 
+        return new_value
+
+    def _Dynamic_Increment(self, request, response):
+        """Implementation of MemcacheService::Increment().
+
+        Args:
+            request: A MemcacheIncrementRequest.
+            response: A MemcacheIncrementResponse.
+        """
+        new_value = self._Increment(request.name_space(), request)
+        if new_value is None:
+            raise apiproxy_errors.ApplicationError(
+                google.appengine.api.memcache.memcache_service_pb.
+                MemcacheServiceError.UNSPECIFIED_ERROR)
         response.set_new_value(new_value)
+
+    def _Dynamic_BatchIncrement(self, request, response):
+        """Implementation of MemcacheService::BatchIncrement().
+
+        Args:
+            request: A MemcacheBatchIncrementRequest.
+            response: A MemcacheBatchIncrementResponse.
+        """
+        namespace = request.name_space()
+        for request_item in request.item_list():
+            new_value = self._Increment(namespace, request_item)
+            item = response.add_item()
+            if new_value is None:
+                item.set_increment_status(MemcacheIncrementResponse.NOT_CHANGED)
+            else:
+                item.set_increment_status(MemcacheIncrementResponse.OK)
+                item.set_new_value(new_value)
 
     def _Dynamic_FlushAll(self, request, response):
         """Implementation of MemcacheService::FlushAll().

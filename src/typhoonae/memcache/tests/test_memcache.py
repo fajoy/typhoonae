@@ -141,6 +141,17 @@ class MemcacheTestCase(unittest.TestCase):
         google.appengine.api.memcache.incr('lcounter')
         assert google.appengine.api.memcache.get('lcounter') == long(21)
 
+    def testBatchIncrement(self):
+        """Tests incrementing multiple keys with integer values."""
+
+        google.appengine.api.memcache.set('low', 0)
+        google.appengine.api.memcache.set('high', 100)
+
+        google.appengine.api.memcache.offset_multi({'low': 1, 'high': -50})
+
+        self.assertEqual(1, google.appengine.api.memcache.get('low'))
+        self.assertEqual(50, google.appengine.api.memcache.get('high'))
+
     def testFlushAll(self):
         """Flushes the whole cache."""
 

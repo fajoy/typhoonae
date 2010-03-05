@@ -102,7 +102,7 @@ class CGIOutAdapter:
         self.fp.write(s)
 
 
-def run_module(mod_name, init_globals=None, run_name=None):
+def run_module(mod_name, init_globals=None, run_name=None, dont_cache=False):
     """Execute a module's code without importing it.
 
     Caches module loader and code and returns the resulting top level namespace
@@ -120,7 +120,8 @@ def run_module(mod_name, init_globals=None, run_name=None):
         code = loader.get_code(mod_name)
         if code is None:
             raise ImportError("No code object available for " + mod_name)
-        _module_cache[mod_name] = (loader, code)
+        if not dont_cache:
+            _module_cache[mod_name] = (loader, code)
     else:
         loader, code = _module_cache[mod_name]
 
@@ -143,6 +144,11 @@ def serve(conf, options):
         conf: The application configuration.
         options: Command line options.
     """
+
+    cache_disabled = False
+
+    if options.debug_mode:
+        cache_disabled = True
 
     # Inititalize URL mapping
     url_mapping = typhoonae.initURLMapping(conf)
@@ -211,7 +217,7 @@ def serve(conf, options):
                 print('Location: %s\r\n' %
                       google.appengine.api.users.create_login_url(path_info))
             # Load and run the application module
-            run_module(name, run_name='__main__')
+            run_module(name, run_name='__main__', dont_cache=cache_disabled)
         finally:
             # Flush buffers
             sys.stdout.flush()
@@ -247,6 +253,9 @@ def main():
 
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this datastore", default='mongodb')
+
+    op.add_option("--debug", dest="debug_mode", action="store_true",
+                  help="enables debug mode", default=False)
 
     op.add_option("--email", dest="email", metavar="EMAIL",
                   help="the username to use", default='')

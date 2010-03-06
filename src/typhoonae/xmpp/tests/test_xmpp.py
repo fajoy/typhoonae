@@ -72,6 +72,9 @@ class StoppableHttpRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.end_headers()
         self.server.stop = True
 
+    def log_request(self, *args):
+        """Suppress any log messages for testing."""
+
 
 class StoppableHttpServer(BaseHTTPServer.HTTPServer):
     """HTTP server that reacts to self.stop flag."""

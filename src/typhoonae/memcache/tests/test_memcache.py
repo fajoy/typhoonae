@@ -16,7 +16,6 @@
 """Unit tests for memcache."""
 
 import google.appengine.api.apiproxy_stub_map
-import google.appengine.api.memcache.memcache_stub
 import google.appengine.ext.db
 import os
 import time
@@ -25,21 +24,16 @@ import unittest
 
 
 class MemcacheTestCase(unittest.TestCase):
-    """Testing the typhoonae memcache."""
+    """Testing the TyphoonAE's memcache."""
 
     def setUp(self):
         """Register typhoonae's memcache API proxy stub."""
 
-        google.appengine.api.apiproxy_stub_map.apiproxy = \
-            google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
+        google.appengine.api.apiproxy_stub_map.apiproxy = (
+            google.appengine.api.apiproxy_stub_map.APIProxyStubMap())
 
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'memcache', typhoonae.memcache.memcache_stub.MemcacheServiceStub())
-
-        # Uncomment to run tests against the SDK's memcache service stub.
-        #google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-        #    'memcache',
-        #    google.appengine.api.memcache.memcache_stub.MemcacheServiceStub())
 
         self.stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
             'memcache')
@@ -136,10 +130,25 @@ class MemcacheTestCase(unittest.TestCase):
         google.appengine.api.memcache.decr('counter')
         assert google.appengine.api.memcache.get('counter') == 2
 
+        # This should cause an error message, because zero deltas are not
+        # allowed.
+        google.appengine.api.memcache.incr('counter', delta=0)
+
         google.appengine.api.memcache.set('lcounter', long(20))
         assert google.appengine.api.memcache.get('lcounter') == long(20)
         google.appengine.api.memcache.incr('lcounter')
         assert google.appengine.api.memcache.get('lcounter') == long(21)
+
+    def testUnsuccessfulIncrement(self):
+        """Tests incrementing values in a broken chache."""
+
+        cache = self.stub._cache
+        self.stub._cache = {}
+
+        google.appengine.api.memcache.incr('somekey')
+
+        self.stub._cache = cache
+        del cache
 
     def testBatchIncrement(self):
         """Tests incrementing multiple keys with integer values."""
@@ -150,6 +159,11 @@ class MemcacheTestCase(unittest.TestCase):
         google.appengine.api.memcache.offset_multi({'low': 1, 'high': -50})
 
         self.assertEqual(1, google.appengine.api.memcache.get('low'))
+        self.assertEqual(50, google.appengine.api.memcache.get('high'))
+
+        google.appengine.api.memcache.offset_multi({'low': 9, 'high': 0})
+
+        self.assertEqual(10, google.appengine.api.memcache.get('low'))
         self.assertEqual(50, google.appengine.api.memcache.get('high'))
 
     def testFlushAll(self):

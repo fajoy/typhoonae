@@ -19,6 +19,7 @@ import base64
 import cPickle
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.memcache.memcache_service_pb
+import google.appengine.runtime.apiproxy_errors
 import logging
 import os
 import pylibmc
@@ -151,6 +152,9 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         Returns:
             An integer or long if the offset was successful, None on error.
         """
+        if not request.delta():
+            return None
+
         key = getKey(request.key(), namespace)
         value = self._cache.get(key)
         if value is None:
@@ -168,7 +172,10 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             new_value -= request.delta()
 
         new_stored_value = cPickle.dumps([flags, str(new_value)])
-        self._cache.set(key, new_stored_value)
+        try:
+            self._cache.set(key, new_stored_value)
+        except:
+            return None
 
         return new_value
 
@@ -181,7 +188,7 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         """
         new_value = self._Increment(request.name_space(), request)
         if new_value is None:
-            raise apiproxy_errors.ApplicationError(
+            raise google.appengine.apiproxy_errors.ApplicationError(
                 google.appengine.api.memcache.memcache_service_pb.
                 MemcacheServiceError.UNSPECIFIED_ERROR)
         response.set_new_value(new_value)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import threading
 import time
 import typhoonae.intid
 import unittest
+
 
 class TestClient(threading.Thread):
     """Simple test client implementation."""
@@ -82,6 +83,15 @@ class IntidTestCase(unittest.TestCase):
 
         # Check whether we obtained the same id twice
         assert set(ids1).intersection(set(ids2)) == set([])
+
+    def testSimpleClient(self):
+        """Tries to set up a simple intid client."""
+
+        client = typhoonae.intid.IntidClient()
+        client.close()
+
+        self.assertRaises(
+            RuntimeError, typhoonae.intid.IntidClient, port=9876)
 
 
 if __name__ == "__main__":

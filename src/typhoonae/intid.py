@@ -52,6 +52,7 @@ class IntidClient(object):
 
         if self.s is None:
             logging.error('no connection to intid server')
+            raise RuntimeError
 
         self.s.send('con')
         r = self.s.recv(3)

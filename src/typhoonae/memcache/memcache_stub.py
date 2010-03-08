@@ -188,7 +188,7 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         """
         new_value = self._Increment(request.name_space(), request)
         if new_value is None:
-            raise google.appengine.apiproxy_errors.ApplicationError(
+            raise google.appengine.runtime.apiproxy_errors.ApplicationError(
                 google.appengine.api.memcache.memcache_service_pb.
                 MemcacheServiceError.UNSPECIFIED_ERROR)
         response.set_new_value(new_value)

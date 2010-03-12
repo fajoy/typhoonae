@@ -109,8 +109,7 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def tearDown(self):
         """Removes test entities."""
 
-        query = google.appengine.ext.db.GqlQuery(
-            "SELECT * FROM TestModel")
+        query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
 
         for entity in query:
             entity.delete()
@@ -175,6 +174,45 @@ class DatastoreMongoTestCase(unittest.TestCase):
         assert query.count() == 1
         result = query.fetch(1)
         assert type(result[0].contents) == unicode
+
+    def testReferenceProperties(self):
+        """Tests reference properties."""
+
+        class FirstModel(google.appengine.ext.db.Model):
+            prop = google.appengine.ext.db.IntegerProperty()
+
+        class SecondModel(google.appengine.ext.db.Model):
+            ref = google.appengine.ext.db.ReferenceProperty(FirstModel)
+
+        obj1 = FirstModel()
+        obj1.prop = 42
+        obj1.put()
+
+        obj2 = SecondModel()
+
+        # A reference value is the key of another entity.
+        obj2.ref = obj1.key()
+
+        # Assigning a model instance to a property uses the entity's key as
+        # the value.
+        obj2.ref = obj1
+        obj2.put()
+
+        obj2.ref.prop = 999
+        obj2.ref.put()
+
+        results = google.appengine.ext.db.GqlQuery("SELECT * FROM SecondModel")
+        another_obj = results.fetch(1)[0]
+        self.assertEqual(999, another_obj.ref.prop)
+
+        # Clean up.
+        query = google.appengine.ext.db.GqlQuery("SELECT * FROM FirstModel")
+        for entity in query:
+            entity.delete()        
+
+        query = google.appengine.ext.db.GqlQuery("SELECT * FROM SecondModel")
+        for entity in query:
+            entity.delete()        
 
     def testAllocatingIDs(self):
         """Allocates a number of IDs."""

@@ -146,15 +146,7 @@ It can be used as expected::
 Testing
 =======
 
-Stop all appserver processes before running the test suite. The tests expect
-following services up and running::
-
-  * memcached
-  * mongod
-  * intid
-  * rabbitmq
-  * ejabberd
-
-Run unit tests by typing::
+In order to run all unit-tests, make sure TyphoonAE's services are up and
+running, then type::
 
   $ bin/nosetests

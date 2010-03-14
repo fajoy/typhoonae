@@ -15,6 +15,7 @@
 # limitations under the License.
 """Console script to perform common tasks on configuring an application."""
 
+import google.appengine.api.appinfo
 import google.appengine.api.croninfo
 import google.appengine.cron
 import getpass
@@ -407,6 +408,9 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
         if handler.login in ('admin', 'required'):
             if ltrunc_url not in urls_require_login:
                 urls_require_login.append(ltrunc_url)
+
+    if options.http_base_auth_enabled:
+        urls_require_login.append('_ah/login')
 
     if urls_require_login and options.http_base_auth_enabled and not internal:
         httpd_conf_stub.write(NGINX_SECURE_LOCATION % dict(

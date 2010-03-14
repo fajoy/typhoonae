@@ -107,11 +107,16 @@ class LoginRequestHandler(google.appengine.ext.webapp.RequestHandler):
     def get(self):
         """Sets the authentication cookie."""
 
+        next_url = self.request.get('continue', '/')
+
+        if os.environ.get('HTTP_AUTHORIZATION', False):
+            self.redirect(next_url)
+            return
+
         self.response.headers.add_header(
             'Set-Cookie', getSetCookieHeaderValue('admin@typhoonae',
                                                   admin=True))
         self.response.set_status(401)
-        next_url = self.request.get('continue', '/')
         self.response.headers.add_header('Content-Type', 'text/html')
         self.response.out.write(
             '<html><body>You\'re logged in as admin@typhoonae! This is a demo '

@@ -67,6 +67,7 @@ class ApptoolTestCase(unittest.TestCase):
         class OptionsMock:
             addr = "localhost"
             blobstore_path = "/tmp/blobstore"
+            http_base_auth_enabled = False
             http_port = 8080
             port = 8081
             server_name = "host.local"

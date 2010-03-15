@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+Version 0.1.4 (2010-??-??)
+--------------------------
+
+  - Fixes an issue where bulkloader.py didn't fetch any results from our
+    MongoDB backed datastore.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=38
+
+
 Version 0.1.3 (2010-03-12)
 --------------------------
 

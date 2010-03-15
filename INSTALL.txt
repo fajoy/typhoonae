@@ -132,6 +132,12 @@ directory and can be tested by typing::
   $ bin/appcfg upload_data --config_file=src/demo/note_loader.py --filename=src/demo/notes.csv --kind=Note --url=http://localhost:8080/remote_api parts/demo/
 
 
+Downloading data from the demo application
+==========================================
+
+  $ bin/python parts/google_appengine/google/appengine/tools/bulkloader.py --url=http://localhost:8080/remote_api --kind=Note --filename=notes.csv --config_file=src/demo/note_loader.py --app_id=demo --download --debug
+
+
 Google's development application server
 =======================================
 

@@ -128,7 +128,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       if elem.has_name():
         db_path.append(elem.name())
       else:
-        db_path.append("\t" + str(elem.id()))
+        db_path.append("\t" + str(elem.id()).zfill(10))
     for elem in key.path().element_list():
       add_element_to_db_path(elem)
     return "\10".join(db_path)
@@ -250,13 +250,14 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     return document
 
   def __entity_for_mongo_document(self, document):
-    key = self.__key_for_id(document.pop("_id"))
+    key = self.__key_for_id(document.get('_id'))
     entity = datastore.Entity(
       kind=key.kind(), parent=key.parent(), name=key.name())
 
     for k in document.keys():
-      v = self.__create_value_for_mongo_value(document[k])
-      entity[k] = v
+      if k != '_id':
+        v = self.__create_value_for_mongo_value(document[k])
+        entity[k] = v
 
     pb = entity._ToPb()
     # no decent way to initialize an Entity w/ an existing key...
@@ -574,7 +575,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     query_info = self._MinimalQueryInfo(query)
     cloned_cursor = cursor.clone()
     if not query.has_limit():
-      cloned_cursor.limit(_MAX_BATCH_SIZE)
+      cloned_cursor.limit(_MAXIMUM_RESULTS)
+      query.set_limit(_MAXIMUM_RESULTS)
     try:
       results = list(cloned_cursor)
       start_key = _CURSOR_SEPARATOR.join((
@@ -582,6 +584,10 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
         query_info.Encode(),
         self.__entity_for_mongo_document(results[-1]).Encode()
       ))
+      # Populate query result
+      query_result.result_list().extend(
+        [self.__entity_for_mongo_document(doc) for doc in results]
+      )
       position.set_start_key(str(start_key))
       position.set_start_inclusive(False)
     except IndexError:
@@ -606,14 +612,14 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
     # Possible HACK, but fixes an issue where we get no results for simple
     # queries (without fetch(n)) since SDK version 1.2.4
-    count = next_request.count() or 1
+    #count = next_request.count() or 1
 
-    for _ in range(count):
-      try:
-        query_result.result_list().append(
-          self.__entity_for_mongo_document(cursor.next()))
-      except StopIteration:
-        return
+    #for _ in range(count):
+    #  try:
+    #    query_result.result_list().append(
+    #      self.__entity_for_mongo_document(cursor.next()))
+    #  except StopIteration:
+    #    return
     query_result.set_more_results(True)
 
   def _Dynamic_Count(self, query, integer64proto):

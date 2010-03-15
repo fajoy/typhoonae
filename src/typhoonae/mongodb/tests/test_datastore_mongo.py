@@ -109,10 +109,27 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def tearDown(self):
         """Removes test entities."""
 
-        query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
+        for i in range(2):
+            query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
 
-        for entity in query:
-            entity.delete()
+            for entity in query:
+                entity.delete()
+
+    def testKeys(self):
+        """Tests obtaining a datastore_types.Key instance."""
+
+        entity = TestModel(contents="some test contents")
+        entity.put()
+ 
+        result = TestModel.all().fetch(1)[0]
+
+        datastore_types = google.appengine.api.datastore_types
+
+        self.assertEqual(
+            datastore_types.Key.from_path(u'TestModel', 1, _app=u'test'),
+            result.key())
+
+        self.assertEqual([u'TestModel', 1], result.key().to_path())
 
     def testDatastoreTypes(self):
         """Puts and gets different basic datastore types."""
@@ -353,35 +370,33 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def testCursors(self):
         """Tests the cursor API."""
 
-        for i in xrange(0, 1000):
-            TestModel(contents='Foobar', number=i).put()
+        for i in xrange(0, 1500):
+            TestModel(contents="Foobar", number=i).put()
 
         # Set up a simple query
-        query = TestModel.all()
-
-        self.assertEqual(1000, query.count())
-        self.assertEqual(500, query.count(limit=500))
+        query = TestModel.all().order('__key__')
 
         # Fetch some results
         a = query.fetch(500)
-        b = query.fetch(500, offset=100)
+        self.assertEqual(0L, a[0].number)
+        self.assertEqual(499L, a[-1].number)
+
+        b = query.fetch(500, offset=500)
+        self.assertEqual(500L, b[0].number)
+        self.assertEqual(999L, b[-1].number)
 
         # Perform query with cursor
         cursor = query.cursor()
         query.with_cursor(cursor)
-        c = query.fetch(300)
+
+        c = query.fetch(200)
+        self.assertEqual(1000L, c[0].number)
+        self.assertEqual(1199L, c[-1].number)
 
         query.with_cursor(query.cursor())
-        d = query.fetch(200)
-
-        self.assertEqual(0L, a[0].number)
-        self.assertEqual(499L, a[-1].number)
-        self.assertEqual(100L, b[0].number)
-        self.assertEqual(599L, b[-1].number)
-        self.assertEqual(600L, c[0].number)
-        self.assertEqual(899L, c[-1].number)
-        self.assertEqual(900L, d[0].number)
-        self.assertEqual(999L, d[-1].number)
+        d = query.fetch(500)
+        self.assertEqual(1200L, d[0].number)
+        self.assertEqual(1499L, d[-1].number)
 
     def testCursorsWithSort(self):
         """Tests cursor on sorted results."""
@@ -429,7 +444,3 @@ class DatastoreMongoTestCase(unittest.TestCase):
                 url='/path/to/my/worker', transactional=True)
 
         google.appengine.ext.db.run_in_transaction(my_transaction)
-
-
-if __name__ == "__main__":
-    unittest.main() 

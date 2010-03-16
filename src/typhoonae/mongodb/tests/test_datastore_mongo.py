@@ -171,6 +171,39 @@ class DatastoreMongoTestCase(unittest.TestCase):
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
         self.assertEqual(query.count(), 1)
 
+    def testExceptions(self):
+        """Tests whether the correct exceptions are raised."""
+
+        class Car(google.appengine.ext.db.Model):
+            license_plate = google.appengine.ext.db.StringProperty(
+                required=True
+            )
+            color = google.appengine.ext.db.StringProperty(
+                required=True,
+                choices=set(['black', 'red'])
+            )
+            registered = google.appengine.ext.db.BooleanProperty()
+
+        car = Car(license_plate='CALIFORNIA 1000', color='black')
+        key = google.appengine.ext.db.put(car)
+        entity = google.appengine.ext.db.get(key)
+
+        def test():
+            car.registered = "Yes"
+
+        self.assertRaises(google.appengine.ext.db.BadValueError, test)
+
+        def test():
+            car.color = "green"
+
+        self.assertRaises(google.appengine.ext.db.BadValueError, test)
+
+        google.appengine.ext.db.delete(key)
+        self.assertEqual(None, google.appengine.ext.db.get(key))
+
+        car = Car(license_plate='CALIFORNIA 2000', color='red')
+        self.assertRaises(google.appengine.ext.db.NotSavedError, car.delete)
+
     def testQueryHistory(self):
         """Tries to retreive query history information."""
 
@@ -313,6 +346,41 @@ class DatastoreMongoTestCase(unittest.TestCase):
         result = query.fetch(3)
         self.assertEqual([u'america', u'England', u'Spain'],
                          [e.contents for e in result])
+
+    def testSortingSpecialProperties(self):
+        """Tests queries with order by special properties."""
+
+        class PointOfInterest(google.appengine.ext.db.Model):
+            category = google.appengine.ext.db.CategoryProperty()
+            location = google.appengine.ext.db.GeoPtProperty()
+            name = google.appengine.ext.db.StringProperty()
+            visitors = google.appengine.ext.db.StringListProperty()
+
+        poi1 = PointOfInterest(
+            category="metrolpolis",
+            location="43.0,-75.0",
+            name='New York',
+            visitors=['John', 'Mary'])
+        key1 = google.appengine.ext.db.put(poi1)
+
+        poi2 = PointOfInterest(
+            category="capital",
+            location="48.85,2.35",
+            name='Paris',
+            visitors=['Caroline'])
+        key2 = google.appengine.ext.db.put(poi2)
+
+        query = (PointOfInterest.all()
+                    .order('category')
+                    .order('location')
+                    .order('visitors'))
+        self.assertEqual('Paris', query.get().name)
+
+        query = PointOfInterest.all().order('-visitors')
+        self.assertEqual('New York', query.get().name)
+
+        for k in (key1, key2):
+            google.appengine.ext.db.delete(k)
 
     def testInQueries(self):
         """Does some IN queries."""

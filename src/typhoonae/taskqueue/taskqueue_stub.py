@@ -77,7 +77,6 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             raise google.appengine.runtime.apiproxy_errors.ApplicationError(
                 google.appengine.api.labs.taskqueue.taskqueue_service_pb.
                 TaskQueueServiceError.UNKNOWN_QUEUE)
-            return
 
         content_type = 'text/plain'
         for h in request.header_list():

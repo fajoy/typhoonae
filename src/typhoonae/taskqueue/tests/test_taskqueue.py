@@ -67,6 +67,20 @@ class TaskQueueTestCase(unittest.TestCase):
         os.environ['TZ'] = 'UTC'
         time.tzset()
 
+    def testStub(self):
+        """Tests stub functions."""
+
+        stub = typhoonae.taskqueue.taskqueue_stub.TaskQueueServiceStub(
+            root_path=os.path.dirname(__file__))
+        stub.connect()
+        del stub
+
+    def testTimeZone(self):
+        """Tests custom UTC time zone class."""
+
+        tz = typhoonae.taskqueue._UTCTimeZone()
+        self.assertEqual('UTC', tz.tzname(''))
+
     def tearDown(self):
         """Tear down test environment."""
 
@@ -76,6 +90,7 @@ class TaskQueueTestCase(unittest.TestCase):
     def testETA(self):
         """Tests helper functions for computing task execution time."""
 
+        unused_eta = typhoonae.taskqueue.get_new_eta_usec(2)
         eta = typhoonae.taskqueue.get_new_eta_usec(0)
         assert typhoonae.taskqueue.is_deferred_eta(eta) == True
         t = datetime.datetime.now() - datetime.timedelta(seconds=20)
@@ -88,6 +103,22 @@ class TaskQueueTestCase(unittest.TestCase):
         google.appengine.api.labs.taskqueue.add(url='/run')
         google.appengine.api.labs.taskqueue.Queue('test').add(
             google.appengine.api.labs.taskqueue.Task(url='/foo'))
+
+        self.assertRaises(
+            google.appengine.api.labs.taskqueue.UnknownQueueError,
+            google.appengine.api.labs.taskqueue.Queue('unknown').add,
+            google.appengine.api.labs.taskqueue.Task(url='/foo'))
+
+    def testAddingTaskWithContentType(self):
+        """Adds a task with a distinct content-type header."""
+
+        google.appengine.api.labs.taskqueue.add(
+            url='/run', params={'foo': 'bar'})
+
+    def testGetQueues(self):
+        """Tries to obtain existing queues."""
+
+        self.assertEqual([], self.stub.GetQueues())
 
     def testDeferred(self):
         """Testing deferred API."""

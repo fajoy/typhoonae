@@ -78,8 +78,11 @@ class TaskQueueServiceStubMock(google.appengine.api.apiproxy_stub.APIProxyStub):
     def __init__(self, service_name='taskqueue', root_path=None):
         super(TaskQueueServiceStubMock, self).__init__(service_name)
 
-    def _Dynamic_Add(self, request, unused_response):
+    def _Dynamic_Add(self, request, response):
         pass
+
+    def _Dynamic_BulkAdd(self, request, response):
+        response.add_taskresult()
 
 
 class DatastoreMongoTestCase(unittest.TestCase):

@@ -72,38 +72,34 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
                     return True
         return False
 
-    def _Dynamic_Add(self, request, unused_response):
-        if not self._ValidQueue(request.queue_name()):
-            raise google.appengine.runtime.apiproxy_errors.ApplicationError(
-                google.appengine.api.labs.taskqueue.taskqueue_service_pb.
-                TaskQueueServiceError.UNKNOWN_QUEUE)
+    def _Dynamic_Add(self, request, response):
+        bulk_request = taskqueue_service_pb.TaskQueueBulkAddRequest()
+        bulk_response = taskqueue_service_pb.TaskQueueBulkAddResponse()
 
-        content_type = 'text/plain'
-        for h in request.header_list():
-            if h.key() == 'content-type':
-                content_type = h.value()
+        bulk_request.add_add_request().CopyFrom(request)
+        self._Dynamic_BulkAdd(bulk_request, bulk_response)
 
-        task_dict = dict(
-            content_type=content_type,
-            eta=request.eta_usec()/1000000,
-            host=INTERNAL_SERVER_NAME,
-            method=request.method(),
-            name=request.task_name(),
-            payload=base64.b64encode(request.body()),
-            port=INTERNAL_PORT,
-            queue=request.queue_name(),
-            try_count=0,
-            url=request.url(),
-        )
+        assert bulk_response.taskresult_size() == 1
+        result = bulk_response.taskresult(0).result()
 
-        msg = amqp.Message(simplejson.dumps(task_dict))
-        msg.properties["delivery_mode"] = 2
-        msg.properties["task_name"] = request.task_name()
+        if result != taskqueue_service_pb.TaskQueueServiceError.OK:
+            raise apiproxy_errors.ApplicationError(result)
+        elif bulk_response.taskresult(0).has_chosen_task_name():
+            response.set_chosen_task_name(
+                bulk_response.taskresult(0).chosen_task_name())
+
+    def _PublishMessage(self, msg, eta):
+        """Publish message.
+
+        Args:
+            msg: An amqp.Message instance.
+            eta: Estimated time of task execution (UNIX time).
+        """
 
         conn_retries = 0
         while conn_retries <= MAX_CONNECTION_RETRIES:
             try:
-                if typhoonae.taskqueue.is_deferred_eta(task_dict['eta']):
+                if typhoonae.taskqueue.is_deferred_eta(eta):
                     self.channel.basic_publish(
                         msg, exchange="deferred", routing_key="deferred_worker")
                 else:
@@ -118,7 +114,50 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
                     logging.error("queue server not reachable. retrying...")
                 self.connect()
 
-        return
+    def _Dynamic_BulkAdd(self, request, response):
+        """Add many tasks to a queue using a single request.
+
+        Args:
+            request: The taskqueue_service_pb.TaskQueueBulkAddRequest. See
+                taskqueue_service.proto.
+            response: The taskqueue_service_pb.TaskQueueBulkAddResponse. See
+                taskqueue_service.proto.
+        """
+
+        assert request.add_request_size(), 'empty requests not allowed'
+
+        if not self._ValidQueue(request.add_request(0).queue_name()):
+            raise google.appengine.runtime.apiproxy_errors.ApplicationError(
+                google.appengine.api.labs.taskqueue.taskqueue_service_pb.
+                TaskQueueServiceError.UNKNOWN_QUEUE)
+
+        for add_request in request.add_request_list():
+
+            content_type = 'text/plain'
+            for h in add_request.header_list():
+                if h.key() == 'content-type':
+                    content_type = h.value()
+
+            task_dict = dict(
+                content_type=content_type,
+                eta=add_request.eta_usec()/1000000,
+                host=INTERNAL_SERVER_NAME,
+                method=add_request.method(),
+                name=add_request.task_name(),
+                payload=base64.b64encode(add_request.body()),
+                port=INTERNAL_PORT,
+                queue=add_request.queue_name(),
+                try_count=0,
+                url=add_request.url(),
+            )
+
+            msg = amqp.Message(simplejson.dumps(task_dict))
+            msg.properties["delivery_mode"] = 2
+            msg.properties["task_name"] = add_request.task_name()
+
+            self._PublishMessage(msg, task_dict['eta'])
+
+            task_result = response.add_taskresult()
 
     def GetQueues(self):
         """Gets all the applications's queues.

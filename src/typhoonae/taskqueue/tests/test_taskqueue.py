@@ -115,6 +115,14 @@ class TaskQueueTestCase(unittest.TestCase):
         google.appengine.api.labs.taskqueue.add(
             url='/run', params={'foo': 'bar'})
 
+    def testBulkAdd(self):
+        """Adds multiple tasks at once."""
+
+        google.appengine.api.labs.taskqueue.Queue('test').add([
+            google.appengine.api.labs.taskqueue.Task(url='/foo'),
+            google.appengine.api.labs.taskqueue.Task(url='/bar'),
+        ])
+
     def testGetQueues(self):
         """Tries to obtain existing queues."""
 

@@ -67,6 +67,12 @@ class TaskQueueTestCase(unittest.TestCase):
         os.environ['TZ'] = 'UTC'
         time.tzset()
 
+    def tearDown(self):
+        """Tear down test environment."""
+
+        os.environ.clear()
+        os.environ.update(self._os_environ)
+
     def testStub(self):
         """Tests stub functions."""
 
@@ -80,12 +86,6 @@ class TaskQueueTestCase(unittest.TestCase):
 
         tz = typhoonae.taskqueue._UTCTimeZone()
         self.assertEqual('UTC', tz.tzname(''))
-
-    def tearDown(self):
-        """Tear down test environment."""
-
-        os.environ.clear()
-        os.environ.update(self._os_environ)
 
     def testETA(self):
         """Tests helper functions for computing task execution time."""

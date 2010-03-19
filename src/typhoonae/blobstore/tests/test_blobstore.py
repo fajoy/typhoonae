@@ -51,6 +51,10 @@ class BlobstoreTestCase(unittest.TestCase):
         """Register typhoonae's memcache API proxy stub."""
 
         os.environ['APPLICATION_ID'] = 'test'
+        os.environ['AUTH_DOMAIN'] = 'yourdomain.net'
+        os.environ['SERVER_NAME'] = 'server'
+        os.environ['SERVER_PORT'] = '9876'
+        os.environ['USER_EMAIL'] = 'test@yourdomain.net'
 
         google.appengine.api.apiproxy_stub_map.apiproxy = \
                     google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
@@ -134,6 +138,33 @@ Submit
                 '__BlobInfo__', str(b.key()))
             google.appengine.api.datastore.Delete(key)
 
+    def testCreateUploadSession(self):
+        """Creates an upload session entity."""
+
+        stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
+            'blobstore')
+        session = stub._CreateSession('foo', 'bar')
+        self.assertNotEqual(None, session)
+
+    def testGetEnviron(self):
+        """Tests internal helper method to obtain environment variables."""
+
+        from google.appengine.api.blobstore import blobstore_stub
+        stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
+            'blobstore')
+        os.environ['TEST_ENV_VAR'] = 'blobstore-test'
+        self.assertEqual('blobstore-test', stub._GetEnviron('TEST_ENV_VAR'))
+        self.assertRaises(
+            blobstore_stub.ConfigurationError,
+            stub._GetEnviron,
+            'UNKNOWN_ENV_VAR')
+
+    def testCreateUploadURL(self):
+        """Creates an upload URL."""
+
+        upload_url = google.appengine.api.blobstore.create_upload_url('foo')
+        self.assertTrue(upload_url.startswith('http://server:9876/upload/'))
+
     def testBlobInfo(self):
         """Tests retreiving a BlobInfo entity."""
 
@@ -164,7 +195,6 @@ Submit
         key = str(query.fetch(1).pop().key())
         self.storage.OpenBlob(key)
 
-
     def testImage(self):
         """Creates an image object from blob data."""
 
@@ -176,6 +206,14 @@ Submit
         data = img.execute_transforms()
         thumbnail = Image(data)
         self.assertEqual(200, thumbnail.width)
+
+    def testFetchData(self):
+        """Fetches data for blob."""
+
+        query = google.appengine.ext.blobstore.BlobInfo.all()
+        key = str(query.fetch(1).pop().key())
+        data = google.appengine.ext.blobstore.fetch_data(key, 0, 5)
+        self.assertEqual('\x89PNG\r\n', data)
 
 
 if __name__ == "__main__":

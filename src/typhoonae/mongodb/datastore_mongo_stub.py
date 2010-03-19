@@ -46,7 +46,7 @@ _MAXIMUM_RESULTS = 1000
 _MAX_QUERY_OFFSET = 1000
 _MAX_QUERY_COMPONENTS = 100
 _MAX_BATCH_SIZE = 20
-_CURSOR_SEPARATOR = '\\CURSEP\\'
+_CURSOR_CONCAT_STR = '!CURSOR!'
 
 
 class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
@@ -432,7 +432,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     position = compiled_cursor.position(0)
     entity_pb = datastore_pb.EntityProto()
     (count, query_info_encoded, entity_encoded) = position.start_key().split(
-      _CURSOR_SEPARATOR)
+      _CURSOR_CONCAT_STR)
     query_info_pb = datastore_pb.Query()
     query_info_pb.ParseFromString(query_info_encoded)
     entity_pb.ParseFromString(entity_encoded)
@@ -579,7 +579,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       query.set_limit(_MAXIMUM_RESULTS)
     try:
       results = list(cloned_cursor)
-      start_key = _CURSOR_SEPARATOR.join((
+      start_key = _CURSOR_CONCAT_STR.join((
         str(len(results) + offset),
         query_info.Encode(),
         self.__entity_for_mongo_document(results[-1]).Encode()

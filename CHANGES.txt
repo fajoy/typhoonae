@@ -9,6 +9,11 @@ Version 0.1.4 (2010-??-??)
     - Implements API to read the contents of uploaded Blobs.
     - Implements Task Queue API for adding multiple tasks in a single call.
 
+  - Fixes an issue where it was nearly impossible to use a custom login/logout
+    handler.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=13
+
   - Fixes an issue where bulkloader.py didn't fetch any results from our
     MongoDB backed datastore.
 

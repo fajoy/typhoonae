@@ -61,6 +61,12 @@ handlers:
   script: app.py
   login: admin
 
+- url: /_ah/login
+  script: login.py
+
+- url: /_ah/logout
+  script: login.py
+
 - url: /_ah/xmpp/message/chat/
   script: app.py
   login: admin

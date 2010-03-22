@@ -40,6 +40,8 @@ class InitTestCase(unittest.TestCase):
         class TestOptions:
             blobstore_path = 'blobstore'
             datastore = 'mongodb'
+            login_url = '/_ah/login'
+            logout_url = '/_ah/logout'
             smtp_host = 'localhost'
             smtp_port = 25
             smtp_user = ''
@@ -51,7 +53,11 @@ class InitTestCase(unittest.TestCase):
     def testInitURLMapping(self):
         """Initializes the url/script map."""
 
-        url_mapping = typhoonae.initURLMapping(self.conf)
+        class TestOptions:
+            login_url = '/_ah/login'
+            logout_url = '/_ah/logout'
+
+        url_mapping = typhoonae.initURLMapping(self.conf, TestOptions())
         for pattern, module, path, login_required, admin_only in url_mapping:
             if pattern.match('/foo'):
                 self.assertEqual(module, 'app')

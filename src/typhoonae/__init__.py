@@ -64,7 +64,7 @@ def getAppConfig(directory='.'):
     return conf
 
 
-def initURLMapping(conf):
+def initURLMapping(conf, options):
     """Returns a list with mappings URL to module name and script."""
 
     url_mapping = []
@@ -73,10 +73,10 @@ def initURLMapping(conf):
         google.appengine.api.appinfo.URLMap(url=url, script=script)
         for url, script in [
             # Configure script with login handler
-            ('/_ah/login', '$PYTHON_LIB/typhoonae/handlers/login.py'),
+            (options.login_url, '$PYTHON_LIB/typhoonae/handlers/login.py'),
             # Configure script with logout handler
-            ('/_ah/logout', '$PYTHON_LIB/typhoonae/handlers/login.py')
-        ]
+            (options.logout_url, '$PYTHON_LIB/typhoonae/handlers/login.py')
+        ] if url not in [h.url for h in conf.handlers if h.url]
     ]
 
     # Generate URL mapping
@@ -188,13 +188,18 @@ def setupURLFetchService():
         google.appengine.api.urlfetch_stub.URLFetchServiceStub())
 
 
-def setupUserService():
-    """Sets up user service."""
+def setupUserService(login_url='/_ah/login', logout_url='/_ah/logout'):
+    """Sets up user service.
+
+    Args:
+        login_url: The login URL.
+        logout_url: The logout URL.
+    """
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('user',
         google.appengine.api.user_service_stub.UserServiceStub(
-            login_url='/_ah/login?continue=%s',
-            logout_url='/_ah/logout?continue=%s'))
+            login_url=login_url+'?continue=%s',
+            logout_url=logout_url+'?continue=%s'))
 
 
 def setupXMPP(host):
@@ -259,7 +264,7 @@ def setupStubs(conf, options):
 
     setupURLFetchService()
 
-    setupUserService()
+    setupUserService(options.login_url, options.logout_url)
 
     setupXMPP(options.xmpp_host)
 

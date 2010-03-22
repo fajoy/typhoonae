@@ -40,6 +40,8 @@ class TestCase(unittest.TestCase):
 
         class Options():
             debug_mode = False
+            login_url = '/_ah/login'
+            logout_url = '/_ah/logout'
 
         self.assertRaises(
             fcgiapp.error,

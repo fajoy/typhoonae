@@ -466,6 +466,12 @@ def write_supervisor_conf(options, conf, app_root):
     if develop_mode:
         additional_options.append(('debug', None))
 
+    if options.login_url:
+        additional_options.append(('login_url', options.login_url))
+
+    if options.logout_url:
+        additional_options.append(('logout_url', options.logout_url))
+
     add_opts = ' '.join(
         ['--%s' % opt for opt, arg in additional_options if arg is None])
 
@@ -694,6 +700,12 @@ def main():
     op.add_option("--http_port", dest="http_port", metavar="PORT",
                   help="port for the HTTP server to listen on",
                   default=8080)
+
+    op.add_option("--login_url", dest="login_url", metavar="STRING",
+                  help="login URL", default=None)
+
+    op.add_option("--logout_url", dest="logout_url", metavar="STRING",
+                  help="logout URL", default=None)
 
     op.add_option("--nginx", dest="nginx", metavar="FILE",
                   help="write nginx configuration to this file",

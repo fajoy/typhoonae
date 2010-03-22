@@ -151,7 +151,7 @@ def serve(conf, options):
         cache_disabled = True
 
     # Inititalize URL mapping
-    url_mapping = typhoonae.initURLMapping(conf)
+    url_mapping = typhoonae.initURLMapping(conf, options)
 
     back_ref_pattern = re.compile(r'\\([0-9]*)')
 
@@ -263,6 +263,12 @@ def main():
     op.add_option("--log", dest="logfile", metavar="FILE",
                   help="write logging output to this file",
                   default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))
+
+    op.add_option("--login_url", dest="login_url", metavar="STRING",
+                  help="login URL", default='/_ah/login')
+
+    op.add_option("--logout_url", dest="logout_url", metavar="STRING",
+                  help="logout URL", default='/_ah/logout')
 
     op.add_option("--password", dest="password", metavar="PASSWORD",
                   help="the password to use", default='')

@@ -228,6 +228,44 @@ class DatastoreMongoTestCase(unittest.TestCase):
         result = query.fetch(1)
         assert type(result[0].contents) == unicode
 
+    def testListProperties(self):
+        """Tests list properties."""
+
+        class Issue(google.appengine.ext.db.Model):
+            reviewers = google.appengine.ext.db.ListProperty(
+                google.appengine.ext.db.Email)
+
+        me = google.appengine.ext.db.Email('me@somewhere.net')
+        you = google.appengine.ext.db.Email('you@home.net')
+        issue = Issue(reviewers=[me, you])
+        issue.put()
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM Issue WHERE reviewers = :1",
+            google.appengine.ext.db.Email('me@somewhere.net'))
+
+        self.assertEqual(1, query.count())
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM Issue WHERE reviewers = :1",
+            'me@somewhere.net')
+
+        # FIXME: query.count() should return 1.
+        # See http://code.google.com/p/typhoonae/issues/detail?id=40
+        # for further details.
+        self.assertEqual(0, query.count())
+
+        query = google.appengine.ext.db.GqlQuery(
+            "SELECT * FROM Issue WHERE reviewers = :1",
+            google.appengine.ext.db.Email('foo@bar.net'))
+
+        self.assertEqual(0, query.count())
+
+        # Clean up.
+        query = google.appengine.ext.db.GqlQuery("SELECT * FROM Issue")
+        for entity in query:
+            entity.delete()        
+
     def testReferenceProperties(self):
         """Tests reference properties."""
 

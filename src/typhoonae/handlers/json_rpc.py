@@ -31,14 +31,21 @@ TODO:
  - Tests
  - more Comments
  - Examples (doctest?)
- - Logging dependant on debug mode
  - ...
 """
+import cgi
+import logging
+import sys
+import traceback
 from django.utils.simplejson import dumps, loads
 from google.appengine.ext import webapp
 from inspect import getargspec
 
 def ServiceMethod(fn):
+    """
+    Decorator to mark a method of a JSONRPSHAndler as ServiceMethod.
+    This exposes methods to the rpc interface.
+    """
     fn.IsServiceMethod = True
     return fn
 
@@ -121,7 +128,10 @@ class ServerError(JsonRpcError):
 
 class JSONRPCHandler(webapp.RequestHandler):
     """
-    TODO
+    Subclass this handler to implement a json-rpc handler.
+    Annotate methods with @ServiceMethod to expose them and make them callable
+    via json-rpc. Currently methods with *args or **kwargs are not supported as 
+    service-methods. All parameters have to be named explicitly.
     """
     
     def __init__(self):
@@ -134,37 +144,23 @@ class JSONRPCHandler(webapp.RequestHandler):
         self.method_name = None
 
     def post(self):
-        self.handle_post()
+        self.handle_request()
 
-    def handle_post(self):
+    def handle_request(self):
         """
-        post
+        handles post request
         """
-        try:
-            self.parse_jsonrpc()    # raises InvalidRequestError, ParseError
-            method = self.getServiceMethod()    # raises MethodNotFoundError
-            result = self.executeMethod(method, self.params) # raises InvalidParamsError
-            
-            if self.notification:
-                self.error(204)
-            else:
-                self.response.headers['Content-Type'] = 'application/json-rpc'
-                http_body = self.encodeResponse(result, self.message_id)
-                self.response.out.write(http_body)
-        except (ParseError,
-                InvalidRequestError,
-                MethodNotFoundError,
-                InvalidParamsError,
-                ServerError),ex:
-            self.error(ex.status)
-            body = self.encodeResponse(ex.getJsonData(),
-                self.message_id,
-                error = True)
-            if not self.notification:   #even no error return on notifications
-                self.response.out.write(body)
-        except Exception, ex:
-            #TODO Handle all other exceptions. -> InternalError. Logging.
-            raise
+        self.parse_jsonrpc()    # raises InvalidRequestError, ParseError
+        method = self.getServiceMethod()    # raises MethodNotFoundError
+        result = self.executeMethod(method, self.params) # raises InvalidParamsError
+
+        if self.notification:
+            self.error(204)
+            return
+        self.response.headers['Content-Type'] = 'application/json-rpc'
+        http_body = self.encodeResponse(result, self.message_id)
+        self.response.out.write(http_body)
+
 
     def parse_jsonrpc(self):
         try:
@@ -237,7 +233,7 @@ class JSONRPCHandler(webapp.RequestHandler):
 
     def dictKeysToAscii(self, d):
         """
-        Convert all keys to str.
+        Convert all keys i dict d to str.
         Maybe Unicode in JSON but no Unicode as keys in python allowed
         """
         try:
@@ -248,12 +244,36 @@ class JSONRPCHandler(webapp.RequestHandler):
         except UnicodeEncodeError:
             # unsure which error is the correct to raise here
             raise InvalidRequestError("Parameter-names must be ASCII")
-
-###########################
-# Test only
-    @ServiceMethod
-    def aServiceMethod(self, a):
-        return 'is A service method: ' +a
-
-    def notAServiceMethod(self):
-        return 'noo'
+    
+    def handle_exception(self, exception, debug_mode):
+        """Called if this handler throws an exception during execution.
+    
+        The default behavior is to call self.error(500) and print a stack trace
+        if debug_mode is True and send a Json-Rpc InternalError to the caller.
+        JsonRpcErrors set their http-status and send a json-rpc response.
+        JsonRpcErrors don't get logged in debug mode.
+    
+        Args:
+          exception: the exception that was thrown
+          debug_mode: True if the web application is running in debug mode
+        """          
+        if isinstance(exception,( ParseError,
+                                  InvalidRequestError,
+                                  MethodNotFoundError,
+                                  InvalidParamsError,
+                                  ServerError)):
+            self.error(exception.status)
+        else:
+            logging.exception(exception)
+            self.error(500)
+            exception = InternalError()    #use an InternalError for easy formating via getJsonData()
+            if debug_mode:
+                lines = ''.join(traceback.format_exception(*sys.exc_info()))
+                exception.data = lines
+        if self.notification:
+            return   #even no error return on notifications
+        body = self.encodeResponse(exception.getJsonData(),
+                                   self.message_id,
+                                   error = True)
+        self.response.clear()
+        self.response.out.write(body)

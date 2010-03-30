@@ -174,6 +174,29 @@ class DatastoreMongoTestCase(unittest.TestCase):
         query = google.appengine.ext.db.GqlQuery("SELECT * FROM TestModel")
         self.assertEqual(query.count(), 1)
 
+    def testGetByKeyName(self):
+        """Gets an entity by its key name."""
+
+        class MyModel(google.appengine.ext.db.Model):
+            contents = google.appengine.ext.db.StringProperty()
+
+        entity = MyModel(key_name='myentity', contents='some contents')
+        entity.put()
+
+        del entity
+
+        self.assertEqual(
+            'some contents',
+            MyModel.get_by_key_name('myentity').contents)
+
+        key = google.appengine.ext.db.Key.from_path('MyModel', 'myentity')
+
+        self.assertEqual(
+            'some contents',
+            google.appengine.ext.db.get(key).contents)
+
+        MyModel.get_by_key_name('myentity').delete()
+
     def testExceptions(self):
         """Tests whether the correct exceptions are raised."""
 

@@ -643,7 +643,7 @@ def write_crontab(options, app_root):
         _, path = tempfile.mkstemp()
         try:
             tmp = open(path, "w")
-            tmp.write('\n'.join([' '.join(r) for r in tab]))
+            tmp.write('\n'.join([' '.join(r) for r in tab])+'\n')
             tmp.close()
             subprocess.call(['crontab', path])
         finally:

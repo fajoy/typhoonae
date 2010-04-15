@@ -144,8 +144,8 @@ class UploadCGIHandler(object):
                   if f+'.content_type' in data]
 
         def format_timestamp(stamp):
-            f = google.appengine.api.blobstore.BASE_CREATION_HEADER_FORMAT
-            return '%s.%06d' % (stamp.strftime(f), stamp.microsecond)
+            format = '%Y-%m-%d %H:%M:%S'
+            return '%s.%06d' % (stamp.strftime(format), stamp.microsecond)
 
         message = []
 

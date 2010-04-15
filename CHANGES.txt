@@ -19,7 +19,7 @@ Version 0.1.4 (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=38
 
-  - Fixes a compatibility with crontab on Fedora.
+  - Fixes a compatibility issue with crontab on Fedora.
 
     - http://code.google.com/p/typhoonae/issues/detail?id=42
 

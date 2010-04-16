@@ -40,6 +40,8 @@ UPLOAD_URL_PATTERN = '/%s(.*)'
 
 BLOB_KEY_HEADER_PATTERN = BLOB_KEY_HEADER+': (.*)'
 
+BASE_CREATION_HEADER_FORMAT = '%Y-%m-%d %H:%M:%S'
+
 CONTENT_PART = """Content-Type: message/external-body; blob-key="%(blob_key)s"; access-type="%(blob_key_header)s"
 MIME-Version: 1.0
 Content-Disposition: form-data; name="file"; filename="%(filename)s"
@@ -144,8 +146,9 @@ class UploadCGIHandler(object):
                   if f+'.content_type' in data]
 
         def format_timestamp(stamp):
-            format = '%Y-%m-%d %H:%M:%S'
-            return '%s.%06d' % (stamp.strftime(format), stamp.microsecond)
+            return '%s.%06d' % (
+                stamp.strftime(BASE_CREATION_HEADER_FORMAT),
+                stamp.microsecond)
 
         message = []
 

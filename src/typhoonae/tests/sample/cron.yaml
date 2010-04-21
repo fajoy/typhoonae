@@ -1,0 +1,4 @@
+cron:
+- description: Test A
+  url: /a
+  schedule: every 1 minutes

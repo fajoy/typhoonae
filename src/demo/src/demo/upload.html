@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>TyphoonAE File Upload</title>
+    <link rel="stylesheet" href="/static/styles.css" type="text/css"
+          media="all" />
+  </head>
+  <body>
+    <img src="logo.png" alt="TyphoonAE" title="TyphoonAE" />
+    <div>
+      <form
+          action="{{ upload_url }}"
+          method="POST"
+          enctype="multipart/form-data">
+        Upload File: <input type="file" name="file"><br>
+        <input type="submit" name="submit" value="Submit">
+      </form>
+    </div>
+  </body>
+</html>

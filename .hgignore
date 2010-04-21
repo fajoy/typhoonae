@@ -1,0 +1,21 @@
+syntax: glob
+
+*.egg-info
+*.pyc
+*.swp
+.installed.cfg
+
+
+syntax: regexp
+
+^bin/
+^develop-eggs/
+^doc/build/
+^downloads/
+^eggs/
+^etc/demo-supervisor.conf
+^etc/ejabberd.cfg
+^etc/server.conf
+^etc/supervisord.conf
+^parts/
+^var/*

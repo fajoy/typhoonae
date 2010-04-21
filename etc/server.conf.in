@@ -1,0 +1,12 @@
+server {
+    listen      8080;
+    server_name localhost;
+
+    access_log  ${buildout:directory}/var/log/httpd-access.log;
+    error_log   ${buildout:directory}/var/log/httpd-error.log;
+
+    location / {
+        root    ${buildout:directory}/doc/www;
+    }
+}
+

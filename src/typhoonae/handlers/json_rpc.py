@@ -314,7 +314,12 @@ class JsonRpcHandler(webapp.RequestHandler):
 
     def execute_method(self, method, params):
             args = set(getargspec(method)[0][1:])
+            # import pdb; pdb.set_trace()
             if params is None:
+                if not len(args) == 0:
+                    raise InvalidParamsError("Wrong number of parameters. "+
+                        "Expected %i but 'params' was omitted "%(len(args))+
+                        "from json-rpc message.")
                 return method()
             if isinstance(params, (list, tuple)):
                 if not len(args) == len(params):

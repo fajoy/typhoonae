@@ -188,6 +188,9 @@ class JsonRpcHandlerTestCase(unittest.TestCase):
         @ServiceMethod
         def brokenMethod(self):
             raise ValueError
+        @ServiceMethod
+        def noParamsMethod(self):
+            return 'nice'
 
     def setUp(self):
         """
@@ -237,6 +240,17 @@ class JsonRpcHandlerTestCase(unittest.TestCase):
         msg = messages[0]
         h.handle_message(msg)
         self.assertTrue(isinstance(msg.error, InvalidParamsError))
+
+    def testNoParams(self):
+        """
+        Test ommiting member 'params' in json message.
+        """
+        h = self.getHandler()
+        rq  = '''{"jsonrpc":"2.0", "method":"noParamsMethod", "id":"1"}'''
+        messages, dummy = h.parse_body(rq)
+        msg = messages[0]
+        h.handle_message(msg)
+        self.assertEqual(msg.result, 'nice')
 
     def testBrokenMethod(self):
         """Test a method that raises an error"""

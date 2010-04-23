@@ -246,7 +246,8 @@ class JsonRpcHandler(webapp.RequestHandler):
         else:
             try:
                 method = self.get_service_method(msg.method_name)
-                msg.result = self.execute_method(method, msg.params)
+                params = getattr(msg, 'params', None)
+                msg.result = self.execute_method(method, params)
             except (MethodNotFoundError, 
                     InvalidParamsError,
                     ServerError ), ex:
@@ -255,11 +256,8 @@ class JsonRpcHandler(webapp.RequestHandler):
             except Exception, exc:
                 logging.error(exc)
                 ex = InternalError("Error executing Service Method")
-                ex.data = exc
+                ex.data = ''.join(traceback.format_exception(*sys.exc_info()))
                 msg.error = ex
-                # TODO
-                # lines = ''.join(traceback.format_exception(*sys.exc_info()))
-                # exception.data = lines
 
     def parse_body(self, body):
         """Parses the body of post-request.
@@ -316,6 +314,13 @@ class JsonRpcHandler(webapp.RequestHandler):
 
     def execute_method(self, method, params):
             args = set(getargspec(method)[0][1:])
+            # import pdb; pdb.set_trace()
+            if params is None:
+                if not len(args) == 0:
+                    raise InvalidParamsError("Wrong number of parameters. "+
+                        "Expected %i but 'params' was omitted "%(len(args))+
+                        "from json-rpc message.")
+                return method()
             if isinstance(params, (list, tuple)):
                 if not len(args) == len(params):
                     raise InvalidParamsError("Wrong number of parameters. "+

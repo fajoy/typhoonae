@@ -1,7 +1,7 @@
 CHANGES
 =======
 
-Version 0.1.4 (2010-??-??)
+Version 0.1.4 (2010-04-26)
 --------------------------
 
   - Supports Google App Engine SDK 1.3.3.
@@ -26,6 +26,8 @@ Version 0.1.4 (2010-??-??)
     - http://code.google.com/p/typhoonae/issues/detail?id=42
 
   - Updated memcached, MongoDB, ejabberd and various Python packages.
+
+  - Adds experimental JSON/RPC handler.
 
 
 Version 0.1.3 (2010-03-12)

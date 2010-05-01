@@ -248,8 +248,10 @@ class DeleteBlobHandler(google.appengine.ext.webapp.RequestHandler):
     def get(self, resource):
         """Handles get."""
 
+        user = google.appengine.api.users.get_current_user()
         resource = str(urllib.unquote(resource))
-        google.appengine.ext.blobstore.delete(resource)
+        if user:
+            google.appengine.ext.blobstore.delete(resource)
         self.redirect('/')
 
 

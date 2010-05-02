@@ -98,6 +98,8 @@ def initURLMapping(conf, options):
                 path = os.path.join(os.sep.join(p[:len(p)-1]), script[12:])
             else:
                 module_path, unused_ext = os.path.splitext(script)
+                if module_path.startswith(os.sep):
+                    module_path = module_path[1:]
                 module = module_path.replace(os.sep, '.')
                 path = os.path.join(os.getcwd(), script)
 

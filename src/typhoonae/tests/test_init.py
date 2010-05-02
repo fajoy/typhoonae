@@ -61,3 +61,5 @@ class InitTestCase(unittest.TestCase):
         for pattern, module, path, login_required, admin_only in url_mapping:
             if pattern.match('/foo'):
                 self.assertEqual(module, 'app')
+            if module.startswith('.'):
+                raise RuntimeError

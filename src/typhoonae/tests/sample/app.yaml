@@ -23,6 +23,9 @@ handlers:
 - url: /images
   static_dir: static/images
 
+- url: /admin
+  script: /app.py
+
 - url: /
   static_files: index.html
   upload: index.html

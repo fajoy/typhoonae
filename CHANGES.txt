@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+Version 0.?.? (2010-??-??)
+--------------------------
+
+  - Fixes an issue where the appserver crashes due to absolute script paths in
+    the app.yaml file.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=48
+
+
 Version 0.1.4 (2010-04-26)
 --------------------------
 

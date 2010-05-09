@@ -46,6 +46,13 @@ server {
     error_log   %(var)s/log/httpd-error.log;
 """
 
+NGINX_ERROR_PAGES = """
+error_page   500 502 503 504  /50x.html;
+location = /50x.html {
+    root %(root)s;
+}
+"""
+
 NGINX_FOOTER = """
 }
 """
@@ -338,6 +345,9 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     app_id = conf.application
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
+    html_error_pages_root = options.html_error_pages_root
+    if not html_error_pages_root:
+        html_error_pages_root = app_root
     http_port = options.http_port
     port = options.port
     server_name = options.server_name
@@ -429,6 +439,7 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_FCGI_CONFIG % vars)
+    httpd_conf_stub.write(NGINX_ERROR_PAGES % {'root': html_error_pages_root})
     httpd_conf_stub.write(NGINX_FOOTER)
     httpd_conf_stub.close()
 
@@ -691,6 +702,10 @@ def main():
     op.add_option("--fcgi_port", dest="port", metavar="PORT",
                   help="use this port of the FastCGI host",
                   default='8081')
+
+    op.add_option("--html_error_pages_root", dest="html_error_pages_root",
+                  metavar="PATH", help="set root for HTML error pages",
+                  default=None)
 
     op.add_option("--http_base_auth", dest="http_base_auth_enabled",
                   action="store_true",

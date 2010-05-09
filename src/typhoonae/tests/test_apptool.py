@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,6 +67,7 @@ class ApptoolTestCase(unittest.TestCase):
         class OptionsMock:
             addr = "localhost"
             blobstore_path = "/tmp/blobstore"
+            html_error_pages_root = "/tmp/html"
             http_base_auth_enabled = False
             http_port = 8080
             port = 8081
@@ -181,6 +182,11 @@ location / {
     
     fastcgi_pass_header Authorization;
     fastcgi_intercept_errors off;
+}
+
+error_page   500 502 503 504  /50x.html;
+location = /50x.html {
+    root /tmp/html;
 }
 
 }

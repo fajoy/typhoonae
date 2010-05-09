@@ -346,8 +346,6 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
     html_error_pages_root = options.html_error_pages_root
-    if not html_error_pages_root:
-        html_error_pages_root = app_root
     http_port = options.http_port
     port = options.port
     server_name = options.server_name
@@ -436,10 +434,13 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     vars = locals()
     vars.update(
         dict(fcgi_params=FCGI_PARAMS % {'add_params': '\n'.join(add_params)}))
+
     httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_FCGI_CONFIG % vars)
-    httpd_conf_stub.write(NGINX_ERROR_PAGES % {'root': html_error_pages_root})
+    if html_error_pages_root:
+        httpd_conf_stub.write(NGINX_ERROR_PAGES %
+                              {'root': html_error_pages_root})
     httpd_conf_stub.write(NGINX_FOOTER)
     httpd_conf_stub.close()
 

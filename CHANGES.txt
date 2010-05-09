@@ -4,6 +4,9 @@ CHANGES
 Version 0.?.? (2010-??-??)
 --------------------------
 
+  - The apptool takes a new option to specify a root directory for HTML error
+    pages.
+
   - Fixes an issue where the appserver crashes due to absolute script paths in
     the app.yaml file.
 

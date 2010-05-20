@@ -4,6 +4,8 @@ CHANGES
 Version 0.?.? (2010-??-??)
 --------------------------
 
+  - Supports Google App Engine SDK 1.3.4.
+
   - The apptool takes a new option to specify a root directory for HTML error
     pages.
 

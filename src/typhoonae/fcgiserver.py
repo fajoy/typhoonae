@@ -168,14 +168,22 @@ def serve(conf, options):
         os.environ['SERVER_SOFTWARE'] = options.server_software
         os.environ['SCRIPT_NAME'] = ''
         os.environ['TZ'] = 'UTC'
+        os.environ['USER'] = 'apphosting'
 
         # Get user info and set the user environment variables
         email, admin, user_id = typhoonae.handlers.login.getUserInfo(
             os.environ.get('HTTP_COOKIE', None))
         os.environ['USER_EMAIL'] = email
+        os.environ['USER_ID'] = user_id
         if admin:
             os.environ['USER_IS_ADMIN'] = '1'
-        os.environ['USER_ID'] = user_id
+        else:
+            os.environ['USER_IS_ADMIN'] = '0'
+        nickname = None
+        if email:
+            nickname = email.split('@')[0]
+        os.environ['USER_NICKNAME'] = nickname or ''
+        os.environ['USER_ORGANIZATION'] = ''
 
         # CGI handler chain
         cgi_handler_chain = CGIHandlerChain(

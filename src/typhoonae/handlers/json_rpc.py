@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2010 Florian Glanzner (fgl)
+# Copyright 2010 Florian Glanzner (fgl), Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,44 +13,51 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-JSONRPCHandler.
-A webapp.RequestHandler for TyphoonAE and Google App Engine
+"""JsonRpcHandler webapp.RequestHandler for TyphoonAE and Google App Engine.
+
 See specs:
-http://groups.google.com/group/json-rpc/web/json-rpc-2-0
-http://groups.google.com/group/json-rpc/web/json-rpc-over-http
+  http://groups.google.com/group/json-rpc/web/json-rpc-2-0
+  http://groups.google.com/group/json-rpc/web/json-rpc-over-http
 
 This version does not support:
   - *args, **kwargs and default-values are not supported for Service Methods
-  - Handle only HTTP POST
-  - json-rpc Version < 2.0 (same as 1.2) not handled
+  - handles only HTTP POST
+  - JSON-RPC Version < 2.0 (same as 1.2) not supported
 
-TODO:
+TODOs:
  - more Comments
  - Examples (doctest?)
- - ...
+ - Factor out handler methods to reuse in other frameworks
 """
+
+from django.utils.simplejson import dumps, loads
+from google.appengine.ext import webapp
+from inspect import getargspec
 import cgi
 import logging
 import sys
 import traceback
-from django.utils.simplejson import dumps, loads
-from google.appengine.ext import webapp
-from inspect import getargspec
+
+
+JSON_RPC_KEYS = frozenset(['method', 'jsonrpc', 'params', 'id'])
+
 
 def ServiceMethod(fn):
-    """
-    Decorator to mark a method of a JSONRPCHAndler as ServiceMethod.
-    This exposes methods to the rpc interface.
+    """Decorator to mark a method of a JsonRpcHandler as ServiceMethod.
+
+    This exposes methods to the RPC interface.
+
     TODO:
         - Warn when applied to underscore methods
     """
+
     fn.IsServiceMethod = True
     return fn
 
+
 class JsonRpcError(Exception):
-    """
-    Baseclass for all JSON-RPC Errors.
+    """Baseclass for all JSON-RPC Errors.
+
     Errors are described in the JSON-RPC 2.0 specs, related HTTP Status
     Codes are described in the json-rpc-over-http proposal.
     """
@@ -79,55 +86,61 @@ class JsonRpcError(Exception):
             error['data'] = self.data
         # TODO More / less info depending on DEBUG mode
         return error
+
         
 class ParseError(JsonRpcError):
-    """
-    Invalid JSON was received by the server.
+    """Invalid JSON was received by the server.
+
     An error occurred on the server while parsing the JSON text.
     """
+
     code = -32700
     message = 'Parse error.'
 
+
 class InvalidRequestError(JsonRpcError):
-    """
-    The JSON sent is not a valid Request object.
-    """
+    """The JSON sent is not a valid Request object."""
+
     code = -32600
     message = 'Invalid Request.'
     status = 400
 
+
 class MethodNotFoundError(JsonRpcError):
-    """
-    The method does not exist / is not available.
-    """
+    """The method does not exist / is not available."""
+
     code = -32601
     message = 'Method not found.'
     status = 404
 
+
 class InvalidParamsError(JsonRpcError):
-    """
-    Invalid method parameter(s).
-    """
+    """Invalid method parameter(s)."""
+
     code = -32602
-    message = 'Invalid params'
+    message = 'Invalid params.'
+
 
 class InternalError(JsonRpcError):
-    """
-    Internal JSON-RPC error.
-    """
+    """Internal JSON-RPC error."""
+
     code = -32603
     message = 'Internal error.'
 
+
 class ServerError(JsonRpcError):
-    """
-    Base Class for implementation-defined Server Errors.
+    """Base Class for implementation-defined Server Errors.
+
     The Error Code must be between -32099..-32000
     """
+
     code = -32000
     message = 'Server Error'
 
+
 class JsonRpcMessage(object):
-    """A single json-rpc message"""
+    """A single JSON-RPC message."""
+
     def __init__(self, json=None):
         super(JsonRpcMessage, self).__init__()
         self.message_id = None
@@ -138,24 +151,23 @@ class JsonRpcMessage(object):
             self.from_json(json)
 
     def from_json(self, json):
-        """Parses a single json-rpc message"""
+        """Parses a single JSON-RPC message."""
+
         try:
             if not isinstance(json, dict):
                 raise InvalidRequestError(
-                        'No valid JSON-RPC Message. Must be an object.')
+                        'Invalid JSON-RPC Message. Must be an object.')
 
-            if not set(json.keys()) <= frozenset(
-                    ['method','jsonrpc','params','id']):
-                raise InvalidRequestError('Invalid members in request object')
+            if not set(json.keys()) <= JSON_RPC_KEYS:
+                raise InvalidRequestError('Invalid members in request object.')
 
             if not ('jsonrpc' in json and json['jsonrpc'] == '2.0'):
-                raise InvalidRequestError(
-                        'Server support JSON-RPC Ver. 2.0 only')
+                raise InvalidRequestError('Server supports JSON-RPC 2.0 only.')
 
             if 'method' not in json:
-                raise InvalidRequestError('No method specified')
+                raise InvalidRequestError('No method specified.')
             if not isinstance(json['method'], basestring):
-                raise InvalidRequestError('method must be a string')
+                raise InvalidRequestError('Method must be a string.')
             self.method_name = json['method']
 
             if 'params' in json:
@@ -174,10 +186,10 @@ class JsonRpcMessage(object):
             logging.info('Encountered invalid json message: ')
 
 class JsonRpcHandler(webapp.RequestHandler):
-    """
-    Subclass this handler to implement a json-rpc handler.
+    """Subclass this handler to implement a JSON-RPC handler.
+
     Annotate methods with @ServiceMethod to expose them and make them callable
-    via json-rpc. Currently methods with *args or **kwargs are not supported
+    via JSON-RPC. Currently methods with *args or **kwargs are not supported
     as service-methods. All parameters have to be named explicitly.
     """
     
@@ -188,9 +200,8 @@ class JsonRpcHandler(webapp.RequestHandler):
         self.handle_request()
 
     def handle_request(self):
-        """
-        handles post request
-        """
+        """Handles POST request."""
+
         self.response.headers['Content-Type'] = 'application/json-rpc'
         try:
             messages, batch_request = self.parse_body(self.request.body)
@@ -223,12 +234,12 @@ class JsonRpcHandler(webapp.RequestHandler):
 
     def get_responses(self, messages):
         """Gets a list of responses from all 'messages'.
+
         Responses are a tuple of http-status and body.
         A Response may be None if the message was a notification.
         None Responses are excluded from the returned list.
         """
-        #return
-        #[x for x in [m.getResponse() for m in messages] if x is not None]
+
         responses = []
         for msg in messages:
             resp = self.get_response(msg)
@@ -238,9 +249,11 @@ class JsonRpcHandler(webapp.RequestHandler):
 
     def handle_message(self, msg):
         """Executes a message.
+
         The method of the message is executed.
         Errors and/or result are written back to the message.
         """
+
         if msg.error != None:
             return
         else:
@@ -255,17 +268,18 @@ class JsonRpcHandler(webapp.RequestHandler):
                 msg.error = ex
             except Exception, exc:
                 logging.error(exc)
-                ex = InternalError("Error executing Service Method")
+                ex = InternalError("Error executing service method.")
                 ex.data = ''.join(traceback.format_exception(*sys.exc_info()))
                 msg.error = ex
 
     def parse_body(self, body):
-        """Parses the body of post-request.
-         Validates for correct json. 
-         Returns a tuple with a list of json-rpc messages and wether the 
-         request was a batch-request.
-         Raises ParseError and InvalidRequestError.
+        """Parses the body of POST request.
+
+        Validates for correct JSON and returns a tuple with a list of JSON-RPC
+        messages and wether the request was a batch-request.
+        Raises ParseError and InvalidRequestError.
         """
+
         try:
             json = loads(body)
         except ValueError:
@@ -288,8 +302,9 @@ class JsonRpcHandler(webapp.RequestHandler):
 
     def get_response(self, msg):
         """Gets the response object for a message.
+
         Returns a tuple of a http-status and a json object or None.
-        The json object maybe a json-rpc error object a result object
+        The JSON object maybe a JSON-RPC error object, a result object
         None is returned if the message was a notification.
         """
         if msg.notification:
@@ -300,8 +315,8 @@ class JsonRpcHandler(webapp.RequestHandler):
         elif msg.result:
             return (200, self._build_result(msg))
         else:
-            # should never be reached
-            logging.warn('Message neither contains an error nor a result')
+            # Should never be reached
+            logging.warn('Message neither contains an error nor a result.')
 
     def _build_error(self, err, message_id=None):
         return {'jsonrpc':'2.0',
@@ -313,40 +328,41 @@ class JsonRpcHandler(webapp.RequestHandler):
                 'id':msg.message_id}
 
     def execute_method(self, method, params):
-            args = set(getargspec(method)[0][1:])
-            # import pdb; pdb.set_trace()
-            if params is None:
-                if not len(args) == 0:
-                    raise InvalidParamsError("Wrong number of parameters. "+
-                        "Expected %i but 'params' was omitted "%(len(args))+
-                        "from json-rpc message.")
-                return method()
-            if isinstance(params, (list, tuple)):
-                if not len(args) == len(params):
-                    raise InvalidParamsError("Wrong number of parameters. "+
-                        "Expected %i got %i."%(len(args),len(params)))
-                return method(*params)
-            if isinstance(params, dict):
-                paramset = set(params)
-                if not args == paramset:
-                    raise InvalidParamsError("Named parameters do not "+
-                        "match method. Expected %s."%(str(args)))
-                params = self.decode_dict_keys(params)
-                return method(**params)
+        args = set(getargspec(method)[0][1:])
+        if params is None:
+            if not len(args) == 0:
+                raise InvalidParamsError(
+                    "Wrong number of parameters. "
+                    "Expected %i but 'params' was omitted "
+                    "from json-rpc message." % (len(args)))
+            return method()
+        if isinstance(params, (list, tuple)):
+            if not len(args) == len(params):
+                raise InvalidParamsError(
+                    "Wrong number of parameters. "
+                    "Expected %i got %i." % (len(args),len(params)))
+            return method(*params)
+        if isinstance(params, dict):
+            paramset = set(params)
+            if not args == paramset:
+                raise InvalidParamsError(
+                    "Named parameters do not "
+                    "match method. Expected %s." % (str(args)))
+            params = self.decode_dict_keys(params)
+            return method(**params)
 
     def get_service_method(self, meth_name):
         # TODO use inspect.getmembers()?
         f = getattr(self, meth_name, None)
-        if f == None or \
-                not hasattr(f, 'IsServiceMethod') or \
-                not getattr(f, 'IsServiceMethod') == True:
-            raise MethodNotFoundError('Method %s not found'%meth_name)
+        if (f == None or not hasattr(f, 'IsServiceMethod')
+                or not getattr(f, 'IsServiceMethod') == True):
+            raise MethodNotFoundError('Method %s not found.' % meth_name)
         return f
 
     def decode_dict_keys(self, d):
-        """
-        Convert all keys i dict d to str.
-        Maybe Unicode in JSON but no Unicode as keys in python allowed
+        """Convert all keys i dict d to str.
+
+        Maybe unicode in JSON but no Unicode as keys in python allowed.
         """
         try:
             r = {}
@@ -359,4 +375,4 @@ class JsonRpcHandler(webapp.RequestHandler):
             # because "wrong" parameters will be filtered out
             # and returned as InvalidParamsError() and methods cant
             # have non-ascii parameter names.
-            raise InvalidRequestError("Parameter-names must be ASCII")
+            raise InvalidRequestError("Parameter-names must be ASCII.")

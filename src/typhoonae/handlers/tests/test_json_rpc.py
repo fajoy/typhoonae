@@ -91,7 +91,7 @@ class JSONRPCHandlerFunctionalTest(unittest.TestCase):
     def test_method_not_found(self):
         """Test rpc call of non-existent method."""
         req = '{"jsonrpc": "2.0", "method": "foobar", "id": "1"}'
-        resp = '{"jsonrpc": "2.0", "error": {"code": -32601, "message": "MethodNotFoundError: Method foobar not found"}, "id": "1"}'
+        resp = '{"jsonrpc": "2.0", "error": {"code": -32601, "message": "MethodNotFoundError: Method foobar not found."}, "id": "1"}'
         status = 404
         r_status, r_resp = self.exec_handler(req)
         self.assertEqual(r_status, status)
@@ -109,7 +109,7 @@ class JSONRPCHandlerFunctionalTest(unittest.TestCase):
     def test_invalid_request(self):
         """Test rpc call with invalid Request object."""
         req = '{"jsonrpc": "2.0", "method": 1, "params": "bar"}'
-        resp = '{"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: method must be a string"}, "id": null}'
+        resp = '{"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: Method must be a string."}, "id": null}'
         status = 400
         r_status, r_resp = self.exec_handler(req)
         self.assertEqual(r_status, status)
@@ -137,9 +137,9 @@ class JSONRPCHandlerFunctionalTest(unittest.TestCase):
         """Test rpc call with invalid Batch"""
         req = '[1,2,3]'
         resp = '''[
-                {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: No valid JSON-RPC Message. Must be an object."}, "id": null},
-                {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: No valid JSON-RPC Message. Must be an object."}, "id": null},
-                {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: No valid JSON-RPC Message. Must be an object."}, "id": null}
+                {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: Invalid JSON-RPC Message. Must be an object."}, "id": null},
+                {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: Invalid JSON-RPC Message. Must be an object."}, "id": null},
+                {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: Invalid JSON-RPC Message. Must be an object."}, "id": null}
                 ]'''
         status = 200
         r_status, r_resp = self.exec_handler(req)
@@ -155,9 +155,9 @@ class JSONRPCHandlerFunctionalTest(unittest.TestCase):
                   ]'''
 
         resp = '''[
-                  {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: Invalid members in request object"}, "id": null},
+                  {"jsonrpc": "2.0", "error": {"code": -32600, "message": "InvalidRequestError: Invalid members in request object."}, "id": null},
                   {"jsonrpc": "2.0", "result": 19, "id": "2"},
-                  {"jsonrpc": "2.0", "id": "5", "error": {"message": "MethodNotFoundError: Method foo.get not found", "code": -32601}}
+                  {"jsonrpc": "2.0", "id": "5", "error": {"message": "MethodNotFoundError: Method foo.get not found.", "code": -32601}}
                   ]'''
 
         status = 200

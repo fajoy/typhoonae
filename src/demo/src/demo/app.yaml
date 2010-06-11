@@ -61,6 +61,9 @@ handlers:
   script: app.py
   login: admin
 
+- url: /ajax
+  script: app.py
+
 - url: /_ah/login
   script: login.py
 

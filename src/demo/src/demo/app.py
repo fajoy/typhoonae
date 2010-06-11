@@ -255,6 +255,19 @@ class DeleteBlobHandler(google.appengine.ext.webapp.RequestHandler):
         self.redirect('/')
 
 
+class AjaxHandler(google.appengine.ext.webapp.RequestHandler):
+
+    def get(self):
+        data = google.appengine.api.memcache.get("data")
+        if data is None:
+            data = ('0' * 252 + '<br>') * 1024
+            google.appengine.api.memcache.add("data", data, 10)
+        else:
+            logging.info('data from memcache')
+        self.response.headers['content-type'] = 'text/plain'
+        self.response.out.write(data)
+
+
 app = google.appengine.ext.webapp.WSGIApplication([
     ('/', DemoRequestHandler),
     ('/count', CountRequestHandler),
@@ -264,6 +277,7 @@ app = google.appengine.ext.webapp.WSGIApplication([
     ('/invite', InviteHandler),
     ('/_ah/xmpp/message/chat/', XMPPHandler),
     ('/delete/([^/]+)?', DeleteBlobHandler),
+    ('/ajax', AjaxHandler),
 ], debug=True)
 
 

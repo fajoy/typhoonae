@@ -9,17 +9,8 @@
   </head>
   <body>
     <img src="logo.png" alt="TyphoonAE" title="TyphoonAE" />
+    <div style="float:right">User: {{ user }} {{ login_or_logout }}</div>
     <div class="debug">{{ env }}</div>
-    <br />
-    <script type="text/javascript" src="static/jquery.min.js"></script>
-    <script type="text/javascript">
-      function callAJAX() {
-        $.ajax({ url: "ajax", context: document, success: function(data){
-          $("#testAJAX").html(data.length/1024 + ' kb received');
-        }});
-      };
-    </script>
-    <div id="testAJAX"><a href="javascript:callAJAX();">Make AJAX call</a></div>
     <div>
       <p>Counter: {{ count }}</p>
       <p>Notes from executed tasks and received XMPP messages (memcached):</p>
@@ -31,9 +22,8 @@
     </div>
     <br />
     <div>
-      Send XMPP invitation to:
       <form action="invite" method="POST">
-        <label for="recipient">JID</label>
+        <label for="recipient">Send XMPP invitation to JID</label>
         <input name="recipient" id="recipient" />
         <input type="submit" value="Send" />
       </form>
@@ -55,7 +45,14 @@
       {% endfor %}
       </ul>
     </div>
-    <br />
-    <div>User: {{ user }} {{ login_or_logout }}</div>
+    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <script type="text/javascript">
+      function callAJAX() {
+        $.ajax({ url: "ajax", context: document, success: function(data){
+          $("#testAJAX").html(data.length/1024 + ' kb received');
+        }});
+      };
+    </script>
+    <div id="testAJAX"><a href="javascript:callAJAX();">Make AJAX call</a></div>
   </body>
 </html>

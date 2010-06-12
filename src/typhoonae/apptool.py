@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ NGINX_HEADER = """
 server {
     client_max_body_size 100m;
     listen      %(http_port)s;
-    server_name %(server_name)s;
+    server_name %(app_domain)s%(server_name)s;
 
     access_log  %(var)s/log/httpd-access.log;
     error_log   %(var)s/log/httpd-error.log;
@@ -342,6 +342,10 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
 
     addr = options.addr
     add_params = []
+    if options.multiple:
+        app_domain = conf.application + '.'
+    else:
+        app_domain = ''
     app_id = conf.application
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
@@ -353,6 +357,7 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     var = os.path.abspath(options.var)
 
     if internal:
+        app_domain = ''
         http_port = '8770'
         server_name = 'localhost'
         add_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
@@ -362,7 +367,11 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
         if not os.path.isdir(p):
             os.makedirs(p)
 
-    httpd_conf_stub = open(options.nginx, mode)
+    if options.multiple:
+        nginx_config_path = os.path.join('etc', app_id+'-nginx.conf')
+    else:
+        nginx_config_path = os.path.join('etc', 'default-nginx.conf')
+    httpd_conf_stub = open(nginx_config_path, mode)
 
     if not internal:
         httpd_conf_stub.write(
@@ -723,15 +732,14 @@ def main():
     op.add_option("--logout_url", dest="logout_url", metavar="STRING",
                   help="logout URL", default=None)
 
-    op.add_option("--nginx", dest="nginx", metavar="FILE",
-                  help="write nginx configuration to this file",
-                  default=os.path.join('etc', 'server.conf'))
+    op.add_option("--multiple", dest="multiple", action="store_true",
+                  help="configure multiple applications", default=False)
 
     op.add_option("--password", dest="password", metavar="PASSWORD",
                   help="the password to use", default='')
 
     op.add_option("--server_name", dest="server_name", metavar="STRING",
-                  help="use this server name", default=socket.getfqdn())
+                  help="use this server name", default='localhost')
 
     op.add_option("--server_software", dest="server_software", metavar="STRING",
                   help="use this server software identifier",

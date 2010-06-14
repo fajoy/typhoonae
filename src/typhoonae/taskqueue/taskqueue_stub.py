@@ -45,8 +45,8 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         """Initialize the Task Queue API proxy stub.
 
         Args:
-            internal_address: The internal host and port of where appserver
-                lives.
+            internal_address: The internal host and port of where the
+                appserver lives.
             service_name: Service name expected for all calls.
             root_path: The app's root directory.
         """

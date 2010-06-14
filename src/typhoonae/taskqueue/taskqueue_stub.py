@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,17 +31,29 @@ import typhoonae.taskqueue
 
 MAX_CONNECTION_RETRIES = 1
 
-INTERNAL_SERVER_NAME = 'localhost'
-INTERNAL_PORT = '8770'
-
 
 class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     """Task queue service stub."""
 
     pyaml = google.appengine.api.labs.taskqueue.taskqueue_stub._ParseQueueYaml
 
-    def __init__(self, service_name='taskqueue', root_path=None):
+    def __init__(
+            self,
+            internal_address,
+            service_name='taskqueue',
+            root_path=None):
+        """Initialize the Task Queue API proxy stub.
+
+        Args:
+            internal_address: The internal host and port of where appserver
+                lives.
+            service_name: Service name expected for all calls.
+            root_path: The app's root directory.
+        """
         super(TaskQueueServiceStub, self).__init__(service_name)
+
+        (self._internal_host, self._internal_port) = internal_address.split(':')
+
         self.next_task_id = 1
         self.root_path = root_path
         self.conn = None
@@ -141,11 +153,11 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             task_dict = dict(
                 content_type=content_type,
                 eta=add_request.eta_usec()/1000000,
-                host=INTERNAL_SERVER_NAME,
+                host=self._internal_host,
                 method=add_request.method(),
                 name=add_request.task_name(),
                 payload=base64.b64encode(add_request.body()),
-                port=INTERNAL_PORT,
+                port=self._internal_port,
                 queue=add_request.queue_name(),
                 try_count=0,
                 url=add_request.url(),

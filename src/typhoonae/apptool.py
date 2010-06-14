@@ -209,7 +209,7 @@ stdout_logfile = %(var)s/log/deferred_taskworker.log
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --address=%(internal_server_name)s:%(internal_http_port)s --jid=%(jid)s --password=%(password)s
+command = %(bin)s/xmpp_http_dispatch --address=%(internal_address)s --jid=%(jid)s --password=%(password)s
 process_name = xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -218,7 +218,7 @@ stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
 [program:websocket]
-command = %(bin)s/websocket --address=%(internal_server_name)s:%(internal_http_port)s --app_id=%(app_id)s
+command = %(bin)s/websocket --address=%(internal_address)s --app_id=%(app_id)s
 process_name = websocket
 priority = 999
 redirect_stderr = true
@@ -358,8 +358,7 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
 
     if internal:
         app_domain = ''
-        http_port = '8770'
-        server_name = 'localhost'
+        server_name, http_port = options.internal_address.split(':')
         add_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
 
     for i in range(10):
@@ -371,6 +370,7 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
         nginx_config_path = os.path.join('etc', app_id+'-nginx.conf')
     else:
         nginx_config_path = os.path.join('etc', 'default-nginx.conf')
+    nginx_config_path = os.path.abspath(nginx_config_path)
     httpd_conf_stub = open(nginx_config_path, mode)
 
     if not internal:
@@ -467,8 +467,7 @@ def write_supervisor_conf(options, conf, app_root):
     develop_mode = options.develop_mode
     email = options.email
     http_port = options.http_port
-    internal_http_port = 8770
-    internal_server_name = 'localhost'
+    internal_address = options.internal_address
     password = options.password
     port = options.port
     root = os.getcwd()
@@ -484,14 +483,17 @@ def write_supervisor_conf(options, conf, app_root):
 
     additional_options = []
 
-    if develop_mode:
-        additional_options.append(('debug', None))
+    if internal_address:
+        additional_options.append(('internal_address', internal_address))
 
     if options.login_url:
         additional_options.append(('login_url', options.login_url))
 
     if options.logout_url:
         additional_options.append(('logout_url', options.logout_url))
+
+    if develop_mode:
+        additional_options.append(('debug', None))
 
     add_opts = ' '.join(
         ['--%s' % opt for opt, arg in additional_options if arg is None])
@@ -725,6 +727,11 @@ def main():
     op.add_option("--http_port", dest="http_port", metavar="PORT",
                   help="port for the HTTP server to listen on",
                   default=8080)
+
+    op.add_option("--internal_address", dest="internal_address",
+                  metavar="HOST:PORT",
+                  help="the internal application host and port",
+                  default='localhost:8770')
 
     op.add_option("--login_url", dest="login_url", metavar="STRING",
                   help="login URL", default=None)

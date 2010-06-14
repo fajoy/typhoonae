@@ -175,12 +175,12 @@ def setupMemcache():
         typhoonae.memcache.memcache_stub.MemcacheServiceStub())
 
 
-def setupTaskQueue(root_path='.'):
+def setupTaskQueue(internal_address, root_path='.'):
     """Sets up task queue."""
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('taskqueue',
         typhoonae.taskqueue.taskqueue_stub.TaskQueueServiceStub(
-            root_path=root_path))
+            internal_address=internal_address, root_path=root_path))
 
 
 def setupURLFetchService():
@@ -262,7 +262,7 @@ def setupStubs(conf, options):
 
     setupMemcache()
 
-    setupTaskQueue()
+    setupTaskQueue(options.internal_address)
 
     setupURLFetchService()
 

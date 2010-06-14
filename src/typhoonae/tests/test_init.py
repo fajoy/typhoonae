@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ class InitTestCase(unittest.TestCase):
         class TestOptions:
             blobstore_path = 'blobstore'
             datastore = 'mongodb'
+            internal_address = 'localhost:8770'
             login_url = '/_ah/login'
             logout_url = '/_ah/logout'
             smtp_host = 'localhost'

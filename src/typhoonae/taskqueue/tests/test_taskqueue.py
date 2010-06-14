@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ class TaskQueueTestCase(unittest.TestCase):
                     google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
         taskqueue = typhoonae.taskqueue.taskqueue_stub.TaskQueueServiceStub(
+            internal_address='127.0.0.1:8770',
             root_path=os.path.dirname(__file__))
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'taskqueue', taskqueue)
@@ -77,6 +78,7 @@ class TaskQueueTestCase(unittest.TestCase):
         """Tests stub functions."""
 
         stub = typhoonae.taskqueue.taskqueue_stub.TaskQueueServiceStub(
+            internal_address='127.0.0.1:8770',
             root_path=os.path.dirname(__file__))
         stub.connect()
         del stub

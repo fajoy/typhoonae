@@ -70,18 +70,20 @@ class ApptoolTestCase(unittest.TestCase):
             html_error_pages_root = "/tmp/html"
             http_base_auth_enabled = False
             http_port = 8080
+            multiple = False
             port = 8081
             server_name = "host.local"
             upload_url = "upload/"
             var = "/tmp/var"
-            nginx = tempfile.mktemp()
 
         options = OptionsMock()
 
         try:
+            os.mkdir(os.path.join(os.getcwd(), 'etc'))
             typhoonae.apptool.write_nginx_conf(
                 options, self.conf, self.app_root)
-            f = open(options.nginx, 'r')
+            f = open(
+                os.path.join(os.getcwd(), 'etc', 'default-nginx.conf'), 'r')
             config = f.read()
             self.assertTrue("""location ~* ^/(.*\.(gif|jpg|png))$ {
     root %(app_root)s;
@@ -192,5 +194,8 @@ location = /50x.html {
 }
 """ % {'app_root': os.getcwd()} in config)
             f.close()
+        except Exception, e:
+            raise e
         finally:
-            os.unlink(options.nginx)
+            os.unlink(os.path.join(os.getcwd(), 'etc', 'default-nginx.conf'))
+            os.rmdir(os.path.join(os.getcwd(), 'etc'))

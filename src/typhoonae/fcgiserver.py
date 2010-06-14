@@ -268,6 +268,11 @@ def main():
     op.add_option("--email", dest="email", metavar="EMAIL",
                   help="the username to use", default='')
 
+    op.add_option("--internal_address", dest="internal_address",
+                  metavar="HOST:PORT",
+                  help="the internal application host and port",
+                  default='localhost:8770')
+
     op.add_option("--log", dest="logfile", metavar="FILE",
                   help="write logging output to this file",
                   default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))

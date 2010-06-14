@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import socket
 import sys
 import threading
 import typhoonae.taskqueue
-import urllib2
+
 
 DESCRIPTION = ("AMQP client deferred tasks.")
 USAGE = "usage: %prog [options]"

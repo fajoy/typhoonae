@@ -13,9 +13,9 @@ syntax: regexp
 ^doc/build/
 ^downloads/
 ^eggs/
+^etc/default-nginx.conf
 ^etc/demo-supervisor.conf
 ^etc/ejabberd.cfg
-^etc/server.conf
 ^etc/supervisord.conf
 ^parts/
 ^var/*

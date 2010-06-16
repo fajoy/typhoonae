@@ -65,10 +65,7 @@ def create_websocket_url(success_path='',
 
     request.success_path = success_path
 
-    try:
-        _make_sync_call("websocket", "CreateWebSocketURL", request, response)
-    except apiproxy_errors.ApplicationError, e:
-        raise Error()
+    _make_sync_call("websocket", "CreateWebSocketURL", request, response)
 
     return response.url
 

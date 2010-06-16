@@ -90,6 +90,10 @@ class WebSocketTestCase(unittest.TestCase):
             typhoonae.websocket.BadArgumentError,
             typhoonae.websocket.send_message, 1, 'My second message.')
 
+        self.assertRaises(
+            typhoonae.websocket.BadArgumentError,
+            typhoonae.websocket.send_message, [None], 'My second message.')
+
     def test_broadcast_message(self):
         """Sends a broadcast message request to the Web Socket service."""
 

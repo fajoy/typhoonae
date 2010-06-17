@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -215,6 +215,19 @@ Submit
         data = google.appengine.ext.blobstore.fetch_data(key, 0, 5)
         self.assertEqual('\x89PNG\r\n', data)
 
+    def testBlobReader(self):
+        """Tests the BlobReader API."""
 
-if __name__ == "__main__":
-    unittest.main()
+        from google.appengine.ext.blobstore import BlobReader
+        query = google.appengine.ext.blobstore.BlobInfo.all()
+        blob_info = query.fetch(1).pop()
+        blob_key = str(blob_info.key())
+
+        reader = BlobReader(blob_key)
+        self.assertEqual(blob_info.filename, reader.blob_info.filename)
+        self.assertEqual(blob_info.size, reader.blob_info.size)
+
+        data = google.appengine.ext.blobstore.fetch_data(blob_key, 0, 5)
+        self.assertEqual(data, reader.read()[:6])
+        reader.close()
+        self.assertTrue(reader.closed)

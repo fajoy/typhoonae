@@ -439,7 +439,8 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
                 urls_require_login.append(ltrunc_url)
 
     if options.http_base_auth_enabled:
-        urls_require_login.append('_ah/login')
+        login_url = options.login_url or '/_ah/login'
+        urls_require_login.append(login_url[1:])
 
     if urls_require_login and options.http_base_auth_enabled and not internal:
         httpd_conf_stub.write(NGINX_BASIC_AUTH_LOCATION % dict(

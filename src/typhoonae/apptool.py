@@ -88,7 +88,7 @@ FCGI_PARAMS = """\
     fastcgi_intercept_errors off;\
 """
 
-NGINX_SECURE_LOCATION = """
+NGINX_BASIC_AUTH_LOCATION = """
 location ~ ^/(%(path)s) {
     auth_basic "%(app_id)s";
     auth_basic_user_file %(passwd_file)s;
@@ -337,6 +337,14 @@ override_acls.
 """
 
 
+def make_blobstore_dirs(blobstore_path):
+    """Makes Blobstore directories."""
+
+    for i in range(10):
+        p = os.path.join(blobstore_path, str(i))
+        if not os.path.isdir(p):
+            os.makedirs(p)
+
 def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     """Writes nginx server configuration stub."""
 
@@ -360,23 +368,12 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
 
-    if internal:
-        app_domain = ''
-        server_name, http_port = options.internal_address.split(':')
-        add_fcgi_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
-
-    for i in range(10):
-        p = os.path.join(blobstore_path, str(i))
-        if not os.path.isdir(p):
-            os.makedirs(p)
-
     if ssl_enabled:
-        params = [
+        add_server_params = '\n    '.join(k+' '+v+';' for k, v in [
             ('ssl', 'on'),
             ('ssl_certificate', ssl_certificate),
             ('ssl_certificate_key', ssl_certificate_key)
-        ]
-        add_server_params = '\n    '.join(k+' '+v+';' for k, v in params)
+        ])
 
     if options.multiple:
         nginx_config_path = os.path.join('etc', app_id+'-nginx.conf')
@@ -392,6 +389,9 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     elif internal:
         httpd_conf_stub.write(
             "# Internal configuration.\n")
+        app_domain = ''
+        server_name, http_port = options.internal_address.split(':')
+        add_fcgi_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
         add_server_params = ''
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
@@ -443,7 +443,7 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
         urls_require_login.append('_ah/login')
 
     if urls_require_login and options.http_base_auth_enabled and not internal:
-        httpd_conf_stub.write(NGINX_SECURE_LOCATION % dict(
+        httpd_conf_stub.write(NGINX_BASIC_AUTH_LOCATION % dict(
             addr=addr,
             app_id=conf.application,
             fcgi_params=FCGI_PARAMS % {
@@ -822,6 +822,8 @@ def main():
 
     write_nginx_conf(options, conf, app_root)
     write_nginx_conf(options, conf, app_root, internal=True, mode='a')
+    make_blobstore_dirs(
+        os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     write_supervisor_conf(options, conf, app_root)
     write_ejabberd_conf(options)
     write_crontab(options, app_root)

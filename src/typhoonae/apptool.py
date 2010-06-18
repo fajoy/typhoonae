@@ -15,7 +15,6 @@
 # limitations under the License.
 """Console script to perform common tasks on configuring an application."""
 
-import google.appengine.api.appinfo
 import google.appengine.api.croninfo
 import google.appengine.cron
 import getpass

@@ -41,7 +41,7 @@ server {
     client_max_body_size 100m;
     listen      %(http_port)s;
     server_name %(app_domain)s%(server_name)s;
-
+    %(add_server_params)s
     access_log  %(var)s/log/httpd-access.log;
     error_log   %(var)s/log/httpd-error.log;
 """
@@ -83,7 +83,7 @@ FCGI_PARAMS = """\
     fastcgi_param SERVER_NAME $server_name;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
-    %(add_params)s
+    %(add_fcgi_params)s
     fastcgi_pass_header Authorization;
     fastcgi_intercept_errors off;\
 """
@@ -341,7 +341,8 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     """Writes nginx server configuration stub."""
 
     addr = options.addr
-    add_params = []
+    add_fcgi_params = []
+    add_server_params = ''
     if options.multiple:
         app_domain = conf.application + '.'
     else:
@@ -353,18 +354,29 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     http_port = options.http_port
     port = options.port
     server_name = options.server_name
+    ssl_certificate = options.ssl_certificate
+    ssl_certificate_key = options.ssl_certificate_key
+    ssl_enabled = options.ssl_enabled
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
 
     if internal:
         app_domain = ''
         server_name, http_port = options.internal_address.split(':')
-        add_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
+        add_fcgi_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
 
     for i in range(10):
         p = os.path.join(blobstore_path, str(i))
         if not os.path.isdir(p):
             os.makedirs(p)
+
+    if ssl_enabled:
+        params = [
+            ('ssl', 'on'),
+            ('ssl_certificate', ssl_certificate),
+            ('ssl_certificate_key', ssl_certificate_key)
+        ]
+        add_server_params = '\n    '.join(k+' '+v+';' for k, v in params)
 
     if options.multiple:
         nginx_config_path = os.path.join('etc', app_id+'-nginx.conf')
@@ -380,6 +392,7 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     elif internal:
         httpd_conf_stub.write(
             "# Internal configuration.\n")
+        add_server_params = ''
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 
@@ -433,7 +446,8 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
         httpd_conf_stub.write(NGINX_SECURE_LOCATION % dict(
             addr=addr,
             app_id=conf.application,
-            fcgi_params=FCGI_PARAMS % {'add_params': '\n'.join(add_params)},
+            fcgi_params=FCGI_PARAMS % {
+                'add_fcgi_params': '\n'.join(add_fcgi_params)},
             passwd_file=os.path.join(app_root, 'htpasswd'),
             path='|'.join(urls_require_login),
             port=port
@@ -442,7 +456,8 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
 
     vars = locals()
     vars.update(
-        dict(fcgi_params=FCGI_PARAMS % {'add_params': '\n'.join(add_params)}))
+        dict(fcgi_params=FCGI_PARAMS % {
+            'add_fcgi_params': '\n'.join(add_fcgi_params)}))
 
     httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % vars)
     httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % vars)
@@ -708,6 +723,9 @@ def main():
     op.add_option("--email", dest="email", metavar="EMAIL",
                   help="the username to use", default='')
 
+    op.add_option("--enable_ssl", dest="ssl_enabled", action="store_true",
+                  help="enable SSL support", default=False)
+
     op.add_option("--fcgi_host", dest="addr", metavar="ADDR",
                   help="use this FastCGI host", default='localhost')
 
@@ -763,7 +781,13 @@ def main():
 
     op.add_option("--smtp_password", dest="smtp_password", metavar="STRING",
                   help="use this SMTP password", default='')
-                  
+
+    op.add_option("--ssl_certificate", dest="ssl_certificate", metavar="PATH",
+                  help="use this SSL certificate file")
+
+    op.add_option("--ssl_certificate_key", dest="ssl_certificate_key",
+                  metavar="PATH", help="use this SSL certificate key file")
+
     op.add_option("--upload_url", dest="upload_url", metavar="URI",
                   help="use this upload URL for the Blobstore configuration "
                        "(no leading '/')",

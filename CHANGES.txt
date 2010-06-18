@@ -8,6 +8,8 @@ Version 0.?.? (2010-??-??)
 
   - Added support for configuring multiple applications.
 
+  - The apptool takes new options for configuring SSL support.
+
   - The apptool takes a new option to specify a root directory for HTML error
     pages.
 

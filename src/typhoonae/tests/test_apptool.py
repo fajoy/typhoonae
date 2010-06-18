@@ -73,6 +73,9 @@ class ApptoolTestCase(unittest.TestCase):
             multiple = False
             port = 8081
             server_name = "host.local"
+            ssl_enabled = False
+            ssl_certificate = None
+            ssl_certificate_key = None
             upload_url = "upload/"
             var = "/tmp/var"
 

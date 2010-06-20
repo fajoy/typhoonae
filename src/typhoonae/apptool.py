@@ -18,6 +18,7 @@
 import google.appengine.api.croninfo
 import google.appengine.cron
 import getpass
+import logging
 import optparse
 import os
 import re
@@ -27,6 +28,10 @@ import sys
 import tempfile
 import typhoonae
 import typhoonae.fcgiserver
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
 DESCRIPTION = ("Console script to perform common tasks on configuring an "
                "application.")
@@ -437,6 +442,15 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
         if handler.login in ('admin', 'required'):
             if ltrunc_url not in urls_require_login:
                 urls_require_login.append(ltrunc_url)
+        if not internal and ssl_enabled:
+            if handler.secure == 'always':
+                logger.warn(
+                    "secure parameter with value 'always' "
+                    "for %s ignored" % handler.url)
+            elif handler.secure == 'never':
+                logger.warn(
+                    "secure parameter with value 'never' "
+                    "for %s ignored" % handler.url)
 
     if options.http_base_auth_enabled:
         login_url = options.login_url or '/_ah/login'
@@ -797,6 +811,10 @@ def main():
                   help="use this directory for platform independent data",
                   default=os.environ.get('TMPDIR', '/var'))
 
+    op.add_option("--verbose", dest="verbose", action="store_true",
+                  help="set verbosity mode to display all warnings",
+                  default=False)
+
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
                   help="use this XMPP host", default=socket.getfqdn())
 
@@ -805,6 +823,12 @@ def main():
     if sys.argv[-1].startswith('-') or sys.argv[-1] == sys.argv[0]:
         op.print_usage()
         sys.exit(2)
+
+    if options.ssl_enabled and (
+            options.ssl_certificate is None or
+            options.ssl_certificate_key is None):
+        logger.error("must specify --ssl_certificate and --ssl_certificate_key")
+        sys.exit(3)
 
     app_root = sys.argv[-1]
 
@@ -817,6 +841,9 @@ def main():
             options.email = raw_input('Email: ')
         if not options.password:
             options.password = getpass.getpass('Password: ')
+
+    if options.verbose:
+        logger.setLevel(logging.WARNING)
 
     conf = typhoonae.getAppConfig(app_root)
 

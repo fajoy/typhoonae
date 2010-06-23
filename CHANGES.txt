@@ -13,14 +13,19 @@ Version 0.?.? (2010-??-??)
   - The apptool takes a new option to specify a root directory for HTML error
     pages.
 
+  - Fixes an issue where Blobstore creates invalid upload URLs.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=26
+
   - Fixes an issue where the appserver crashes due to absolute script paths in
     the app.yaml file.
 
     - http://code.google.com/p/typhoonae/issues/detail?id=48
 
-  - Fixes an issue where Blobstore creates invalid upload URLs.
+  - Fixes an issue where some users experiencing strange behaviours with
+    module imports.
 
-    - http://code.google.com/p/typhoonae/issues/detail?id=26
+    - http://code.google.com/p/typhoonae/issues/detail?id=56
 
 
 Version 0.1.4 (2010-04-26)

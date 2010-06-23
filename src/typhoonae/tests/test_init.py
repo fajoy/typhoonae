@@ -59,8 +59,6 @@ class InitTestCase(unittest.TestCase):
             logout_url = '/_ah/logout'
 
         url_mapping = typhoonae.initURLMapping(self.conf, TestOptions())
-        for pattern, module, path, login_required, admin_only in url_mapping:
+        for pattern, handler_path, path, login_required, admin_only in url_mapping:
             if pattern.match('/foo'):
-                self.assertEqual(module, 'app')
-            if module.startswith('.'):
-                raise RuntimeError
+                self.assertEqual(handler_path, 'app.py')

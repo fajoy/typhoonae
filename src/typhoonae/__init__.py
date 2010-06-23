@@ -97,11 +97,9 @@ def initURLMapping(conf, options):
                 p = os.path.dirname(m.__file__).split(os.sep)
                 path = os.path.join(os.sep.join(p[:len(p)-1]), script[12:])
             else:
-                module_path, unused_ext = os.path.splitext(script)
-                if module_path.startswith(os.sep):
-                    module_path = module_path[1:]
-                module = module_path.replace(os.sep, '.')
                 path = os.path.join(os.getcwd(), script)
+                if path.startswith(os.sep) and not os.path.isfile(path):
+                    path = path[1:]
 
             if not regexp.startswith('^'):
                 regexp = '^' + regexp
@@ -111,7 +109,7 @@ def initURLMapping(conf, options):
             login_required = handler.login in ('required', 'admin')
             admin_only = handler.login in ('admin',)
             url_mapping.append(
-                (compiled, module, path, login_required, admin_only))
+                (compiled, script, path, login_required, admin_only))
 
     return url_mapping
 

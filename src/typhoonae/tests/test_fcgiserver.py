@@ -58,7 +58,9 @@ class TestCase(unittest.TestCase):
             sys.stdout = buffer
             os.environ['PATH_INFO'] = uri
             os.environ['REQUEST_METHOD'] = method
-            typhoonae.fcgiserver.run_module('app', run_name='__main__')
+            typhoonae.fcgiserver.run_module(
+                'app.py',
+                os.path.join(os.path.dirname(__file__), 'sample', 'app.py'))
             sys.stdout = sys.__stdout__
             del os.environ['PATH_INFO']
             del os.environ['REQUEST_METHOD']

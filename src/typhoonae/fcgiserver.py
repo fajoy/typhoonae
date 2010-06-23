@@ -16,26 +16,24 @@
 """FastCGI script to serve a CGI application."""
 
 import base64
-import blobstore.handlers
 import cStringIO
 import fcgiapp
 import google.appengine.api.users
+import google.appengine.tools.dev_appserver
+import imp
 import logging
 import optparse
 import os
 import re
-import runpy
 import sys
 import typhoonae
+import typhoonae.blobstore.handlers
 import typhoonae.handlers.login
 
 BASIC_AUTH_PATTERN = re.compile(r'Basic (.*)$')
 DESCRIPTION = ("FastCGI application server.")
 USAGE = "usage: %prog [options] <application root>"
 SERVER_SOFTWARE = "TyphoonAE/0.1.5"
-
-
-_module_cache = dict()
 
 
 class CGIHandlerChain(object):
@@ -102,39 +100,69 @@ class CGIOutAdapter:
         self.fp.write(s)
 
 
-def run_module(mod_name, init_globals=None, run_name=None, dont_cache=False):
-    """Execute a module's code without importing it.
-
-    Caches module loader and code and returns the resulting top level namespace
-    dictionary.
-    """
-    global _module_cache
-
-    if mod_name not in _module_cache:
-        loader = runpy.get_loader(mod_name)
-        if loader is None:
-            raise ImportError("No module named " + mod_name)
-        if loader.is_package(mod_name):
-            raise ImportError(("%s is a package and cannot " +
-                              "be directly executed") % mod_name)
-        code = loader.get_code(mod_name)
-        if code is None:
-            raise ImportError("No code object available for " + mod_name)
-        if not dont_cache:
-            _module_cache[mod_name] = (loader, code)
+def load_module(handler_path, cgi_path, module_dict=sys.modules):
+    module_fullname = google.appengine.tools.dev_appserver.GetScriptModuleName(
+        handler_path)
+    script_module = module_dict.get(module_fullname)
+    module_code = None
+    has_main = google.appengine.tools.dev_appserver.ModuleHasValidMainFunction(
+        script_module)
+    if script_module is not None and has_main:
+        logging.debug('Reusing main() function of module "%s"', module_fullname)
     else:
-        loader, code = _module_cache[mod_name]
+        if script_module is None:
+            script_module = imp.new_module(module_fullname)
 
-    filename = loader.get_filename(mod_name)
+        missing_inits = (google.appengine.tools.dev_appserver.
+                         FindMissingInitFiles(cgi_path, module_fullname))
+        if missing_inits:
+            logging.warning(
+                'Missing package initialization files: %s',
+                ', '.join(missing_inits))
 
-    if run_name is None:
-        run_name = mod_name
-    if sys.hexversion > 33883376:
-        pkg_name = mod_name.rpartition('.')[0]
-        return runpy._run_module_code(code, init_globals, run_name,
-                                      filename, loader, pkg_name)
-    return runpy._run_module_code(code, init_globals, run_name,
-                                  filename, loader, alter_sys=True)
+        independent_load_successful = True
+
+        if not os.path.isfile(cgi_path):
+            independent_load_successful = False
+        else:
+            try:
+                source_file = open(cgi_path)
+                try:
+                    module_code = compile(source_file.read(), cgi_path, 'exec')
+                    script_module.__file__ = cgi_path
+                finally:
+                    source_file.close()
+
+            except OSError:
+                independent_load_successful = False
+
+        if not independent_load_successful:
+            raise RuntimeError('Failed to load module "%s"', cgi_path)
+
+    module_dict[module_fullname] = script_module
+
+    return module_fullname, script_module, module_code
+
+
+def run_module(handler_path, cgi_path):
+    """Executes a CGI script by importing it as a new module.
+
+    Args:
+        handler_path: CGI path stored in the application configuration
+            (as a path like 'foo/bar/baz.py'). Should not have $PYTHON_LIB
+            references.
+        cgi_path: Absolute path to the CGI script file on disk.
+    """
+    module_fullname, script_module, module_code = load_module(
+        handler_path, cgi_path)
+
+    script_module.__name__ = '__main__'
+    sys.modules['__main__'] = script_module
+
+    if module_code:
+        exec module_code in script_module.__dict__
+    else:
+        script_module.main()
 
 
 def serve(conf, options):
@@ -152,8 +180,6 @@ def serve(conf, options):
 
     # Inititalize URL mapping
     url_mapping = typhoonae.initURLMapping(conf, options)
-
-    back_ref_pattern = re.compile(r'\\([0-9]*)')
 
     while True:
         (inp, out, unused_err, env) = fcgiapp.Accept()
@@ -187,7 +213,8 @@ def serve(conf, options):
 
         # CGI handler chain
         cgi_handler_chain = CGIHandlerChain(
-            blobstore.handlers.UploadCGIHandler(upload_url=options.upload_url))
+            typhoonae.blobstore.handlers.UploadCGIHandler(
+                upload_url=options.upload_url))
 
         # Redirect standard input and output streams
         sys.stdin = cgi_handler_chain(CGIInAdapter(inp), os.environ)
@@ -195,16 +222,9 @@ def serve(conf, options):
 
         # Compute script path and set PATH_TRANSLATED environment variable
         path_info = os.environ['PATH_INFO']
-        for pattern, name, script, login_required, admin_only in url_mapping:
-            # Check for back reference
+        for pattern, handler_path, script, login_required, admin_only in url_mapping:
             if re.match(pattern, path_info) is not None:
-                m = back_ref_pattern.search(name)
-                if m:
-                    ind = int(m.group(1))
-                    mod = path_info.split('/')[ind]
-                    name = '.'.join(name.split('.')[0:-1] + [mod])
                 os.environ['PATH_TRANSLATED'] = script
-                os.chdir(os.path.dirname(script))
                 break
 
         http_auth = os.environ.get('HTTP_AUTHORIZATION', False)
@@ -225,7 +245,7 @@ def serve(conf, options):
                 print('Location: %s\r\n' %
                       google.appengine.api.users.create_login_url(path_info))
             # Load and run the application module
-            run_module(name, run_name='__main__', dont_cache=cache_disabled)
+            run_module(handler_path, script)
         finally:
             # Flush buffers
             sys.stdout.flush()

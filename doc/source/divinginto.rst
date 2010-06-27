@@ -1,13 +1,13 @@
 .. TyphoonAE a deeper look.
 
 ======================
-Diving into the engine
+Diving into the Engine
 ======================
 
 This chapter describes how TyphoonAE is assembled and what's keeping its parts
 together.
 
-Pythonic glue
+Pythonic Glue
 =============
 
 The core of TyphoonAE is a relatively small Python package which contains the

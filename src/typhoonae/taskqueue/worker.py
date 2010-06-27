@@ -25,12 +25,14 @@ import signal
 import simplejson
 import socket
 import sys
+import time
 import typhoonae.taskqueue
 import urllib2
 
 DESCRIPTION = ("AMQP client to perform queued tasks.")
 USAGE = "usage: %prog [options]"
-MAX_TRY_COUNT = 10
+MAX_CONN_RETRIES = 10
+MAX_TASK_RETRIES = 10
 MAX_TIME_LIMIT = 30
 
 
@@ -120,16 +122,28 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
                '%(message)s',
         level=logging.DEBUG)
 
-    try:
-        conn = amqp.Connection(
-            host="%s:5672" % options.amqp_host,
-            userid="guest",
-            password="guest",
-            virtual_host="/",
-            insist=False)
-    except socket.error, err_obj:
-        logging.error("queue server not reachable (reason: %s)" % err_obj)
-        sys.exit(1)
+    conn_retry_count = 0
+    while True:
+        reason = None
+        try:
+            conn = amqp.Connection(
+                host="%s:5672" % options.amqp_host,
+                userid="guest",
+                password="guest",
+                virtual_host="/",
+                insist=False)
+            if conn:
+                logging.info("connected.")
+                break
+        except socket.error, err_obj:
+            logging.warn("broker not reachable. Retrying.")
+            reason = str(err_obj)
+            time.sleep(1)
+        conn_retry_count += 1
+        if conn_retry_count > MAX_CONN_RETRIES:
+            logging.error(
+                "broker not reachable. Giving up. Reason: %s" % err_obj)
+            sys.exit(1)
 
     chan = conn.channel()
 
@@ -144,7 +158,7 @@ def main(queue="tasks", exchange="immediate", routing_key="normal_worker"):
             task = simplejson.loads(msg.body)
             task_dict = dict(task)
 
-            if task_dict["try_count"] < MAX_TRY_COUNT:
+            if task_dict["try_count"] < MAX_TASK_RETRIES:
                 task_dict["try_count"] = task["try_count"] + 1
                 task_dict["eta"] = typhoonae.taskqueue.get_new_eta_usec(
                     task_dict["try_count"])

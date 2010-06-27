@@ -23,11 +23,13 @@ import simplejson
 import socket
 import sys
 import threading
+import time
 import typhoonae.taskqueue
 
 
 DESCRIPTION = ("AMQP client deferred tasks.")
 USAGE = "usage: %prog [options]"
+MAX_CONN_RETRIES = 10
 
 
 class RecoverLoop(threading.Thread):
@@ -74,16 +76,28 @@ def main(
                '%(message)s',
         level=logging.DEBUG)
 
-    try:
-        conn = amqp.Connection(
-            host="%s:5672" % options.amqp_host,
-            userid="guest",
-            password="guest",
-            virtual_host="/",
-            insist=False)
-    except socket.error, err_obj:
-        logging.error("queue server not reachable (reason: %s)" % err_obj)
-        sys.exit(1)
+    conn_retry_count = 0
+    while True:
+        reason = None
+        try:
+            conn = amqp.Connection(
+                host="%s:5672" % options.amqp_host,
+                userid="guest",
+                password="guest",
+                virtual_host="/",
+                insist=False)
+            if conn:
+                logging.info("connected.")
+                break
+        except socket.error, err_obj:
+            logging.warn("broker not reachable. Retrying.")
+            reason = str(err_obj)
+            time.sleep(1)
+        conn_retry_count += 1
+        if conn_retry_count > MAX_CONN_RETRIES:
+            logging.error(
+                "broker not reachable. Giving up. Reason: %s" % err_obj)
+            sys.exit(1)
 
     chan = conn.channel()
 

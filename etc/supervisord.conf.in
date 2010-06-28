@@ -1,7 +1,5 @@
 [inet_http_server]
 port = 9001
-username = admin
-password = admin
 
 [supervisord]
 logfile = ${buildout:directory}/var/log/supervisord.log

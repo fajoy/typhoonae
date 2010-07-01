@@ -543,6 +543,8 @@ def write_supervisor_conf(options, conf, app_root):
         supervisor_conf_stub.write(SUPERVISOR_MONGODB_CONFIG % locals())
     elif datastore == 'bdbdatastore':
         supervisor_conf_stub.write(SUPERVISOR_BDBDATASTORE_CONFIG % locals())
+    elif datastore == 'mysql':
+        pass
     elif datastore == 'remote':
         pass
     else:

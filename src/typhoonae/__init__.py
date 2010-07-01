@@ -35,7 +35,7 @@ import typhoonae.websocket.websocket_stub
 import typhoonae.xmpp.xmpp_service_stub
 
 
-SUPPORTED_DATASTORES = frozenset(['mongodb', 'bdbdatastore'])
+SUPPORTED_DATASTORES = frozenset(['mongodb', 'bdbdatastore', 'mysql'])
 
 end_request_hook = None
 
@@ -142,6 +142,16 @@ def setupDatastore(name, app_id, datastore, history, require_indexes, trusted):
             ('localhost', 9123))
         global end_request_hook
         end_request_hook = datastore.closeSession
+    elif name == 'mysql':
+        from typhoonae.mysql import datastore_mysql_stub
+        database_info = {
+            "host": "127.0.0.1",
+            "user": "root",
+            "passwd": "",
+            "db": "typhoonae"
+        }
+        datastore = typhoonae.mysql.datastore_mysql_stub.DatastoreMySQLStub(
+            app_id, database_info)
     else:
         raise RuntimeError, "unknown datastore"
 

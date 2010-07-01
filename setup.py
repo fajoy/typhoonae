@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,8 +58,9 @@ setuptools.setup(
         ],
     extras_require=dict(
         amqp=['amqplib'],
-        mongo=['pymongo'],
         memcached=['pylibmc'],
+        mongo=['pymongo'],
+        mysql=['MySQL-python'],
         websocket=['tornado'],
         xmpp=['xmpppy']
         ),

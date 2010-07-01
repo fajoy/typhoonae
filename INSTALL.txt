@@ -82,6 +82,7 @@ that these directories are on your PATH and following programs can be found::
 
 On Debian Lenny you will need to have the following packages installed::
 
+  * libmysql++-dev
   * libncurses5-dev
   * libssl-dev
   * python-dev

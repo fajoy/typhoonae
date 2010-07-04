@@ -194,17 +194,17 @@ stderr_logfile_maxbytes = 1MB
 """
 
 SUPERVISOR_AMQP_CONFIG = """
-[program:%(app_id)s-taskworker]
+[program:%(app_id)s_taskworker]
 command = %(bin)s/taskworker --amqp_host=%(amqp_host)s
-process_name = %(app_id)s-taskworker
+process_name = %(app_id)s_taskworker
 directory = %(root)s
 priority = 20
 redirect_stderr = true
 stdout_logfile = %(var)s/log/taskworker.log
 
-[program:%(app_id)s-deferred_taskworker]
+[program:%(app_id)s_deferred_taskworker]
 command = %(bin)s/deferred_taskworker --amqp_host=%(amqp_host)s
-process_name = %(app_id)s-deferred_taskworker
+process_name = %(app_id)s_deferred_taskworker
 directory = %(root)s
 priority = 20
 redirect_stderr = true
@@ -212,18 +212,18 @@ stdout_logfile = %(var)s/log/deferred_taskworker.log
 """
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
-[program:%(app_id)s-xmpp_http_dispatch]
+[program:%(app_id)s_xmpp_http_dispatch]
 command = %(bin)s/xmpp_http_dispatch --address=%(internal_address)s --jid=%(jid)s --password=%(password)s
-process_name = %(app_id)s-xmpp_http_dispatch
+process_name = %(app_id)s_xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
 stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 """
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
-[program:%(app_id)s-websocket]
+[program:%(app_id)s_websocket]
 command = %(bin)s/websocket --address=%(internal_address)s --app_id=%(app_id)s
-process_name = %(app_id)s-websocket
+process_name = %(app_id)s_websocket
 priority = 999
 redirect_stderr = true
 stdout_logfile = %(var)s/log/websocket.log

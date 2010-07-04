@@ -280,7 +280,9 @@ def main():
                   default=os.path.join('var', 'blobstore'))
 
     op.add_option("--datastore", dest="datastore", metavar="NAME",
-                  help="use this datastore", default='mongodb')
+                  help="use this Datastore backend (%s)"
+                      % '/'.join(sorted(typhoonae.SUPPORTED_DATASTORES)),
+                  default='mongodb')
 
     op.add_option("--debug", dest="debug_mode", action="store_true",
                   help="enables debug mode", default=False)

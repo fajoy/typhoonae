@@ -35,7 +35,8 @@ import typhoonae.websocket.websocket_stub
 import typhoonae.xmpp.xmpp_service_stub
 
 
-SUPPORTED_DATASTORES = frozenset(['mongodb', 'bdbdatastore', 'mysql'])
+SUPPORTED_DATASTORES = frozenset([
+    'bdbdatastore', 'mongodb', 'mysql', 'remote'])
 
 end_request_hook = None
 
@@ -257,13 +258,19 @@ def setupStubs(conf, options):
 
     setupCapability()
 
-    if options.datastore in SUPPORTED_DATASTORES:
-        setupDatastore(options.datastore.lower(),
-                       conf.application,
-                       'dev_appserver.datastore',
-                       'dev_appserver.datastore.history',
-                       False,
-                       False)
+    datastore = options.datastore.lower()
+
+    if datastore in SUPPORTED_DATASTORES:
+        if datastore == 'remote':
+            setupRemoteDatastore(
+                conf.application, options.email, options.password)
+        else:
+            setupDatastore(datastore,
+                           conf.application,
+                           'dev_appserver.datastore',
+                           'dev_appserver.datastore.history',
+                           False,
+                           False)
 
     setupMail(options.smtp_host, options.smtp_port,
               options.smtp_user, options.smtp_password)

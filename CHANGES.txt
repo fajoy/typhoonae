@@ -29,6 +29,11 @@ Version 0.?.? (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=56
 
+  - Fixes an issue where request handlers get executed, even though they
+    require login.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=59
+
 
 Version 0.1.4 (2010-04-26)
 --------------------------

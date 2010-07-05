@@ -229,10 +229,10 @@ def serve(conf, options):
 
         http_auth = os.environ.get('HTTP_AUTHORIZATION', False)
 
+        internal = os.environ.get('X-TyphoonAE-Secret') == 'secret'
+
         try:
-            if os.environ.get('X-TyphoonAE-Secret') == 'secret':
-                pass
-            elif http_auth and not email:
+            if http_auth and not email and not internal:
                 match = re.match(BASIC_AUTH_PATTERN, http_auth)
                 if match:
                     user, pw = base64.b64decode(match.group(1)).split(':')
@@ -240,12 +240,13 @@ def serve(conf, options):
                     print('Set-Cookie: ' + typhoonae.handlers.login.
                           getSetCookieHeaderValue(user, admin=True))
                     print('Location: %s\r\n' % os.environ['REQUEST_URI'])
-            elif (login_required or admin_only) and not email:
+            elif (login_required or admin_only) and not email and not internal:
                 print('Status: 302 Requires login')
                 print('Location: %s\r\n' %
                       google.appengine.api.users.create_login_url(path_info))
-            # Load and run the application module
-            run_module(handler_path, script)
+            else:
+                # Load and run the application module
+                run_module(handler_path, script)
         finally:
             # Flush buffers
             sys.stdout.flush()

@@ -97,5 +97,9 @@ handlers:
 - url: /stats.*
   script: $PYTHON_LIB/google/appengine/ext/appstats/ui.py
 
+- url: /admin.*
+  script: $PYTHON_LIB/google/appengine/ext/admin
+  login: admin
+
 - url: .*
   script: failure.py

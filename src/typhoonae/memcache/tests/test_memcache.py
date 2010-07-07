@@ -218,15 +218,14 @@ class MemcacheTestCase(unittest.TestCase):
         assert {'map_key_two': u'some value', 'three': u'trois'} == values
 
     def testStats(self):
-        """Tries to get memcache stats.
+        """Tries to get memcache stats."""
 
-        TODO: This is not implemented right now.
-        """
-
-        self.assertRaises(
-            NotImplementedError,
-            google.appengine.api.memcache.get_stats)
-        
+        stats = google.appengine.api.memcache.get_stats()
+        self.assertEqual(
+            set(['hits', 'items', 'bytes', 'oldest_item_age', 'misses',
+                 'byte_hits']),
+            set(stats.keys()))
+ 
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,6 +23,7 @@ import google.appengine.runtime.apiproxy_errors
 import logging
 import os
 import pylibmc
+import time
 
 DEFAULT_ADDR = '127.0.0.1'
 DEFAULT_PORT = 11211
@@ -227,5 +228,34 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             request: A MemcacheStatsRequest.
             response: A MemcacheStatsResponse.
         """
+        stats = response.mutable_stats()
 
-        raise NotImplementedError
+        num_servers = 0
+        hits_total = 0
+        misses_total = 0
+        byte_hits_total = 0
+        items_total = 0
+        bytes_total = 0
+        time_total = 0
+
+        def get_stats_value(stats_dict, key, _type=int):
+            if key not in stats_dict:
+                logging.warn("No stats for key '%s'." % key) 
+            return _type(stats_dict.get(key, '0'))
+
+        for server, server_stats in self._cache.get_stats():
+            num_servers += 1
+            hits_total += get_stats_value(server_stats, 'get_hits')
+            misses_total += get_stats_value(server_stats, 'get_misses')
+            byte_hits_total += get_stats_value(server_stats, 'bytes_read') 
+            items_total += get_stats_value(server_stats, 'curr_items') 
+            bytes_total += get_stats_value(server_stats, 'bytes') 
+            time_total += get_stats_value(server_stats, 'time', float) 
+
+        stats.set_hits(hits_total)
+        stats.set_misses(misses_total)
+        stats.set_byte_hits(byte_hits_total)
+        stats.set_items(items_total)
+        stats.set_bytes(bytes_total)
+
+        stats.set_oldest_item_age(time.time() - time_total / num_servers)

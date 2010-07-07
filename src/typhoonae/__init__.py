@@ -86,7 +86,9 @@ def initURLMapping(conf, options):
         regexp = handler.url
         if script != None:
             if script.startswith('$PYTHON_LIB'):
-                module = script.replace(os.sep, '.')[12:-3]
+                module = script.replace(os.sep, '.')[12:]
+                if module.endswith('.py'):
+                    module = module[:-3]
                 try:
                     m = __import__(module)
                 except Exception, err_obj:

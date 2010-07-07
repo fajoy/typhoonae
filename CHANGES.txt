@@ -34,6 +34,11 @@ Version 0.?.? (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=59
 
+  - Fixes an issue where script handlers referring to a package path don't
+    work.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=60
+
 
 Version 0.1.4 (2010-04-26)
 --------------------------

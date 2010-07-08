@@ -62,7 +62,7 @@ class LogoutRequestHandler(google.appengine.ext.webapp.RequestHandler):
         c[cookie_name]['max-age'] = '0'
         h = re.compile('^Set-Cookie: ').sub('', c.output(), count=1)
         self.response.headers.add_header('Set-Cookie', str(h))
-        self.redirect('/')
+        self.redirect(self.request.get('continue', '/'))
 
 
 app = google.appengine.ext.webapp.WSGIApplication([

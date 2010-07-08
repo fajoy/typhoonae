@@ -68,6 +68,12 @@ location ~ ^/(%(path)s)/ {
 }
 """
 
+NGINX_REWRITE_LOCATION = """
+location ~* ^%(regex)s$ {
+    rewrite %(rewrite)s break;
+}
+"""
+
 NGINX_REGEX_LOCATION = """
 location ~* ^%(regex)s$ {
     root %(root)s;
@@ -349,7 +355,8 @@ def make_blobstore_dirs(blobstore_path):
         if not os.path.isdir(p):
             os.makedirs(p)
 
-def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
+def write_nginx_conf(
+        options, conf, app_root, internal=False, secure=False, mode='w'):
     """Writes nginx server configuration stub."""
 
     addr = options.addr
@@ -372,7 +379,8 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
 
-    if ssl_enabled:
+    if secure:
+        http_port = options.https_port
         add_server_params = '\n    '.join(k+' '+v+';' for k, v in [
             ('ssl', 'on'),
             ('ssl_certificate', ssl_certificate),
@@ -386,17 +394,18 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
     nginx_config_path = os.path.abspath(nginx_config_path)
     httpd_conf_stub = open(nginx_config_path, mode)
 
-    if not internal:
+    if not internal and not secure:
         httpd_conf_stub.write(
             "# Automatically generated NGINX configuration file: don't edit!\n"
             "# Use apptool to modify.\n")
     elif internal:
-        httpd_conf_stub.write(
-            "# Internal configuration.\n")
+        httpd_conf_stub.write("# Internal configuration.\n")
         app_domain = ''
         server_name, http_port = options.internal_address.split(':')
         add_fcgi_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
         add_server_params = ''
+    elif secure:
+        httpd_conf_stub.write("# Secure configuration.\n")
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 
@@ -404,6 +413,29 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
 
     for handler in conf.handlers:
         ltrunc_url = re.sub('^/', '', handler.url)
+        if ltrunc_url and ssl_enabled and not internal and not secure and handler.secure == 'always':
+            rewrite = '^/(%s)$ https://%s' % (ltrunc_url, server_name)
+            if options.https_port != '443':
+                rewrite += ':%s' % options.https_port
+            rewrite += '/$1'
+            httpd_conf_stub.write(NGINX_REWRITE_LOCATION % dict(
+                regex='/(%s)' % ltrunc_url,
+                rewrite=rewrite
+                )
+            )
+            continue
+        if ltrunc_url and ssl_enabled and not internal and secure and handler.secure == 'never':
+            rewrite = '^/(%s)$ http://%s' % (ltrunc_url, server_name)
+            if options.http_port != '80':
+                rewrite += ':%s' % options.http_port
+            rewrite += '/$1'
+            httpd_conf_stub.write(NGINX_REWRITE_LOCATION % dict(
+                regex='/(%s)' % ltrunc_url,
+                rewrite=rewrite
+                )
+            )
+            continue
+
         if handler.GetHandlerType() == 'static_dir':
             if ltrunc_url != handler.static_dir:
                 rewrite = '^/(%s)/(.*)$ /%s/$2 break;' % (ltrunc_url,
@@ -442,7 +474,7 @@ def write_nginx_conf(options, conf, app_root, internal=False, mode='w'):
         if handler.login in ('admin', 'required'):
             if ltrunc_url not in urls_require_login:
                 urls_require_login.append(ltrunc_url)
-        if not internal and ssl_enabled:
+        if not internal and secure:
             if handler.secure == 'always':
                 logger.warn(
                     "secure parameter with value 'always' "
@@ -764,6 +796,10 @@ def main():
                   help="port for the HTTP server to listen on",
                   default=8080)
 
+    op.add_option("--https_port", dest="https_port", metavar="PORT",
+                  help="use this port for HTTPS",
+                  default=8443)
+
     op.add_option("--internal_address", dest="internal_address",
                   metavar="HOST:PORT",
                   help="the internal application host and port",
@@ -852,6 +888,8 @@ def main():
     conf = typhoonae.getAppConfig(app_root)
 
     write_nginx_conf(options, conf, app_root)
+    if options.ssl_enabled:
+        write_nginx_conf(options, conf, app_root, secure=True, mode='a')
     write_nginx_conf(options, conf, app_root, internal=True, mode='a')
     make_blobstore_dirs(
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))

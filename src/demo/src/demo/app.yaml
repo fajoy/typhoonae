@@ -50,15 +50,12 @@ handlers:
 - url: /blobstore
   script: blobstore.py
   login: required
-  secure: never
 
 - url: /upload
   script: blobstore.py
-  secure: never
 
 - url: /serve/([^/]+)?
   script: blobstore.py
-  secure: never
 
 - url: /delete/([^/]+)?
   script: app.py
@@ -73,7 +70,6 @@ handlers:
 
 - url: /_ah/logout
   script: login.py
-  secure: always
 
 - url: /_ah/xmpp/message/chat/
   script: app.py
@@ -81,6 +77,7 @@ handlers:
 
 - url: /websocket
   script: websocket.py
+  secure: never
 
 - url: /_ah/websocket/handshake/(.*)
   script: websocket.py

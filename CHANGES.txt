@@ -8,7 +8,7 @@ Version 0.1.5 (2010-??-??)
 
   - Introducing MySQL backed Datastore.
 
-  - Added support for configuring multiple applications.
+  - Added support for configuring and running multiple applications.
 
   - The apptool takes new options for configuring SSL support.
 

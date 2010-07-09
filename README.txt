@@ -8,7 +8,7 @@ parts for building your own scalable App Engine while staying compatible with
 Google's API.
 
 
-Copyright and license
+Copyright and License
 ---------------------
 
 Copyright 2009, 2010 Tobias Rodaebel

@@ -79,7 +79,7 @@ that these directories are on your PATH and following programs can be found::
   * JAVA
   * locally installed sendmail (if you want to send emails)
   * Erlang
-  * MySQL
+  * MySQL (if you want to use it as alternate Datastore backend)
 
 On Debian Lenny you will need to have the following packages installed::
 

@@ -349,7 +349,7 @@ class DatastoreMySQLStub(apiproxy_stub.APIProxyStub):
                app_id,
                database_info_dict,
                require_indexes=False,
-               verbose=True,
+               verbose=False,
                service_name='datastore_v3',
                trusted=False):
     """Constructor.

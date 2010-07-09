@@ -30,7 +30,7 @@ TyphoonAE development environment you just have to delete this single
 directory.
 
 
-Copyright and license
+Copyright and License
 =====================
 
 Copyright 2009, 2010 Tobias Rodäbel
@@ -41,10 +41,10 @@ a copy of the License at
   http://www.apache.org/licenses/LICENSE-2.0
 
 
-Before you install
+Before You Install
 ==================
 
-Python interpreter
+Python Interpreter
 ------------------
 
 It is possible to run TyphoonAE's Python parts with Python 2.5.x and 2.6.x, but
@@ -63,7 +63,7 @@ Google App Engine SDK
 You don't have to install the Google App Engine SDK, because zc.buildout will
 install it for you.
 
-Other requirements
+Other Requirements
 ------------------
 
 Most of the required libraries and programs will be installed by zc.buildout.
@@ -103,8 +103,8 @@ In order to install Erlang/OTP on Mac OS X Snow Leopard uncomment the reagrding
 extra options in the buildout.cfg file.
 
 
-Running the cloud out of the box
-================================
+Installing and Running
+======================
 
 Build the whole stack by typing the following commands::
 
@@ -124,8 +124,8 @@ You can access the application using a web browser with the following URL::
   http://localhost:8080/
 
 
-Loading some data into the demo application
-===========================================
+Uploading Data
+==============
 
 The appcfg tool (original script from the SDK) can upload and download data to
 and from your application's datastore.
@@ -136,13 +136,13 @@ directory and can be tested by typing::
   $ bin/appcfg upload_data --config_file=src/demo/note_loader.py --filename=src/demo/notes.csv --kind=Note --url=http://localhost:8080/remote_api parts/demo/
 
 
-Downloading data from the demo application
-==========================================
+Downloading Data
+================
 
   $ bin/python parts/google_appengine/google/appengine/tools/bulkloader.py --url=http://localhost:8080/remote_api --kind=Note --filename=notes.csv --config_file=src/demo/note_loader.py --app_id=demo --download --debug
 
 
-Google's development application server
+Google's Development Application Server
 =======================================
 
 You may have recognized the dev_appserver script in the bin directory after

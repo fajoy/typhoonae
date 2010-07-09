@@ -544,6 +544,9 @@ def write_supervisor_conf(options, conf, app_root):
 
     additional_options = []
 
+    if develop_mode:
+        additional_options.append(('debug', None))
+
     if internal_address:
         additional_options.append(('internal_address', internal_address))
 
@@ -553,8 +556,18 @@ def write_supervisor_conf(options, conf, app_root):
     if options.logout_url:
         additional_options.append(('logout_url', options.logout_url))
 
-    if develop_mode:
-        additional_options.append(('debug', None))
+    if datastore == 'mysql':
+        if options.mysql_db:
+            additional_options.append(('mysql_db', options.mysql_db))
+
+        if options.mysql_host:
+            additional_options.append(('mysql_host', options.mysql_host))
+
+        if options.mysql_passwd:
+            additional_options.append(('mysql_passwd', options.mysql_passwd))
+
+        if options.mysql_user:
+            additional_options.append(('mysql_user', options.mysql_user))
 
     add_opts = ' '.join(
         ['--%s' % opt for opt, arg in additional_options if arg is None])
@@ -744,7 +757,7 @@ def main():
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
-    op.add_option("--auth_domain", dest="auth_domain", metavar="STRING",
+    op.add_option("--auth_domain", dest="auth_domain", metavar="DOMAIN",
                   help="use this value for the AUTH_DOMAIN environment "
                   "variable", default='localhost')
 
@@ -805,14 +818,30 @@ def main():
                   help="the internal application host and port",
                   default='localhost:8770')
 
-    op.add_option("--login_url", dest="login_url", metavar="STRING",
+    op.add_option("--login_url", dest="login_url", metavar="URL",
                   help="login URL", default=None)
 
-    op.add_option("--logout_url", dest="logout_url", metavar="STRING",
+    op.add_option("--logout_url", dest="logout_url", metavar="URL",
                   help="logout URL", default=None)
 
     op.add_option("--multiple", dest="multiple", action="store_true",
                   help="configure multiple applications", default=False)
+
+    op.add_option("--mysql_db", dest="mysql_db", metavar="STRING",
+                  help="connect to the given MySQL database",
+                  default='typhoonae')
+
+    op.add_option("--mysql_host", dest="mysql_host", metavar="ADDR",
+                  help="connect to this MySQL database server",
+                  default='127.0.0.1')
+
+    op.add_option("--mysql_passwd", dest="mysql_passwd", metavar="PASSWORD",
+                  help="use this password to connect to the MySQL database "
+                       "server", default='')
+
+    op.add_option("--mysql_user", dest="mysql_user", metavar="USER",
+                  help="use this user to connect to the MySQL database server",
+                  default='root')
 
     op.add_option("--password", dest="password", metavar="PASSWORD",
                   help="the password to use", default='')

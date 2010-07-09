@@ -124,19 +124,21 @@ def setupCapability():
         'capability_service', typhoonae.capability_stub.CapabilityServiceStub())
 
 
-def setupDatastore(name, app_id, datastore, history, require_indexes, trusted):
+def setupDatastore(options, conf, datastore_file, history, require_indexes, trusted):
     """Sets up datastore."""
+
+    name = options.datastore.lower()
 
     if name == 'mongodb':
         tmp_dir = os.environ['TMPDIR']
         if not os.path.exists(tmp_dir):
             os.mkdir(tmp_dir)
 
-        datastore_path = os.path.join(tmp_dir, datastore)
+        datastore_path = os.path.join(tmp_dir, datastore_file)
         history_path = os.path.join(tmp_dir, history)
 
         datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
-            app_id, datastore_path,
+            conf.application, datastore_path,
             require_indexes=require_indexes,
             intid_client=typhoonae.intid.IntidClient())
     elif name == 'bdbdatastore':
@@ -148,24 +150,24 @@ def setupDatastore(name, app_id, datastore, history, require_indexes, trusted):
     elif name == 'mysql':
         from typhoonae.mysql import datastore_mysql_stub
         database_info = {
-            "host": "127.0.0.1",
-            "user": "root",
-            "passwd": "",
-            "db": "typhoonae"
+            "host": options.mysql_host,
+            "user": options.mysql_user,
+            "passwd": options.mysql_passwd,
+            "db": options.mysql_db
         }
         datastore = typhoonae.mysql.datastore_mysql_stub.DatastoreMySQLStub(
-            app_id, database_info)
+            conf.application, database_info)
     else:
         raise RuntimeError, "unknown datastore"
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
         'datastore_v3', datastore)
 
-    if name in ['bdbdatastore']:
+    if name == 'bdbdatastore':
         from google.appengine.tools import dev_appserver_index
         app_root = os.getcwd()
         logging.info("%s" % app_root)
-        dev_appserver_index.SetupIndexes(app_id, app_root)
+        dev_appserver_index.SetupIndexes(conf.application, app_root)
         dev_appserver_index.IndexYamlUpdater(app_root)
 
 
@@ -267,8 +269,8 @@ def setupStubs(conf, options):
             setupRemoteDatastore(
                 conf.application, options.email, options.password)
         else:
-            setupDatastore(datastore,
-                           conf.application,
+            setupDatastore(options,
+                           conf,
                            'dev_appserver.datastore',
                            'dev_appserver.datastore.history',
                            False,

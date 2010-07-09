@@ -272,7 +272,7 @@ def main():
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
-    op.add_option("--auth_domain", dest="auth_domain", metavar="STRING",
+    op.add_option("--auth_domain", dest="auth_domain", metavar="DOMAIN",
                   help="use this value for the AUTH_DOMAIN environment "
                   "variable", default='localhost')
 
@@ -300,11 +300,27 @@ def main():
                   help="write logging output to this file",
                   default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))
 
-    op.add_option("--login_url", dest="login_url", metavar="STRING",
+    op.add_option("--login_url", dest="login_url", metavar="URL",
                   help="login URL", default='/_ah/login')
 
-    op.add_option("--logout_url", dest="logout_url", metavar="STRING",
+    op.add_option("--logout_url", dest="logout_url", metavar="URL",
                   help="logout URL", default='/_ah/logout')
+
+    op.add_option("--mysql_db", dest="mysql_db", metavar="STRING",
+                  help="connect to the given MySQL database",
+                  default='typhoonae')
+
+    op.add_option("--mysql_host", dest="mysql_host", metavar="ADDR",
+                  help="connect to this MySQL database server",
+                  default='127.0.0.1')
+
+    op.add_option("--mysql_passwd", dest="mysql_passwd", metavar="PASSWORD",
+                  help="use this password to connect to the MySQL database "
+                       "server", default='')
+
+    op.add_option("--mysql_user", dest="mysql_user", metavar="USER",
+                  help="use this user to connect to the MySQL database server",
+                  default='root')
 
     op.add_option("--password", dest="password", metavar="PASSWORD",
                   help="the password to use", default='')

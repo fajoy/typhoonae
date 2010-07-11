@@ -108,14 +108,14 @@ location ~ ^/(%(path)s) {
 """
 
 NGINX_FCGI_CONFIG = """
-location / {
+location ~ {
     fastcgi_pass %(addr)s:%(port)s;
 %(fcgi_params)s
 }
 """
 
 NGINX_UPLOAD_CONFIG = """
-location /%(upload_url)s {
+location ~* /%(upload_url)s {
     # Pass altered request body to this location
     upload_pass @%(app_id)s;
 

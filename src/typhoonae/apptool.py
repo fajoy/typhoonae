@@ -500,14 +500,11 @@ def write_nginx_conf(
             )
         )
 
-    vars = locals()
-    vars.update(
-        dict(fcgi_params=FCGI_PARAMS % {
-            'add_fcgi_params': '\n'.join(add_fcgi_params)}))
+    fcgi_params=FCGI_PARAMS % {'add_fcgi_params': '\n'.join(add_fcgi_params)}
 
-    httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % vars)
-    httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % vars)
-    httpd_conf_stub.write(NGINX_FCGI_CONFIG % vars)
+    httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % locals())
+    httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % locals())
+    httpd_conf_stub.write(NGINX_FCGI_CONFIG % locals())
     if html_error_pages_root:
         httpd_conf_stub.write(NGINX_ERROR_PAGES %
                               {'root': html_error_pages_root})

@@ -198,7 +198,7 @@ stdout_logfile_backups = 10
 stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
 
-[eventlistener:memmon]
+[eventlistener:%(app_id)s_monitor]
 command=%(bin)s/memmon -g %(app_id)s=200MB
 events=TICK_60
 """

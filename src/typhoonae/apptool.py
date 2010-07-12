@@ -53,7 +53,7 @@ server {
 NGINX_ERROR_PAGES = """
 error_page   500 502 503 504  /50x.html;
 location = /50x.html {
-    root %(root)s;
+    root "%(root)s";
 }
 """
 
@@ -63,7 +63,7 @@ NGINX_FOOTER = """
 
 NGINX_STATIC_LOCATION = """
 location ~ ^/(%(path)s)/ {
-    root %(root)s;%(rewrite)s
+    root "%(root)s";%(rewrite)s
     expires %(expires)s;
 }
 """
@@ -76,7 +76,7 @@ location ~* ^%(regex)s$ {
 
 NGINX_REGEX_LOCATION = """
 location ~* ^%(regex)s$ {
-    root %(root)s;
+    root "%(root)s";
     rewrite %(rewrite)s break;
     expires %(expires)s;
 }
@@ -149,7 +149,7 @@ location @%(app_id)s {
 
 NGINX_DOWNLOAD_CONFIG = """
 location ~ ^/_ah/blobstore/%(app_id)s/(.*) {
-    root %(blobstore_path)s;
+    root "%(blobstore_path)s";
     rewrite ^/_ah/blobstore/%(app_id)s/(.*) /$1 break;
     internal;
 }
@@ -178,7 +178,7 @@ SUPERVISOR_BDBDATASTORE_CONFIG = """
 [program:bdbdatastore]
 command = java -jar %(root)s/parts/bdbdatastore/bdbdatastore-0.2.2.jar %(var)s
 process_name = bdbdatastore
-directory = %(app_root)s
+directory = "%(app_root)s"
 priority = 10
 redirect_stderr = true
 stdout_logfile = %(var)s/log/bdbdatastore.log
@@ -186,7 +186,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s%(app_root)s
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s"%(app_root)s"
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2

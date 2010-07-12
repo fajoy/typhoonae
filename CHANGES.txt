@@ -7,6 +7,11 @@ Version 0.1.6 (2010-??-??)
   - Adds process monitor for automatically restarting appserver processes
     consuming more than a given amount of memory that is held in RAM (RSS).
 
+  - Fixes an issue where spaces in application paths caused failures on
+    startup.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=62
+
 
 Version 0.1.5 (2010-07-09)
 --------------------------

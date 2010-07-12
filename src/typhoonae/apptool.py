@@ -197,6 +197,10 @@ stdout_logfile_maxbytes = 1MB
 stdout_logfile_backups = 10
 stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
+
+[eventlistener:memmon]
+command=%(bin)s/memmon -g %(app_id)s=200MB
+events=TICK_60
 """
 
 SUPERVISOR_AMQP_CONFIG = """

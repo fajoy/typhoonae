@@ -186,7 +186,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s"%(app_root)s"
+command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -571,13 +571,8 @@ def write_supervisor_conf(options, conf, app_root):
             additional_options.append(('mysql_user', options.mysql_user))
 
     add_opts = ' '.join(
-        ['--%s' % opt for opt, arg in additional_options if arg is None])
-
-    add_opts += ' '.join(
+        ['--%s' % opt for opt, arg in additional_options if arg is None] +
         ['--%s=%s' % (opt, arg) for opt, arg in additional_options if arg])
-
-    if add_opts:
-        add_opts += ' '
 
     supervisor_conf_stub = open(
         os.path.join(root, 'etc', conf.application+'-supervisor.conf'), 'w')

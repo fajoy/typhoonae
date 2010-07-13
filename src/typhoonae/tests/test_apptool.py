@@ -89,41 +89,41 @@ class ApptoolTestCase(unittest.TestCase):
                 os.path.join(os.getcwd(), 'etc', 'default-nginx.conf'), 'r')
             config = f.read()
             self.assertTrue("""location ~* ^/(.*\.(gif|jpg|png))$ {
-    root %(app_root)s;
+    root "%(app_root)s";
     rewrite ^/(.*\.(gif|jpg|png))$ /static/$1 break;
     expires 5h;
 }""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~* ^/favicon.ico$ {
-    root %(app_root)s;
+    root "%(app_root)s";
     rewrite ^/favicon.ico$ /static/favicon.ico break;
     expires 30d;
 }""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~ ^/(static)/ {
-    root %(app_root)s;
+    root "%(app_root)s";
     expires 30d;
 }""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~ ^/(foo)/ {
-    root %(app_root)s;
+    root "%(app_root)s";
     rewrite ^/(foo)/(.*)$ /bar/$2 break;
     expires 30d;
 }""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~ ^/(images)/ {
-    root %(app_root)s;
+    root "%(app_root)s";
     rewrite ^/(images)/(.*)$ /static/images/$2 break;
     expires 30d;
 }""" % {'app_root': os.getcwd()} in config)
 
             self.assertTrue("""location ~* ^/(index.html)$ {
-    root %(app_root)s;
+    root "%(app_root)s";
     rewrite ^/(index.html)$ /$1 break;
     expires 30d;
 }""" % {'app_root': os.getcwd()} in config)
 
-            self.assertTrue("""location /upload/ {
+            self.assertTrue("""location ~* /upload/ {
     # Pass altered request body to this location
     upload_pass @sample;
 
@@ -167,12 +167,12 @@ location @sample {
 }
 
 location ~ ^/_ah/blobstore/sample/(.*) {
-    root /tmp/blobstore/sample;
+    root "/tmp/blobstore/sample";
     rewrite ^/_ah/blobstore/sample/(.*) /$1 break;
     internal;
 }
 
-location / {
+location ~ {
     fastcgi_pass localhost:8081;
     fastcgi_param CONTENT_LENGTH $content_length;
     fastcgi_param CONTENT_TYPE $content_type;
@@ -191,7 +191,7 @@ location / {
 
 error_page   500 502 503 504  /50x.html;
 location = /50x.html {
-    root /tmp/html;
+    root "/tmp/html";
 }
 
 }

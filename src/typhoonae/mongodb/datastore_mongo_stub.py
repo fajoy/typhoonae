@@ -557,11 +557,11 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       cursor = cursor.sort(order)
 
     if offset:
-      cursor = cursor.skip(offset)
+      cursor = cursor.skip(int(offset))
     elif query.has_offset():
-      cursor = cursor.skip(query.offset())
+      cursor = cursor.skip(int(query.offset()))
     if query.has_limit():
-      cursor = cursor.limit(query.limit())
+      cursor = cursor.limit(int(query.limit()))
 
     self.__cursor_lock.acquire()
     cursor_index = self.__next_cursor

@@ -106,8 +106,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     This is mainly for testing purposes and the admin console.
     """
     for name in self.__db.collection_names():
-        if not name.startswith('system.'):
-            self.__db.drop_collection(name)
+      if not name.startswith('system.'):
+        self.__db.drop_collection(name)
     self.__queries = {}
     self.__query_history = {}
     self.__indexes = {}

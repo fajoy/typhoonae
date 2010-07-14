@@ -1331,15 +1331,15 @@ class DatastoreMySQLStub(apiproxy_stub.APIProxyStub):
       sql_stmt += ' LIMIT %i' % query.limit()
 
     if self.__verbose:
-      logging.info("Executing statement '%s' with arguments %r",
-                   sql_stmt, [str(x) for x in params])
+      logging.debug("Executing statement '%s' with arguments %r",
+                    sql_stmt, [str(x) for x in params])
     db_cursor = conn.cursor()
     if self.__verbose:
       start_time = time.time()
     db_cursor.execute(sql_stmt, params)
     if self.__verbose:
       time_delta_ms = (time.time() - start_time) * 1000
-      logging.info("Statement execution time (ms): %s" % time_delta_ms)
+      logging.debug("Statement execution time (ms): %s" % time_delta_ms)
     cursor = QueryCursor(query, db_cursor)
     if query.has_compiled_cursor() and query.compiled_cursor().position_size():
       cursor.ResumeFromCompiledCursor(query.compiled_cursor())

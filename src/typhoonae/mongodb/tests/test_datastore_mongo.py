@@ -906,6 +906,33 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
 #        self.assertEqual(start, 2001)
 #        self.assertEqual(end, 4000)
 
+    def testBatching(self):
+        """Counts in batches with __key__ as offset."""
+
+        class TestModel(db.Model):
+            contents = db.StringProperty()
+
+        for i in xrange(0, 1000):
+            TestModel(contents='some string').put()
+        for i in xrange(0, 1000):
+            TestModel(contents='some string').put()
+
+        keys = []
+        # Maybe we have a compatibility problem here, because order by
+        # __key__ should be the default.
+        query = db.GqlQuery(
+            "SELECT __key__ FROM TestModel ORDER BY __key__")
+        result = query.fetch(1000)
+        while len(result) == 1000:
+            keys.extend(result)
+            query = db.GqlQuery(
+                "SELECT __key__ FROM TestModel "
+                "WHERE __key__ > :1 ORDER BY __key__", result[-1])
+            result = query.fetch(1000)
+        keys.extend(result)
+ 
+        self.assertEqual(2000, len(keys))
+
     def testCursors(self):
         """Tests the cursor API."""
 

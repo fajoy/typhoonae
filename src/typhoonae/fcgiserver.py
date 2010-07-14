@@ -100,10 +100,22 @@ class CGIOutAdapter:
         self.fp.write(s)
 
 
-def load_module(handler_path, cgi_path, module_dict=sys.modules):
+def load_module(handler_path, cgi_path, module_dict=sys.modules, debug=False):
+    """Loads a CGI script by importing it as a Python module.
+
+    Args:
+        handler_path: CGI path stored in the application configuration.
+        cgi_path: Absolute path to the CGI script file on disk.
+        module_dict: Used for dependency injection.
+        debug: Enables debug mode and forces reload of the CGI script.
+    """
     module_fullname = google.appengine.tools.dev_appserver.GetScriptModuleName(
         handler_path)
     script_module = module_dict.get(module_fullname)
+    if debug and script_module:
+        logging.warn(
+            'Debug mode enabled. Forcing reload of "%s"', handler_path)
+        script_module = None
     module_code = None
     has_main = google.appengine.tools.dev_appserver.ModuleHasValidMainFunction(
         script_module)
@@ -144,7 +156,7 @@ def load_module(handler_path, cgi_path, module_dict=sys.modules):
     return module_fullname, script_module, module_code
 
 
-def run_module(handler_path, cgi_path):
+def run_module(handler_path, cgi_path, debug=False):
     """Executes a CGI script by importing it as a new module.
 
     Args:
@@ -152,9 +164,10 @@ def run_module(handler_path, cgi_path):
             (as a path like 'foo/bar/baz.py'). Should not have $PYTHON_LIB
             references.
         cgi_path: Absolute path to the CGI script file on disk.
+        debug: Boolean which enables/disables debug mode.
     """
     module_fullname, script_module, module_code = load_module(
-        handler_path, cgi_path)
+        handler_path, cgi_path, debug=debug)
 
     script_module.__name__ = '__main__'
     sys.modules['__main__'] = script_module
@@ -172,11 +185,6 @@ def serve(conf, options):
         conf: The application configuration.
         options: Command line options.
     """
-
-    cache_disabled = False
-
-    if options.debug_mode:
-        cache_disabled = True
 
     # Inititalize URL mapping
     url_mapping = typhoonae.initURLMapping(conf, options)
@@ -246,7 +254,7 @@ def serve(conf, options):
                       google.appengine.api.users.create_login_url(path_info))
             else:
                 # Load and run the application module
-                run_module(handler_path, script)
+                run_module(handler_path, script, debug=options.debug_mode)
         finally:
             # Flush buffers
             sys.stdout.flush()
@@ -357,10 +365,10 @@ def main():
 
     app_root = sys.argv[-1]
 
-    logging.basicConfig(
-        format='%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] '
-               '%(message)s',
-        level=logging.INFO, filename=options.logfile)
+    if options.debug_mode:
+        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging.getLogger().setLevel(logging.INFO)
 
     # Change the current working directory to the application root and load
     # the application configuration

@@ -156,7 +156,7 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
             "db": options.mysql_db
         }
         datastore = typhoonae.mysql.datastore_mysql_stub.DatastoreMySQLStub(
-            conf.application, database_info)
+            conf.application, database_info, verbose=options.debug_mode)
     else:
         raise RuntimeError, "unknown datastore"
 

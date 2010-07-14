@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009, 2010 Tobias Rodäbel
+# Copyright 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,16 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for the datastore mongo stub."""
-
+"""Unit tests for the Datastore MongoDB stub."""
 
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
+from google.appengine.api import datastore_admin
+from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
 from google.appengine.api import users
 from google.appengine.api.labs import taskqueue
+from google.appengine.datastore import datastore_index
 from google.appengine.ext import db
+from google.appengine.ext.db import polymodel
+from google.appengine.runtime import apiproxy_errors
 
 import datetime
 import os
@@ -30,33 +34,18 @@ import time
 import typhoonae.mongodb.datastore_mongo_stub
 import unittest
 
- 
-class LowerCaseProperty(db.Property):
-    """A convenience class for generating lower-cased fields for filtering."""
 
-    def __init__(self, property, *args, **kwargs):
-        """Constructor.
- 
-        Args:
-            property: The property to lower-case.
-        """
-        super(LowerCaseProperty, self).__init__(*args, **kwargs)
-        self.property = property
+class TaskQueueServiceStubMock(apiproxy_stub.APIProxyStub):
+    """Task queue service stub for testing purposes."""
 
-    def __get__(self, model_instance, model_class):
-        return self.property.__get__(model_instance, model_class).lower()
- 
-    def __set__(self, model_instance, value):
-        raise db.DerivedPropertyError("Cannot assign to a DerivedProperty")
+    def __init__(self, service_name='taskqueue', root_path=None):
+        super(TaskQueueServiceStubMock, self).__init__(service_name)
 
+    def _Dynamic_Add(self, request, response):
+        pass
 
-class TestModel(db.Model):
-    """Some test model."""
-
-    contents = db.StringProperty(required=True)
-    lowered_contents = LowerCaseProperty(contents)
-    number = db.IntegerProperty()
-    more = db.ListProperty(int, required=True)
+    def _Dynamic_BulkAdd(self, request, response):
+        response.add_taskresult()
 
 
 class TestIntidClient(object):
@@ -73,34 +62,29 @@ class TestIntidClient(object):
         pass
 
 
-class TaskQueueServiceStubMock(apiproxy_stub.APIProxyStub):
-    """Task queue service stub for testing purposes."""
-
-    def __init__(self, service_name='taskqueue', root_path=None):
-        super(TaskQueueServiceStubMock, self).__init__(service_name)
-
-    def _Dynamic_Add(self, request, response):
-        pass
-
-    def _Dynamic_BulkAdd(self, request, response):
-        response.add_taskresult()
-
-
-class DatastoreMongoTestCase(unittest.TestCase):
-    """Testing the typhoonae datastore mongo."""
+class DatastoreMongoTestCaseBase(unittest.TestCase):
+    """Base class for testing the TyphoonAE Datastore MongoDB API proxy stub."""
 
     def setUp(self):
-        """Register typhoonae's datastore API proxy stub."""
+        """Sets up test environment and regisers stub."""
 
+        # Set required environment variables
         os.environ['APPLICATION_ID'] = 'test'
-        os.environ['AUTH_DOMAIN'] = 'bar.net'
+        os.environ['AUTH_DOMAIN'] = 'mydomain.local'
+        os.environ['USER_EMAIL'] = 'tester@mydomain.local'
+        os.environ['USER_IS_ADMIN'] = '1'
 
-        apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
+        # Register API proxy stub.
+        apiproxy_stub_map.apiproxy = (apiproxy_stub_map.APIProxyStubMap())
 
         datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
             'test', '', require_indexes=False, intid_client=TestIntidClient())
 
-        apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', datastore)
+        try:
+            apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', datastore)
+        except apiproxy_errors.ApplicationError, e:
+            raise RuntimeError('These tests require a running MongoDB server '
+                               '(%s)' % e)
 
         self.stub = apiproxy_stub_map.apiproxy.GetStub('datastore_v3')
 
@@ -108,87 +92,60 @@ class DatastoreMongoTestCase(unittest.TestCase):
             'taskqueue', TaskQueueServiceStubMock())
 
     def tearDown(self):
-        """Removes test entities."""
+        """Clears all data."""
 
-        for i in range(2):
-            query = db.GqlQuery("SELECT * FROM TestModel")
+        self.stub.Clear()
 
-            for entity in query:
-                entity.delete()
 
-    def testKeys(self):
-        """Tests obtaining a datastore_types.Key instance."""
+class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
+    """Testing the TyphoonAE Datastore MongoDB API proxy stub."""
 
-        entity = TestModel(contents="some test contents")
-        entity.put()
- 
-        result = TestModel.all().fetch(1)[0]
+    def testStub(self):
+        """Tests whether our stub is registered."""
 
+        self.assertNotEqual(None, self.stub)
+
+    def testPutGetDelete(self):
+        """Puts/gets/deletes entities into/from the datastore."""
+
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        a = Author(name='Mark Twain', key_name='marktwain')
+        a.put()
+
+        b = Book(parent=a, title="The Adventures Of Tom Sawyer")
+        b.put()
+
+        key = b.key()
+
+        del a, b
+
+        book = datastore.Get(key)
         self.assertEqual(
-            datastore_types.Key.from_path(u'TestModel', 1, _app=u'test'),
-            result.key())
+            "{u'title': u'The Adventures Of Tom Sawyer'}", str(book))
 
-        self.assertEqual([u'TestModel', 1], result.key().to_path())
+        author = datastore.Get(book.parent())
+        self.assertEqual("{u'name': u'Mark Twain'}", str(author))
 
-    def testDatastoreTypes(self):
-        """Puts and gets different basic datastore types."""
+        del book
 
-        entity = datastore.Entity('TestKind')
+        datastore.Delete(key)
 
-        entity.update({
-            'rating': datastore_types.Rating(1),
-            'category': datastore_types.Category('bugs'),
-            'key': datastore_types.Key.from_path('foo', 'bar'),
-            'user': users.User('foo@bar.net'),
-            'text': datastore_types.Text('some text'),
-            'blob': datastore_types.Blob('data'),
-            'bytestring': datastore_types.ByteString('data'),
-            'im': datastore_types.IM('http://example.com/', 'Larry97'),
-            'geopt': datastore_types.GeoPt(1.1234, -1.1234),
-            'email': datastore_types.Email('foo@bar.net'),
-            'blobkey': datastore_types.BlobKey('27f5a7'),
-        })
+        self.assertRaises(
+            datastore_errors.EntityNotFoundError, datastore.Get, key)
 
-        datastore.Put(entity)
-        e = datastore.Get(entity)
-        datastore.Delete(entity)
+        del author
 
-    def testPuttingAndGettingEntity(self):
-        """Writes an entity to and gets an entity from the datastore."""
+        mark_twain = Author.get_by_key_name('marktwain')
 
-        query = db.GqlQuery("SELECT * FROM TestModel LIMIT 1000")
+        self.assertEqual('Author', mark_twain.kind())
+        self.assertEqual('Mark Twain', mark_twain.name)
 
-        for entity in query:
-            entity.delete()
-
-        entity = TestModel(contents='foo')
-        entity.put()
-        assert TestModel.all().fetch(1)[0].contents == 'foo'
-        query = db.GqlQuery("SELECT * FROM TestModel")
-        self.assertEqual(query.count(), 1)
-
-    def testGetByKeyName(self):
-        """Gets an entity by its key name."""
-
-        class MyModel(db.Model):
-            contents = db.StringProperty()
-
-        entity = MyModel(key_name='myentity', contents='some contents')
-        entity.put()
-
-        del entity
-
-        self.assertEqual(
-            'some contents',
-            MyModel.get_by_key_name('myentity').contents)
-
-        key = db.Key.from_path('MyModel', 'myentity')
-
-        self.assertEqual(
-            'some contents',
-            db.get(key).contents)
-
-        MyModel.get_by_key_name('myentity').delete()
+        mark_twain.delete()
 
     def testExceptions(self):
         """Tests whether the correct exceptions are raised."""
@@ -224,6 +181,9 @@ class DatastoreMongoTestCase(unittest.TestCase):
     def testQueryHistory(self):
         """Tries to retreive query history information."""
 
+        class TestModel(db.Model):
+            contents = db.StringProperty(required=True)
+
         entity = TestModel(contents='some data')
         entity.put()
         query = TestModel.all()
@@ -231,19 +191,515 @@ class DatastoreMongoTestCase(unittest.TestCase):
         history = self.stub.QueryHistory()
         assert history.keys().pop().kind() == 'TestModel'
 
-    def testUnicode(self):
-        """Writes an entity with unicode contents."""
+    def testGetPutMultiTypes(self):
+        """Sets and Gets models with different entity groups."""
 
-        entity = TestModel(contents=u'Äquator')
-        entity.put()
-        query = db.GqlQuery(
-            "SELECT * FROM TestModel WHERE contents=:1", u'Äquator')
-        assert query.count() == 1
-        result = query.fetch(1)
-        assert type(result[0].contents) == unicode
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        a = Author(name='Mark Twain', key_name='marktwain')
+        b = Book(title="The Adventures Of Tom Sawyer")
+        keys = db.put([a,b])
+        self.assertEqual(2, len(keys))
+
+        items = db.get(keys)
+        self.assertEqual(2, len(items))
+        
+        db.delete(keys)
+
+#    def testExpando(self):
+#        """Test the Expando superclass."""
+#
+#        class Song(db.Expando):
+#            title = db.StringProperty()
+# 
+#        crazy = Song(
+#            title='Crazy like a diamond',
+#            author='Lucy Sky',
+#            publish_date='yesterday',
+#            rating=5.0)
+# 
+#        oboken = Song(
+#            title='The man from Hoboken',
+#            author=['Anthony', 'Lou'],
+#            publish_date=datetime.datetime(1977, 5, 3))
+#
+#        crazy.last_minute_note=db.Text('Get a train to the station.')
+#
+#        crazy.put()
+#        oboken.put()
+#
+#        self.assertEqual(
+#            'The man from Hoboken',
+#            Song.all().filter('author =', 'Anthony').get().title)
+#
+#        self.assertEqual(
+#            'The man from Hoboken',
+#            Song.all().filter('publish_date >', datetime.datetime(1970, 1, 1)).
+#                get().title)
+
+    def testPolymodel(self):
+        """Tests Polymodels."""
+
+        class Contact(polymodel.PolyModel):
+            phone_number = db.PhoneNumberProperty()
+            address = db.PostalAddressProperty()
+
+        class Person(Contact):
+            first_name = db.StringProperty()
+            last_name = db.StringProperty()
+            mobile_number = db.PhoneNumberProperty()
+
+        class Company(Contact):
+            name = db.StringProperty()
+            fax_number = db.PhoneNumberProperty()
+
+        p = Person(
+            phone_number='1-206-555-9234',
+            address='123 First Ave., Seattle, WA, 98101',
+            first_name='Alfred',
+            last_name='Smith',
+            mobile_number='1-206-555-0117')
+
+        c = Company(
+            phone_number='1-503-555-9123',
+            address='P.O. Box 98765, Salem, OR, 97301',
+            name='Data Solutions, LLC',
+            fax_number='1-503-555-6622')
+
+        p.put()
+        c.put()
+
+        self.assertEqual(
+            set([e.phone_number for e in [p, c]]),
+            set([e.phone_number for e in list(Contact.all())]))
+
+        self.assertEqual(
+            set([p.phone_number]),
+            set([e.phone_number for e in list(Person.all())]))
+
+    def testGetEntitiesByNameAndID(self):
+        """Tries to retrieve entities by name or numeric id."""
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        Book(title="The Hitchhiker's Guide to the Galaxy").put()
+        book = Book.get_by_id(1)
+        self.assertEqual("The Hitchhiker's Guide to the Galaxy", book.title)
+
+        Book(key_name="solong",
+             title="So Long, and Thanks for All the Fish").put()
+        book = Book.get_by_key_name("solong")
+        self.assertEqual("So Long, and Thanks for All the Fish", book.title)
+
+    def testTransaction(self):
+        """Executes multiple operations in one transaction."""
+
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        marktwain = Author(name='Mark Twain', key_name='marktwain').put()
+
+        def tx():
+            assert db.get(marktwain).name == "Mark Twain"
+
+            b = Book(parent=marktwain, title="The Adventures Of Tom Sawyer")
+            b.put()
+
+            c = Book(
+                parent=marktwain, title="The Hitchhiker's Guide to the Galaxy")
+            c.put()
+
+            c.delete()
+
+        db.run_in_transaction(tx)
+
+        self.assertEqual(1, Author.all().count())
+        self.assertEqual(1, Book.all().count())
+
+        marktwain = Author.get_by_key_name('marktwain')
+
+        def query_tx():
+            query = db.Query()
+            query.filter('__key__ = ', marktwain.key())
+            author = query.get()
+
+        self.assertRaises(
+            datastore_errors.BadRequestError,
+            db.run_in_transaction, query_tx)
+
+#    def testKindlessAncestorQueries(self):
+#        """Perform kindless queries for entities with a given ancestor."""
+#
+#        class Author(db.Model):
+#            name = db.StringProperty()
+#
+#        class Book(db.Model):
+#            title = db.StringProperty()
+#
+#        author = Author(name='Mark Twain', key_name='marktwain').put()
+#
+#        book = Book(parent=author, title="The Adventures Of Tom Sawyer").put()
+#
+#        query = db.Query()
+#        query.ancestor(author)
+#        query.filter('__key__ = ', book)
+#
+#        self.assertEqual(book, query.get().key())
+#
+#        book = query.get()
+#        book.delete()
+#
+#        self.assertEqual(0, query.count())
+
+    def testRunQuery(self):
+        """Runs some simple queries."""
+
+        class Employee(db.Model):
+            first_name = db.StringProperty(required=True)
+            last_name = db.StringProperty(required=True)
+            manager = db.SelfReferenceProperty()
+
+        manager = Employee(first_name='John', last_name='Dowe')
+        manager.put()
+
+        employee = Employee(
+            first_name=u'John', last_name='Appleseed', manager=manager.key())
+        employee.put()
+
+        # Perform a very simple query.
+        query = Employee.all()
+        self.assertEqual(set(['John Dowe', 'John Appleseed']),
+                         set(['%s %s' % (e.first_name, e.last_name)
+                              for e in query.run()]))
+
+        # Rename the manager.
+        manager.first_name = 'Clara'
+        manager.put()
+
+        # And perform the same query as above.
+        query = Employee.all()
+        self.assertEqual(set(['Clara Dowe', 'John Appleseed']),
+                         set(['%s %s' % (e.first_name, e.last_name)
+                              for e in query.run()]))
+
+        # Get only one entity.
+        query = Employee.all()
+        self.assertEqual(u'Dowe', query.get().last_name)
+        self.assertEqual(u'Dowe', query.fetch(1)[0].last_name)
+
+        # Delete our entities.
+        employee.delete()
+        manager.delete()
+
+        # Our query results should now be empty.
+        query = Employee.all()
+        self.assertEqual([], list(query.run()))
+
+    def testCount(self):
+        """Counts query results."""
+
+        class Balloon(db.Model):
+            color = db.StringProperty()
+
+        Balloon(color='Red').put()
+
+        self.assertEqual(1, Balloon.all().count())
+
+        Balloon(color='Blue').put()
+
+        self.assertEqual(2, Balloon.all().count())
+
+    def testQueryWithFilter(self):
+        """Tries queries with filters."""
+
+        class SomeKind(db.Model):
+            value = db.StringProperty()
+
+        foo = SomeKind(value="foo")
+        foo.put()
+
+        bar = SomeKind(value="bar")
+        bar.put()
+
+        class Artifact(db.Model):
+            description = db.StringProperty(required=True)
+            age = db.IntegerProperty()
+
+        vase = Artifact(description="Mycenaean stirrup vase", age=3300)
+        vase.put()
+
+        helmet = Artifact(description="Spartan full size helmet", age=2400)
+        helmet.put()
+
+        unknown = Artifact(description="Some unknown artifact")
+        unknown.put()
+
+        query = Artifact.all().filter('age =', 2400)
+
+        self.assertEqual(
+            ['Spartan full size helmet'],
+            [artifact.description for artifact in query.run()])
+
+        query = db.GqlQuery("SELECT * FROM Artifact WHERE age = :1", 3300)
+
+        self.assertEqual(
+            ['Mycenaean stirrup vase'],
+            [artifact.description for artifact in query.run()])
+
+        query = Artifact.all().filter('age IN', [2400, 3300])
+
+        self.assertEqual(
+            set(['Spartan full size helmet', 'Mycenaean stirrup vase']),
+            set([artifact.description for artifact in query.run()]))
+
+        vase.delete()
+
+        query = Artifact.all().filter('age IN', [2400])
+
+        self.assertEqual(
+            ['Spartan full size helmet'],
+            [artifact.description for artifact in query.run()])
+
+        helmet.age = 2300
+        helmet.put()
+
+        query = Artifact.all().filter('age =', 2300)
+
+        self.assertEqual([2300], [artifact.age for artifact in query.run()])
+
+        query = Artifact.all()
+
+        self.assertEqual(
+            set([2300L, None]),
+            set([artifact.age for artifact in query.run()]))
+
+    def testQueryForKeysOnly(self):
+        """Queries for entity keys instead of full entities."""
+
+        class Asset(db.Model):
+            name = db.StringProperty(required=True)
+            price = db.FloatProperty(required=True)
+
+        lamp = Asset(name="Bedside Lamp", price=10.45)
+        lamp.put()
+
+        towel = Asset(name="Large Towel", price=3.50)
+        towel.put()
+
+        query = Asset.all(keys_only=True)
+
+        app_id = os.environ['APPLICATION_ID']
+ 
+        self.assertEqual(
+            set([
+                datastore_types.Key.from_path(u'Asset', 1, _app=app_id),
+                datastore_types.Key.from_path(u'Asset', 2, _app=app_id)]),
+            set(query.run()))
+
+    def testQueryWithOrder(self):
+        """Tests queries with sorting."""
+
+        class Planet(db.Model):
+            name = db.StringProperty()
+            moon_count = db.IntegerProperty()
+            distance = db.FloatProperty()
+
+        earth = Planet(name="Earth", distance=93.0, moon_count=1)
+        earth.put()
+
+        saturn = Planet(name="Saturn", distance=886.7, moon_count=18)
+        saturn.put()
+
+        venus = Planet(name="Venus", distance=67.2, moon_count=0)
+        venus.put()
+
+        mars = Planet(name="Mars", distance=141.6, moon_count=2)
+        mars.put()
+
+        mercury = Planet(name="Mercury", distance=36.0, moon_count=0)
+        mercury.put()
+
+        query = (Planet.all()
+            .filter('moon_count <', 10)
+            .order('moon_count')
+            .order('-name')
+            .order('distance'))
+
+        self.assertEqual(
+            [u'Venus', u'Mercury', u'Earth', u'Mars'],
+            [planet.name for planet in query.run()]
+        )
+
+        query = Planet.all().filter('distance >', 100.0).order('-distance')
+
+        self.assertEqual(
+            ['Saturn', 'Mars'],
+            [planet.name for planet in query.run()]
+        )
+
+        query = Planet.all().filter('distance <=', 93.0).order('distance')
+
+        self.assertEqual(
+            ['Mercury', 'Venus', 'Earth'],
+            [planet.name for planet in query.run()]
+        )
+
+        query = (Planet.all()
+            .filter('distance >', 80.0)
+            .filter('distance <', 150.0)
+            .order('distance'))
+
+        self.assertEqual(
+            ['Earth', 'Mars'],
+            [planet.name for planet in query.run()])
+
+        query = Planet.all().filter('distance >=', 93.0).order('distance')
+        self.assertEqual(
+            [u'Earth', u'Mars', u'Saturn'],
+            [planet.name for planet in query.run()])
+
+        query = Planet.all().filter('distance ==', 93.0)
+        self.assertEqual(
+            [u'Earth'], [planet.name for planet in query.run()])
+
+    def testQueriesWithMultipleFiltersAndOrders(self):
+        """Tests queries with multiple filters and orders."""
+
+        class Artist(db.Model):
+            name = db.StringProperty()
+
+        class Album(db.Model):
+            title = db.StringProperty()
+
+        class Song(db.Model):
+            artist = db.ReferenceProperty(Artist)
+            album = db.ReferenceProperty(Album)
+            duration = db.StringProperty()
+            genre = db.CategoryProperty()
+            title = db.StringProperty()
+
+        beatles = Artist(name="The Beatles")
+        beatles.put()
+
+        abbeyroad = Album(title="Abbey Road")
+        abbeyroad.put()
+
+        herecomesthesun = Song(
+            artist=beatles.key(),
+            album=abbeyroad.key(),
+            duration="3:06",
+            genre=db.Category("Pop"),
+            title="Here Comes The Sun")
+        herecomesthesun.put()
+
+        query = (Song.all()
+            .filter('artist =', beatles)
+            .filter('album =', abbeyroad))
+
+        self.assertEqual(u'Here Comes The Sun', query.get().title)
+
+        cometogether = Song(
+            artist=beatles.key(),
+            album=abbeyroad.key(),
+            duration="4:21",
+            genre=db.Category("Pop"),
+            title="Come Together")
+        cometogether.put()
+
+        something = Song(
+            artist=beatles.key(),
+            album=abbeyroad.key(),
+            duration="3:03",
+            genre=db.Category("Pop"),
+            title="Something")
+        something.put()
+
+        because1 = Song(
+            key_name='because',
+            artist=beatles.key(),
+            album=abbeyroad.key(),
+            duration="2:46",
+            genre=db.Category("Pop"),
+            title="Because")
+        because1.put()
+
+        because2= Song(
+            artist=beatles.key(),
+            album=abbeyroad.key(),
+            duration="2:46",
+            genre=db.Category("Pop"),
+            title="Because")
+        because2.put()
+
+        query = (Song.all()
+            .filter('artist =', beatles)
+            .filter('album =', abbeyroad)
+            .order('title'))
+
+        self.assertEqual(
+            [u'Because', u'Because', u'Come Together', u'Here Comes The Sun',
+             u'Something'],
+            [song.title for song in query.run()])
+
+        query = Song.all().filter('title !=', 'Because').order('title')
+
+        self.assertEqual(
+            [u'Come Together', u'Here Comes The Sun', u'Something'],
+            [song.title for song in query.run()])
+
+        query = Song.all().filter('title >', 'Come').order('title')
+
+        self.assertEqual(
+            [u'Come Together', u'Here Comes The Sun', u'Something'],
+            [song.title for song in query.run()])
+
+        something.delete()
+
+        query = Song.all().filter('title >', 'Come').order('title')
+
+        self.assertEqual(
+            [u'Come Together', u'Here Comes The Sun'],
+            [song.title for song in query.run()])
+
+    def testUnicode(self):
+        """Tests unicode."""
+
+        class Employee(db.Model):
+            first_name = db.StringProperty(required=True)
+            last_name = db.StringProperty(required=True)
+
+        employee = Employee(first_name=u'Björn', last_name=u'Müller')
+        employee.put()
+
+        query = Employee.all(keys_only=True).filter('first_name =', u'Björn')
+        app_id = os.environ['APPLICATION_ID']
+        self.assertEqual(
+            datastore_types.Key.from_path(u'Employee', 1, _app=app_id),
+            query.get())
 
     def testListProperties(self):
         """Tests list properties."""
+
+        class Numbers(db.Model):
+            values = db.ListProperty(int)
+
+        Numbers(values=[0, 1, 2, 3]).put()
+        Numbers(values=[4, 5, 6, 7]).put()
+
+        query = Numbers.all().filter('values =', 0)
+        self.assertEqual([0, 1, 2, 3], query.get().values)
+
+        query = db.GqlQuery(
+            "SELECT * FROM Numbers WHERE values > :1 AND values < :2", 4, 7)
+        self.assertEqual([4, 5, 6, 7], query.get().values)
 
         class Issue(db.Model):
             reviewers = db.ListProperty(db.Email)
@@ -259,14 +715,11 @@ class DatastoreMongoTestCase(unittest.TestCase):
 
         self.assertEqual(1, query.count())
 
-        query = db.GqlQuery(
-            "SELECT * FROM Issue WHERE reviewers = :1",
-            'me@somewhere.net')
-
-        # FIXME: query.count() should return 1.
-        # See http://code.google.com/p/typhoonae/issues/detail?id=40
-        # for further details.
-        self.assertEqual(0, query.count())
+#        query = db.GqlQuery(
+#            "SELECT * FROM Issue WHERE reviewers = :1",
+#            'me@somewhere.net')
+#
+#        self.assertEqual(1, query.count())
 
         query = db.GqlQuery(
             "SELECT * FROM Issue WHERE reviewers = :1",
@@ -274,289 +727,265 @@ class DatastoreMongoTestCase(unittest.TestCase):
 
         self.assertEqual(0, query.count())
 
-        # Clean up.
-        query = db.GqlQuery("SELECT * FROM Issue")
-        for entity in query:
-            entity.delete()        
+    def testStringListProperties(self):
+        """Tests string list properties."""
 
-    def testReferenceProperties(self):
-        """Tests reference properties."""
+        class Pizza(db.Model):
+            topping = db.StringListProperty()
 
-        class FirstModel(db.Model):
-            prop = db.IntegerProperty()
+        Pizza(topping=["tomatoe", "cheese"]).put()
+        Pizza(topping=["tomatoe", "cheese", "salami"]).put()
+        Pizza(topping=["tomatoe", "cheese", "prosciutto"]).put()
 
-        class SecondModel(db.Model):
-            ref = db.ReferenceProperty(FirstModel)
+        query = Pizza.all(keys_only=True).filter('topping =', "salami")
+        self.assertEqual(1, query.count())
 
-        obj1 = FirstModel()
-        obj1.prop = 42
-        obj1.put()
+        query = Pizza.all(keys_only=True).filter('topping =', "cheese")
+        self.assertEqual(3, query.count())
 
-        obj2 = SecondModel()
+        query = Pizza.all().filter('topping IN', ["salami", "prosciutto"])
+        self.assertEqual(2, query.count())
 
-        # A reference value is the key of another entity.
-        obj2.ref = obj1.key()
+        key = datastore_types.Key.from_path('Pizza', 1)
+        query = db.GqlQuery("SELECT * FROM Pizza WHERE __key__ IN :1", [key])
+        pizza = query.get()
+        self.assertEqual(["tomatoe", "cheese"], pizza.topping)
 
-        # Assigning a model instance to a property uses the entity's key as
-        # the value.
-        obj2.ref = obj1
-        obj2.put()
+        pizza.delete()
 
-        obj2.ref.prop = 999
-        obj2.ref.put()
+        query = db.GqlQuery("SELECT * FROM Pizza WHERE __key__ IN :1", [key])
+        self.assertEqual(0, query.count())
 
-        results = db.GqlQuery("SELECT * FROM SecondModel")
-        another_obj = results.fetch(1)[0]
-        self.assertEqual(999, another_obj.ref.prop)
+    def testDatastoreTypes(self):
+        """Puts and gets different basic datastore types."""
 
-        # Clean up.
-        query = db.GqlQuery("SELECT * FROM FirstModel")
-        for entity in query:
-            entity.delete()        
+        entity = datastore.Entity('TestKind')
 
-        query = db.GqlQuery("SELECT * FROM SecondModel")
-        for entity in query:
-            entity.delete()        
+        entity.update({
+            'rating': datastore_types.Rating(1),
+            'category': datastore_types.Category('bugs'),
+            'key': datastore_types.Key.from_path('foo', 'bar'),
+            'user': users.User('foo@bar.net'),
+            'text': datastore_types.Text('some text'),
+            'blob': datastore_types.Blob('data'),
+            'bytestring': datastore_types.ByteString('data'),
+            'im': datastore_types.IM('http://example.com/', 'Larry97'),
+            'geopt': datastore_types.GeoPt(1.1234, -1.1234),
+            'email': datastore_types.Email('foo@bar.net'),
+            'blobkey': datastore_types.BlobKey('27f5a7'),
+        })
 
-    def testAllocatingIDs(self):
-        """Allocates a number of IDs."""
+        datastore.Put(entity)
+        e = datastore.Get(entity)
+        datastore.Delete(entity)
 
-        for i in xrange(0, 1000):
-            test_key = TestModel(contents='some string').put()
+    def testVariousPropertyTypes(self):
+        """Tests various property types."""
 
-        query = db.GqlQuery("SELECT * FROM TestModel")
-        self.assertEqual(1000, query.count())
+        class Note(db.Model):
+            timestamp = db.DateTimeProperty(auto_now=True)
+            description = db.StringProperty()
+            author_email = db.EmailProperty()
+            location = db.GeoPtProperty()
+            user = db.UserProperty()
 
-        start, end = db.allocate_ids(test_key, 2000)
-        self.assertEqual(start, 1001)
-        self.assertEqual(end, 3001)
+        Note(
+            description="My first note.",
+            author_email="me@inter.net",
+            location="52.518,13.408",
+            user=users.get_current_user()
+        ).put()
 
-    def testBatching(self):
-        """Counts in batches with __key__ as offset."""
+        query = db.GqlQuery("SELECT * FROM Note ORDER BY timestamp DESC")
+        self.assertEqual(1, query.count())
 
-        for i in xrange(0, 1000):
-            TestModel(contents='some string').put()
-        for i in xrange(0, 1000):
-            TestModel(contents='some string').put()
-
-        keys = []
-        # Maybe we have a compatibility problem here, because order by
-        # __key__ should be the default.
         query = db.GqlQuery(
-            "SELECT __key__ FROM TestModel ORDER BY __key__")
-        result = query.fetch(1000)
-        while len(result) == 1000:
-            keys.extend(result)
-            query = db.GqlQuery(
-                "SELECT __key__ FROM TestModel "
-                "WHERE __key__ > :1 ORDER BY __key__", result[-1])
-            result = query.fetch(1000)
-        keys.extend(result)
- 
-        self.assertEqual(2000, len(keys))
+            "SELECT * FROM Note WHERE timestamp <= :1", datetime.datetime.now())
 
-    def testFilter(self):
-        """Filters queries."""
+        self.assertEqual(1, query.count())
 
-        data = 'foo'
-        entity = TestModel(contents=data)
-        entity.put()
-        q = TestModel.all()
-        q.filter("contents =", data)
-        result = q.get()
-        assert result.contents == data
+        note = query.get()
 
-    def testKeysOnly(self):
-        """Fetches keys only."""
+        self.assertEqual("My first note.", note.description)
 
-        entity = TestModel(contents='Some contents')
-        entity.put()
-        query = TestModel.all(keys_only=True)
-        result = query.fetch(1)
-        assert type(result[0]) == datastore_types.Key
+        self.assertEqual(db.Email("me@inter.net"), note.author_email)
+        self.assertEqual("me@inter.net", note.author_email)
+
+        self.assertEqual(
+            datastore_types.GeoPt(52.518000000000001, 13.407999999999999),
+            note.location)
+        self.assertEqual("52.518,13.408", note.location)
+
+        del note
+
+        query = Note.all().filter(
+            'location =',
+            datastore_types.GeoPt(52.518000000000001, 13.407999999999999))
+        self.assertEqual(1, query.count())
+
+        query = Note.all().filter('location =', db.GeoPt("52.518,13.408"))
+        self.assertEqual(1, query.count())
 
     def testDerivedProperty(self):
         """Query by derived property."""
 
-        entity = TestModel(contents='Foo Bar')
-        entity.put()
+        class LowerCaseProperty(db.Property):
+            """A convenience class for generating lower-cased fields."""
+
+            def __init__(self, property, *args, **kwargs):
+                """Constructor.
+ 
+                Args:
+                    property: The property to lower-case.
+                """
+                super(LowerCaseProperty, self).__init__(*args, **kwargs)
+                self.property = property
+
+            def __get__(self, model_instance, model_class):
+                return self.property.__get__(
+                    model_instance, model_class).lower()
+ 
+            def __set__(self, model_instance, value):
+                raise db.DerivedPropertyError(
+                    "Cannot assign to a DerivedProperty")
+
+        class TestModel(db.Model):
+            contents = db.StringProperty(required=True)
+            lowered_contents = LowerCaseProperty(contents)
+
+        TestModel(contents='Foo Bar').put()
+
         query = db.GqlQuery(
             "SELECT * FROM TestModel WHERE lowered_contents = :1", 'foo bar')
-        result = query.fetch(1)
-        assert result[0].contents == 'Foo Bar'
 
-    def testSorting(self):
-        """Sort query."""
+        self.assertEqual('Foo Bar', query.get().contents)
 
-        values = ['Spain', 'England', 'america']
-        for value in values:
-            entity = TestModel(contents=value)
-            entity.put()
-        query = db.GqlQuery(
-            "SELECT * FROM TestModel ORDER BY lowered_contents ASC")
+    def testQueriesWithOffsetAndLimit(self):
+        """Retrieves a limited number of results."""
 
-        self.assertEqual(3, query.count())
+        class MyModel(db.Model):
+            data = db.StringProperty()
+            number = db.IntegerProperty()
+            
 
-        result = query.fetch(3)
-        self.assertEqual([u'america', u'England', u'Spain'],
-                         [e.contents for e in result])
+        for i in range(100):
+            MyModel(data="Random data.", number=i).put()
 
-    def testSortingSpecialProperties(self):
-        """Tests queries with order by special properties."""
+        query = (MyModel.all()
+                    .filter('data =', "Random data.")
+                    .filter('number >=', 10)
+                    .filter('number <', 20)
+                    .order('-number')
+        )
 
-        class PointOfInterest(db.Model):
-            category = db.CategoryProperty()
-            location = db.GeoPtProperty()
-            name = db.StringProperty()
-            visitors = db.StringListProperty()
+        self.assertEqual(
+            [19L, 18L], [e.number for e in query.fetch(2)])
 
-        poi1 = PointOfInterest(
-            category="metrolpolis",
-            location="43.0,-75.0",
-            name='New York',
-            visitors=['John', 'Mary'])
-        key1 = db.put(poi1)
+        self.assertEqual(
+            [14L, 13L, 12L], [e.number for e in query.fetch(3, offset=5)])
 
-        poi2 = PointOfInterest(
-            category="capital",
-            location="48.85,2.35",
-            name='Paris',
-            visitors=['Caroline'])
-        key2 = db.put(poi2)
+        self.assertEqual(
+            [18L, 17L], [e.number for e in query.fetch(2, offset=1)])
 
-        query = (PointOfInterest.all()
-                    .order('category')
-                    .order('location')
-                    .order('visitors'))
-        self.assertEqual('Paris', query.get().name)
+        self.assertEqual(
+            [], [e.number for e in query.fetch(2, offset=10)])
 
-        query = PointOfInterest.all().order('-visitors')
-        self.assertEqual('New York', query.get().name)
-
-        for k in (key1, key2):
-            db.delete(k)
-
-    def testInQueries(self):
-        """Does some IN queries."""
-
-        entity = TestModel(contents=u'some contents', number=1, more=[1, 4])
-        entity.put()
-        count = (TestModel.all()
-                 .filter('number IN', [1, 3])
-        ).count()
-        self.assertEqual(1, count)
-
-        count = (TestModel.all()
-                 .filter('number IN', [0, 4])
-        ).count()
-        self.assertEqual(0, count)
-
-        count = (TestModel.all()
-                 .filter('number IN', [1, 3])
-                 .filter('number IN', [1, 4])
-        ).count()
-        self.assertEqual(1, count)
-
-        count = (TestModel.all()
-                 .filter('contents IN', [u'some contents', u'foo'])
-        ).count()
-        self.assertEqual(1, count)
-
-        query = db.GqlQuery(
-            "SELECT * FROM TestModel WHERE number IN :1 LIMIT 10", [3])
-        result = query.fetch(10)
-        self.assertEqual(0, len(result))
-
-        query = db.GqlQuery(
-            "SELECT * FROM TestModel WHERE number IN :1 LIMIT 10", [4])
-        result = query.fetch(10)
-        self.assertEqual(0, len(result))
-
-        query = db.GqlQuery(
-            "SELECT * FROM TestModel WHERE number IN :1 "
-            "AND number IN :2 ORDER BY number DESC",
-            [1, 2], [1])
-        result = query.fetch(10)
-        self.assertEqual(1, len(result))
-
-        # This test failed in earlier GAE Python releases.
-        # See http://code.google.com/p/googleappengine/issues/detail?id=2611
-        # for further details.
-        count = (TestModel.all()
-                 .filter('more =', 1)
-                 .filter('more IN', [1, 2])
-                 .filter('more IN', [0, 1])
-        ).count()
-        self.assertEqual(1, count)
+#    def testAllocateIds(self):
+#        """ """
+#
+#        class EmptyModel(db.Model):
+#            pass
+#
+#        for i in xrange(0, 1000):
+#            key = EmptyModel().put()
+#
+#        query = db.GqlQuery("SELECT * FROM EmptyModel")
+#        self.assertEqual(1000, query.count())
+#
+#        start, end = db.allocate_ids(key, 2000)
+#        self.assertEqual(start, 2001)
+#        self.assertEqual(end, 4000)
 
     def testCursors(self):
         """Tests the cursor API."""
 
-        for i in xrange(0, 1500):
-            TestModel(contents="Foobar", number=i).put()
+        class Number(db.Model):
+            unit = db.StringProperty(choices=set(['cm', 'm']))
+            value = db.IntegerProperty()
 
-        # Set up a simple query
-        query = TestModel.all().order('__key__')
+        for i in xrange(0, 2000):
+            if i % 2: unit = 'm'
+            else: unit = 'cm'
+            Number(unit=unit, value=i).put()
 
-        # Fetch some results
+        # Set up a simple query.
+        query = Number.all()
+
+        # Fetch some results.
         a = query.fetch(500)
-        self.assertEqual(0L, a[0].number)
-        self.assertEqual(499L, a[-1].number)
+        self.assertEqual(0L, a[0].value)
+        self.assertEqual(499L, a[-1].value)
 
         b = query.fetch(500, offset=500)
-        self.assertEqual(500L, b[0].number)
-        self.assertEqual(999L, b[-1].number)
+        self.assertEqual(500L, b[0].value)
+        self.assertEqual(999L, b[-1].value)
 
-        # Perform query with cursor
+        # Perform several queries with a cursor.
         cursor = query.cursor()
         query.with_cursor(cursor)
 
         c = query.fetch(200)
-        self.assertEqual(1000L, c[0].number)
-        self.assertEqual(1199L, c[-1].number)
+        self.assertEqual(1000L, c[0].value)
+        self.assertEqual(1199L, c[-1].value)
 
         query.with_cursor(query.cursor())
         d = query.fetch(500)
-        self.assertEqual(1200L, d[0].number)
-        self.assertEqual(1499L, d[-1].number)
+        self.assertEqual(1200L, d[0].value)
+        self.assertEqual(1699L, d[-1].value)
 
-    def testCursorsWithSort(self):
-        """Tests cursor on sorted results."""
+        query.with_cursor(query.cursor())
+        self.assertEqual(1700L, query.get().value)
 
-        values = ['Spain', 'england', 'France', 'germany']
+        # Use a query with filters.
+        query = Number.all().filter('value >', 500).filter('value <=', 1000) 
+        e = query.fetch(100)
+        query.with_cursor(query.cursor())
+        e = query.fetch(50)
+        self.assertEqual(601, e[0].value)
+        self.assertEqual(650, e[-1].value)
 
-        for value in values:
-            entity = TestModel(contents=value)
-            entity.put()
+        # Query with filter and order.
+        query = (Number.all()
+                    .filter('unit =', 'cm')
+                    .order('-value'))
+        f = query.fetch(5)
+        self.assertEqual(
+            [1998L, 1996L, 1994L, 1992L, 1990L],
+            [n.value for n in f])
 
-        query = TestModel.all().order('lowered_contents')
+        query.with_cursor(query.cursor())
+        f = query.fetch(5)
+        self.assertEqual(
+            [1988L, 1986L, 1984L, 1982L, 1980L],
+            [n.value for n in f])
 
-        self.assertEqual(4, query.count())
+        query.with_cursor(query.cursor())
+        f = query.fetch(6)
+        self.assertEqual(
+            [1978L, 1976L, 1974L, 1972L, 1970L, 1968L],
+            [n.value for n in f])
 
-        a = query.fetch(2)
-
-        cursor = query.cursor()
-        query.with_cursor(cursor)
-
-        b = query.fetch(2)
-
-        self.assertEqual([u'england', u'France'], [e.contents for e in a])
-        self.assertEqual([u'germany', u'Spain'], [e.contents for e in b])
-
-    def testTransactions(self):
-        """Tests transactions.
-
-        Transactions are not supported by mongoDB but shouldn't raise an
-        exception.
-        """
-
-        def my_transaction():
-            entity = TestModel(contents='Foobar', number=42)
-            entity.put()
-
-        db.run_in_transaction(my_transaction)
-
-        self.assertEqual(42, TestModel.all().get().number)
+#    def testGetSchema(self):
+#        """Infers an app's schema from the entities in the datastore."""
+#
+#        class Foo(db.Model):
+#            foobar = db.IntegerProperty(default=42)
+#
+#        Foo().put()
+#
+#        entity_pbs = datastore_admin.GetSchema()
+#        entity = datastore.Entity.FromPb(entity_pbs.pop())
+#        self.assertEqual('Foo', entity.key().kind())
 
     def testTransactionalTasks(self):
         """Tests tasks within transactions."""

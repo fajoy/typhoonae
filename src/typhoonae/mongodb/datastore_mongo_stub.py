@@ -100,6 +100,18 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__next_cursor = 1
     self.__queries = {}
 
+  def Clear(self):
+    """Clears the datastore.
+
+    This is mainly for testing purposes and the admin console.
+    """
+    for name in self.__db.collection_names():
+        if not name.startswith('system.'):
+            self.__db.drop_collection(name)
+    self.__queries = {}
+    self.__query_history = {}
+    self.__indexes = {}
+
   def MakeSyncCall(self, service, call, request, response):
     """ The main RPC entry point. service must be 'datastore_v3'.
 

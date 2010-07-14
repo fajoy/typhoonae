@@ -12,6 +12,11 @@ Version 0.1.6 (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=62
 
+  - Fixes issues where develop mode didn't work.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=63
+    - http://code.google.com/p/typhoonae/issues/detail?id=64
+
 
 Version 0.1.5 (2010-07-09)
 --------------------------

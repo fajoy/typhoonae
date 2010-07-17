@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS %(prefix)s_Entities (
 CREATE TABLE IF NOT EXISTS %(prefix)s_EntitiesByProperty (
   kind VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
-  value MEDIUMBLOB NOT NULL,
+  value BLOB NOT NULL,
   __path__ VARCHAR(255) NOT NULL REFERENCES Entities,
   hashed_index CHAR(32) NOT NULL,
   PRIMARY KEY(hashed_index),

@@ -48,9 +48,9 @@
     <script type="text/javascript" src="static/jquery.min.js"></script>
     <script type="text/javascript">
       function callAJAX() {
-        $.ajax({ url: "ajax", context: document, success: function(data){
-          $("#testAJAX").html(data.length/1024 + ' kb received');
-        }});
+        $.getJSON("/ajax", function(json) {
+          $("#testAJAX").html(json.data.length/1024 + ' kb received');
+        });
       };
     </script>
     <div id="testAJAX"><a href="javascript:callAJAX();">Make AJAX call</a></div>

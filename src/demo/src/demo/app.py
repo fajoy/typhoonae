@@ -30,6 +30,7 @@ import google.appengine.ext.webapp.util
 import logging
 import os
 import random
+import simplejson
 import urllib
 
 NUM_SHARDS = 20
@@ -264,8 +265,7 @@ class AjaxHandler(google.appengine.ext.webapp.RequestHandler):
             google.appengine.api.memcache.add("data", data, 10)
         else:
             logging.info('data from memcache')
-        self.response.headers['content-type'] = 'text/plain'
-        self.response.out.write(data)
+        self.response.out.write(simplejson.dumps({'data': data}))
 
 
 app = google.appengine.ext.webapp.WSGIApplication([

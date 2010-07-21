@@ -24,7 +24,10 @@ It should only be used internally.
 from google.appengine.ext import webapp
 from wsgiref.simple_server import make_server
 
+import cStringIO
 import logging
+import mimetools
+import multifile
 import optparse
 import signal
 import sys
@@ -34,31 +37,111 @@ DEFAULT_ADDRESS = 'localhost:9190'
 DESCRIPTION = "HTTP service for deploying and managing GAE applications."
 USAGE = "usage: %prog [options]"
 
+LIST_DELIMITER = '\n'
+TUPLE_DELIMITER = '|'
+MIME_FILE_HEADER = 'X-Appcfg-File'
+MIME_HASH_HEADER = 'X-Appcfg-Hash'
 
-class UpdatecheckRequestHandler(webapp.RequestHandler):
-    """ """
+
+class UpdatecheckHandler(webapp.RequestHandler):
+    """Informs a client about available updates.
+
+    This implementation always pretends to be in sync with the client.
+    """
 
     def post(self):
         response = ""
         # We pretend always to be up-to-date
         for key in self.request.params.keys():
             response += "%s: %s\n" % (key, self.request.params.get(key))
-        self.response.headers['content-type'] = 'text/plain'
         self.response.out.write(response)
 
 
-class AppversionRequestHandler(webapp.RequestHandler):
-    """ """
+class AppversionHandler(webapp.RequestHandler):
+    """Implements web-hooks for uploading a new appversion.
 
-    def post(self):
+    Handles all POST requests for /api/appversion.
+    """
+
+    def post(self, func_name):
+        logging.debug(func_name)
+        if self.request.body:
+            logging.debug(self.request.body)
+
         app_id = self.request.params.get('app_id')
         version = self.request.params.get('version')
-        version_dir = "%s.%i" % (version, int(time.time()) << 28)
+        version_string = "%s.%i" % (version, int(time.time()) << 28)
+
+        func = getattr(self, func_name, None)
+        if func:
+            func(app_id, version, self.request.body)
+
+    # API methods
+
+    def clonefiles(self, app_id, version, data):
+        files = [tuple(f.split(TUPLE_DELIMITER))
+                 for f in data.split(LIST_DELIMITER)]
+        self.response.out.write(
+            LIST_DELIMITER.join([filename for filename, _ in files]))
+
+    def addfiles(self, app_id, version, data):
+        fp = cStringIO.StringIO(data)
+
+        def extract_mime_parts(stream):
+            msg = mimetools.Message(stream)
+            msgtype = msg.gettype()
+            params = msg.getplist()
+
+            files = []
+
+            raw_data = cStringIO.StringIO()
+            if msgtype[:10] == "multipart/":
+                f = multifile.MultiFile(stream)
+                f.push(msg.getparam("boundary"))
+                while f.next():
+                    submsg = mimetools.Message(f)
+                    filename = submsg.getheader(MIME_FILE_HEADER)
+                    content_hash = submsg.getheader(MIME_HASH_HEADER)
+                    try:
+                        raw_data = cStringIO.StringIO()
+                        mimetools.decode(f, raw_data, submsg.getencoding())
+                    except ValueError:
+                        continue
+                    files.append((filename, content_hash, raw_data.getvalue()))
+                f.pop()
+            return files
+
+        files = extract_mime_parts(fp)
+
+    def isready(self, app_id, version, data):
+        self.response.out.write('1')
+
+
+class DatastoreHandler(webapp.RequestHandler):
+    """Implements web-hooks for actions on the datastore.
+
+    Handles all POST requests for /api/datastore.
+    """
+
+    def post(self, resource, func_name):
+        pass
+
+
+class CronHandler(webapp.RequestHandler):
+    """Implements web-hooks for configuring the cron service.
+
+    Handles all POST requests for /api/cron.
+    """
+
+    def post(self, func_name):
+        pass
 
 
 app = webapp.WSGIApplication([
-    ('/api/updatecheck', UpdatecheckRequestHandler),
-    ('/api/appversion/create', AppversionRequestHandler),
+    ('/api/updatecheck', UpdatecheckHandler),
+    ('/api/appversion/(.*)', AppversionHandler),
+    ('/api/datastore/(.*)/(.*)', DatastoreHandler),
+    ('/api/cron/(.*)', CronHandler),
 ], debug=True)
 
 

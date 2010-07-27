@@ -15,7 +15,10 @@
 # under the License.
 
 import functools
+import hashlib
 import logging
+import re
+import struct
 import tornado.escape
 import tornado.web
 
@@ -69,14 +72,48 @@ class WebSocketHandler(tornado.web.RequestHandler):
                 "HTTP/1.1 403 Forbidden\r\nContent-Length: " +
                 str(len(message)) + "\r\n\r\n" + message)
             return
-        self.stream.write(
-            "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
-            "Upgrade: WebSocket\r\n"
-            "Connection: Upgrade\r\n"
-            "Server: TornadoServer/0.1\r\n"
-            "WebSocket-Origin: " + self.request.headers["Origin"] + "\r\n"
-            "WebSocket-Location: ws://" + self.request.host +
-            self.request.path + "\r\n\r\n")
+
+        def get_key_value(key):
+            s = self.request.headers.get(key)
+            if s is None:
+                return None
+            number = int(re.sub("\\D", "", s))
+            spaces = re.subn(" ", "", s)[1]
+            return struct.pack("!I", number/spaces)
+ 
+        def solve_challenge(first, second, third):
+            result = (get_key_value(first) + get_key_value(second) + third)
+            return hashlib.md5(result).digest()
+
+        if self.request.headers.get("Sec-Websocket-Key1"):
+            def fill_body(ch):
+                self.request.body += ch 
+            self.stream.read_bytes(8, fill_body)
+            response = (
+                "HTTP/1.1 101 WebSocket Protocol Handshake\r\n"
+                "Upgrade: WebSocket\r\n"
+                "Connection: Upgrade\r\n"
+                "Server: TornadoServer/0.1\r\n"
+                "Sec-WebSocket-Origin: " + self.request.headers["Origin"] +
+                "\r\n"
+                "Sec-WebSocket-Location: ws://" + self.request.host +
+                self.request.path + "\r\n\r\n")
+            response += solve_challenge(
+                "Sec-Websocket-Key1", "Sec-Websocket-Key2", self.request.body)
+            response += "\r\n"
+            response += "\x00\xff"
+        else:
+            response = (
+                "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
+                "Upgrade: WebSocket\r\n"
+                "Connection: Upgrade\r\n"
+                "Server: TornadoServer/0.1\r\n"
+                "WebSocket-Origin: " + self.request.headers["Origin"] + "\r\n"
+                "WebSocket-Location: ws://" + self.request.host +
+                self.request.path + "\r\n\r\n")
+
+        self.stream.write(response)
+
         self.async_callback(self.open)(*args, **kwargs)
 
     def write_message(self, message):

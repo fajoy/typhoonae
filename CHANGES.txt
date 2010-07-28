@@ -7,6 +7,10 @@ Version 0.1.6 (2010-??-??)
   - Adds process monitor for automatically restarting appserver processes
     consuming more than a given amount of memory that is held in RAM (RSS).
 
+  - Updated Web Socket Service to provide the latest Web Socket Protocol.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=52
+
   - Fixes an issue where spaces in application paths caused failures on
     startup.
 

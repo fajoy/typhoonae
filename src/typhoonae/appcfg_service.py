@@ -21,6 +21,9 @@ This implementation uses a simple WSGI server while omitting any security.
 It should only be used internally.
 """
 
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import appinfo
+from google.appengine.ext import db
 from google.appengine.ext import webapp
 from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, make_server
 
@@ -33,7 +36,9 @@ import os
 import signal
 import sys
 import time
+import typhoonae
 
+APPLICATION_ID = 'appcfg'
 DEFAULT_ADDRESS = 'localhost:9190'
 DESCRIPTION = "HTTP service for deploying and managing GAE applications."
 USAGE = "usage: %prog [options]"
@@ -44,6 +49,20 @@ LIST_DELIMITER = '\n'
 TUPLE_DELIMITER = '|'
 MIME_FILE_HEADER = 'X-Appcfg-File'
 MIME_HASH_HEADER = 'X-Appcfg-Hash'
+
+INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>TyphoonAE appcfg service</title>
+  </head>
+  <body>
+    <h1>TyphoonAE appcfg service</h1>
+    %(apps)s
+  </body>
+</html>
+"""
 
 
 class WSGIServerHandler(ServerHandler):
@@ -71,13 +90,37 @@ class RequestHandler(WSGIRequestHandler):
         logging.info(format, *args)
 
 
+class Appversion(db.Model):
+    """Represents appversions."""
+
+    app_id = db.StringProperty(required=True)
+    version = db.StringProperty(required=True)
+    created = db.DateTimeProperty(auto_now=True)
+    app_yaml = db.BlobProperty(required=True)
+
+    @property
+    def current_version_id(self):
+        version_id = "%s.%i" % (
+            self.version, int(time.mktime(self.created.timetuple())) << 28)
+        return version_id
+
+    @property
+    def config(self):
+        return appinfo.LoadSingleAppInfo(cStringIO.StringIO(self.app_yaml))
+
+
 class IndexPage(webapp.RequestHandler):
     """Provides a simple index page."""
 
     def get(self):
-        template = ("<http><body><h1>TyphoonAE appcfg service</h1>"
-                    "</body></body>")
-        self.response.out.write(template)
+        apps = u'<ul>'
+        apps += u''.join([
+            u'<li>%s (%s)</li>' % (app.app_id, app.current_version_id)
+            for app in Appversion.all().fetch(10)
+        ])
+        apps += u'</ul>'
+
+        self.response.out.write(INDEX_TEMPLATE % locals())
 
 
 class UpdatecheckHandler(webapp.RequestHandler):
@@ -139,19 +182,31 @@ class AppversionHandler(webapp.RequestHandler):
                 for f in data.split(LIST_DELIMITER)]
 
     @staticmethod
-    def getAppversionDirectory():
+    def getAppversionDirectory(app):
+        """Get appversion directory.
+
+        Args:
+            app: An Application instance.
+
+        Returns an absolute directory path.
+        """
         app_dir = os.path.join(
-            os.path.abspath(os.environ['APPS_ROOT']),
-            os.environ['CURRENT_VERSION_ID'])
+            os.path.abspath(os.environ['APPS_ROOT']), app.current_version_id)
         return app_dir
 
     # API methods
 
     def create(self, app_id, version, data):
-        current_version_id = "%s.%i" % (version, int(time.time()) << 28)
-        os.environ['CURRENT_VERSION_ID'] = current_version_id
-        app_dir = self.getAppversionDirectory()
-        logging.debug('Appversion directory: %s', app_dir)
+        def tx():
+            app = Appversion(
+                app_id=app_id,
+                version=version,
+                app_yaml=self.request.body)
+            app.put()
+            app_dir = self.getAppversionDirectory(app)
+            logging.debug('Appversion directory: %s', app_dir)
+
+        db.run_in_transaction(tx)
 
     def clonefiles(self, app_id, version, data):
         files = self._extractFileTuples(data)
@@ -205,13 +260,14 @@ app = webapp.WSGIApplication([
 class AppConfigService(object):
     """Uses a simple single-threaded WSGI server and signal handling."""
 
-    def __init__(self, addr, app, apps_root):
+    def __init__(self, addr, app, apps_root, verbose=False):
         """Initialize the WSGI server.
 
         Args:
             app: A webapp.WSGIApplication.
             addr: Use this address to initialize the HTTP server.
             apps_root: Applications root directory.
+            verbose: Boolean, default False. If True, enable verbose mode.
         """
         assert isinstance(app, webapp.WSGIApplication)
         self.app = app
@@ -225,6 +281,26 @@ class AppConfigService(object):
         signal.signal(signal.SIGQUIT, self._handleSignal)
         signal.signal(signal.SIGABRT, self._handleSignal)
         signal.signal(signal.SIGTERM, self._handleSignal)
+
+        # Setup environment
+        os.environ['APPLICATION_ID'] = APPLICATION_ID
+
+        # Setup Datastore
+        # We use the SQLite Datastore stub for development. Later, we take
+        # the production Datastore.
+        from google.appengine.datastore import datastore_sqlite_stub
+        apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
+
+        datastore_path = os.path.join(
+            os.environ['TMPDIR'], APPLICATION_ID+'.sqlite')
+
+        datastore = datastore_sqlite_stub.DatastoreSqliteStub(
+            APPLICATION_ID, datastore_path)
+
+        apiproxy_stub_map.apiproxy.RegisterStub(
+            'datastore_v3', datastore)
+
+        logging.debug('Using datastore: %s', datastore_path)
 
     def _handleSignal(self, sig, frame):
         logging.debug('Caught signal %d' % sig)
@@ -276,5 +352,6 @@ def main():
     else:
         logging.getLogger().setLevel(logging.INFO)
 
-    service = AppConfigService(options.address, app, options.apps_root)
+    service = AppConfigService(
+        options.address, app, options.apps_root, options.debug_mode)
     service.serve_forever()

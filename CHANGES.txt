@@ -21,6 +21,11 @@ Version 0.1.6 (2010-??-??)
     - http://code.google.com/p/typhoonae/issues/detail?id=63
     - http://code.google.com/p/typhoonae/issues/detail?id=64
 
+  - Fixes an issue where the Capability API did not work with remote Datastore
+    configuration.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=65
+
 
 Version 0.1.5 (2010-07-09)
 --------------------------

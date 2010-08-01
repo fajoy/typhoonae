@@ -50,6 +50,11 @@ TUPLE_DELIMITER = '|'
 MIME_FILE_HEADER = 'X-Appcfg-File'
 MIME_HASH_HEADER = 'X-Appcfg-Hash'
 
+STATE_INACTIVE = 0
+STATE_UPDATING = 1
+STATE_DEPLOYED = 2
+VALID_STATES = frozenset([STATE_INACTIVE, STATE_UPDATING, STATE_DEPLOYED])
+
 INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -63,6 +68,10 @@ INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
   </body>
 </html>
 """
+
+
+class AppConfigServiceError(Exception):
+    """Exception to be raised on errors during appversion deployment."""
 
 
 class WSGIServerHandler(ServerHandler):
@@ -97,6 +106,7 @@ class Appversion(db.Model):
     version = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now=True)
     app_yaml = db.BlobProperty(required=True)
+    state = db.IntegerProperty(choices=VALID_STATES, default=STATE_UPDATING)
 
     @property
     def current_version_id(self):
@@ -149,7 +159,11 @@ class AppversionHandler(webapp.RequestHandler):
 
         func = getattr(self, func_name, None)
         if func:
-            func(app_id, version, self.request.body)
+            try:
+                func(app_id, version, self.request.body)
+            except AppConfigServiceError, e:
+                self.response.out.write(e)
+                self.response.set_status(403)
 
     @staticmethod
     def _extractMimeParts(stream):
@@ -182,28 +196,66 @@ class AppversionHandler(webapp.RequestHandler):
                 for f in data.split(LIST_DELIMITER)]
 
     @staticmethod
-    def getAppversionDirectory(app):
+    def getAppversionDirectory(appversion):
         """Get appversion directory.
 
         Args:
-            app: An Application instance.
+            appversion: An Appversion instance.
 
         Returns an absolute directory path.
         """
         app_dir = os.path.join(
-            os.path.abspath(os.environ['APPS_ROOT']), app.current_version_id)
+            os.path.abspath(os.environ['APPS_ROOT']),
+            appversion.app_id,
+            appversion.current_version_id)
         return app_dir
+
+    @classmethod
+    def createAppversionDirectory(cls, appversion):
+        """Create appversion directory.
+
+        Args:
+            appversion: An Appversion instance.
+
+        Raises AppConfigServiceError when appversion directory exits.
+        Returns an absolute directory path.
+        """
+        app_dir = cls.getAppversionDirectory(appversion)
+        if os.path.isdir(app_dir):
+            raise AppConfigServiceError(
+                u"Application exists (app_id=u'%s')." % appversion.app_id)
+        os.makedirs(app_dir)
+        return app_dir
+
+    @staticmethod
+    def getAppversionKey(app_id, version, state):
+        """Get appversion key.
+
+        Args:
+            app_id: The application id.
+            version: The application version.
+            state: Integer representing the appversion state.
+
+        Returns datastore_types.Key instance.
+        """
+        query = db.GqlQuery(
+            "SELECT __key__ FROM Appversion WHERE app_id = :1 "
+            "AND version = :2 AND state = :3", app_id, version, state)
+        return query.get()
 
     # API methods
 
     def create(self, app_id, version, data):
+        if self.getAppversionKey(app_id, version, STATE_UPDATING):
+            raise AppConfigServiceError(
+                u"Already updating application (app_id=u'%s')." % app_id)
         def tx():
             app = Appversion(
                 app_id=app_id,
                 version=version,
                 app_yaml=self.request.body)
             app.put()
-            app_dir = self.getAppversionDirectory(app)
+            app_dir = self.createAppversionDirectory(app)
             logging.debug('Appversion directory: %s', app_dir)
 
         db.run_in_transaction(tx)
@@ -223,6 +275,11 @@ class AppversionHandler(webapp.RequestHandler):
 
     def addblobs(self, app_id, version, data):
         files = self._extractMimeParts(cStringIO.StringIO(data))
+
+    def deploy(self, app_id, version, data):
+        app = db.get(self.getAppversionKey(app_id, version, STATE_UPDATING))
+        app.state = STATE_DEPLOYED
+        app.put()
 
     def isready(self, app_id, version, data):
         self.response.out.write('1')
@@ -339,7 +396,7 @@ def main():
     op.add_option("-d", "--debug", dest="debug_mode", action="store_true",
                   help="enables debug mode", default=False)
 
-    op.add_option("--apps_root", dest="apps_root",
+    op.add_option("--apps_root", dest="apps_root", metavar="PATH",
                   help="the root directory of all application directories",
                   default=os.environ.get("TMPDIR", "/tmp"))
 

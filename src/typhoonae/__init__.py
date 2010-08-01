@@ -257,11 +257,6 @@ def setupStubs(conf, options):
     google.appengine.api.apiproxy_stub_map.apiproxy = \
         google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
-    if options.datastore == 'remote':
-        setupRemoteDatastore(conf.application, options.email, options.password)
-
-    setupCapability()
-
     datastore = options.datastore.lower()
 
     if datastore in SUPPORTED_DATASTORES:
@@ -275,6 +270,8 @@ def setupStubs(conf, options):
                            'dev_appserver.datastore.history',
                            False,
                            False)
+
+    setupCapability()
 
     setupMail(options.smtp_host, options.smtp_port,
               options.smtp_user, options.smtp_password)

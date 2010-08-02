@@ -227,8 +227,26 @@ class AppversionHandler(webapp.RequestHandler):
         os.makedirs(app_dir)
         return app_dir
 
+    @classmethod
+    def extractFiles(cls, data, app_dir):
+        """Extracts files from multipart into the appversion directory.
+
+        Args:
+            data: Multipart form data.
+            app_dir: String containing the absolute appversion directory.
+        """
+        files = cls._extractMimeParts(cStringIO.StringIO(data))
+        for file_path, content_hash, contents in files:
+            path, name = os.path.split(file_path)
+            dst = os.path.join(app_dir, path)
+            if not os.path.isdir(dst):
+                os.makedirs(dst)
+            f = file(os.path.join(dst, name), 'wb')
+            f.write(contents)
+            f.close()
+
     @staticmethod
-    def getAppversionKey(app_id, version, state):
+    def getAppversion(app_id, version, state):
         """Get appversion key.
 
         Args:
@@ -239,23 +257,29 @@ class AppversionHandler(webapp.RequestHandler):
         Returns datastore_types.Key instance.
         """
         query = db.GqlQuery(
-            "SELECT __key__ FROM Appversion WHERE app_id = :1 "
+            "SELECT * FROM Appversion WHERE app_id = :1 "
             "AND version = :2 AND state = :3", app_id, version, state)
         return query.get()
 
     # API methods
 
     def create(self, app_id, version, data):
-        if self.getAppversionKey(app_id, version, STATE_UPDATING):
+        if self.getAppversion(app_id, version, STATE_UPDATING):
             raise AppConfigServiceError(
                 u"Already updating application (app_id=u'%s')." % app_id)
         def tx():
-            app = Appversion(
+            appversion = Appversion(
                 app_id=app_id,
                 version=version,
                 app_yaml=self.request.body)
-            app.put()
-            app_dir = self.createAppversionDirectory(app)
+            appversion.put()
+
+            app_dir = self.createAppversionDirectory(appversion)
+
+            conf = file(os.path.join(app_dir, 'app.yaml'), 'wb')
+            conf.write(self.request.body)
+            conf.close()
+
             logging.debug('Appversion directory: %s', app_dir)
 
         db.run_in_transaction(tx)
@@ -271,15 +295,19 @@ class AppversionHandler(webapp.RequestHandler):
             LIST_DELIMITER.join([filename for filename, _, mimetype in files]))
 
     def addfiles(self, app_id, version, data):
-        files = self._extractMimeParts(cStringIO.StringIO(data))
+        appversion = self.getAppversion(app_id, version, STATE_UPDATING)
+        app_dir = self.getAppversionDirectory(appversion)
+        self.extractFiles(data, app_dir)
 
     def addblobs(self, app_id, version, data):
-        files = self._extractMimeParts(cStringIO.StringIO(data))
+        appversion = self.getAppversion(app_id, version, STATE_UPDATING)
+        app_dir = self.getAppversionDirectory(appversion)
+        self.extractFiles(data, app_dir)
 
     def deploy(self, app_id, version, data):
-        app = db.get(self.getAppversionKey(app_id, version, STATE_UPDATING))
-        app.state = STATE_DEPLOYED
-        app.put()
+        appversion = self.getAppversion(app_id, version, STATE_UPDATING)
+        appversion.state = STATE_DEPLOYED
+        appversion.put()
 
     def isready(self, app_id, version, data):
         self.response.out.write('1')

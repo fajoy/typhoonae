@@ -829,8 +829,8 @@ class DatastoreMySQLTestCase(DatastoreMySQLTestCaseBase):
         self.assertEqual(1000, query.count())
 
         start, end = db.allocate_ids(key, 2000)
-        self.assertEqual(start, 2001)
-        self.assertEqual(end, 4000)
+        self.assertEqual(start, 1001)
+        self.assertEqual(end, 3000)
 
     def testCursors(self):
         """Tests the cursor API."""

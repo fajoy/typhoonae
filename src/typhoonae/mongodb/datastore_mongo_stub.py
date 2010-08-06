@@ -116,7 +116,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     """ The main RPC entry point. service must be 'datastore_v3'.
 
     So far, the supported calls are 'Get', 'Put', 'Delete', 'RunQuery', 'Next',
-    'AllocateIds' and 'Count'.
+    and 'AllocateIds'.
     """
     super(DatastoreMongoStub, self).MakeSyncCall(
         service, call, request, response)
@@ -455,10 +455,6 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
             position.start_inclusive())
 
   def _Dynamic_RunQuery(self, query, query_result):
-    if query.has_offset() and query.offset() > _MAX_QUERY_OFFSET:
-      raise apiproxy_errors.ApplicationError(
-        datastore_pb.Error.BAD_REQUEST, 'Too big query offset.')
-
     if query.keys_only():
       query_result.set_keys_only(True)
 
@@ -568,6 +564,10 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     if order:
       cursor = cursor.sort(order)
 
+    if query.offset() == datastore._MAX_INT_32:
+      query.set_offset(0)
+      query.set_limit(datastore._MAX_INT_32)
+
     if offset:
       cursor = cursor.skip(int(offset))
     elif query.has_offset():
@@ -586,24 +586,20 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     position = compiled_cursor.add_position()
     query_info = self._MinimalQueryInfo(query)
     cloned_cursor = cursor.clone()
-    if not query.has_limit():
-      cloned_cursor.limit(_MAXIMUM_RESULTS)
-      query.set_limit(_MAXIMUM_RESULTS)
-    try:
-      results = list(cloned_cursor)
+    results = list(cloned_cursor)
+    if results:
       start_key = _CURSOR_CONCAT_STR.join((
         str(len(results) + offset),
         query_info.Encode(),
         self.__entity_for_mongo_document(results[-1]).Encode()
       ))
       # Populate query result
-      query_result.result_list().extend(
-        [self.__entity_for_mongo_document(doc) for doc in results]
-      )
+      result_list = query_result.result_list()
+      for doc in results:
+        result_list.append(self.__entity_for_mongo_document(doc))
+      query_result.set_skipped_results(len(results))
       position.set_start_key(str(start_key))
       position.set_start_inclusive(False)
-    except IndexError:
-      pass 
     del cloned_cursor
 
     query_result.mutable_cursor().set_cursor(cursor_index)
@@ -622,31 +618,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
                                              'Cursor %d not found' % cursor)
 
-    # Possible HACK, but fixes an issue where we get no results for simple
-    # queries (without fetch(n)) since SDK version 1.2.4
-    #count = next_request.count() or 1
-
-    #for _ in range(count):
-    #  try:
-    #    query_result.result_list().append(
-    #      self.__entity_for_mongo_document(cursor.next()))
-    #  except StopIteration:
-    #    return
     query_result.set_more_results(True)
-
-  def _Dynamic_Count(self, query, integer64proto):
-    query_result = datastore_pb.QueryResult()
-    self._Dynamic_RunQuery(query, query_result)
-    cursor_number = query_result.cursor().cursor()
-    if cursor_number == 0: # we exited early from the query w/ no results...
-      integer64proto.set_value(0)
-    else:
-      cursor = self.__queries[cursor_number]
-      count = cursor.count()
-      del self.__queries[cursor_number]
-      if query.has_limit() and count > query.limit():
-        count = query.limit()
-      integer64proto.set_value(count)
 
   def _Dynamic_BeginTransaction(self, request, transaction):
     transaction.set_handle(0)

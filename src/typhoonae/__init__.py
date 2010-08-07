@@ -27,12 +27,8 @@ import re
 import typhoonae.blobstore.blobstore_stub
 import typhoonae.blobstore.file_blob_storage
 import typhoonae.capability_stub
-import typhoonae.intid
 import typhoonae.memcache.memcache_stub
-import typhoonae.mongodb.datastore_mongo_stub
 import typhoonae.taskqueue.taskqueue_stub
-import typhoonae.websocket.websocket_stub
-import typhoonae.xmpp.xmpp_service_stub
 
 
 SUPPORTED_DATASTORES = frozenset([
@@ -130,6 +126,8 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
     name = options.datastore.lower()
 
     if name == 'mongodb':
+        from typhoonae.intid import IntidClient
+        from typhoonae.mongodb import datastore_mongo_stub
         tmp_dir = os.environ['TMPDIR']
         if not os.path.exists(tmp_dir):
             os.mkdir(tmp_dir)
@@ -137,10 +135,10 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
         datastore_path = os.path.join(tmp_dir, datastore_file)
         history_path = os.path.join(tmp_dir, history)
 
-        datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
+        datastore = datastore_mongo_stub.DatastoreMongoStub(
             conf.application, datastore_path,
             require_indexes=require_indexes,
-            intid_client=typhoonae.intid.IntidClient())
+            intid_client=IntidClient())
     elif name == 'bdbdatastore':
         from notdot.bdbdatastore import socket_apiproxy_stub
         datastore = socket_apiproxy_stub.RecordingSocketApiProxyStub(
@@ -219,6 +217,7 @@ def setupUserService(login_url='/_ah/login', logout_url='/_ah/logout'):
 
 def setupXMPP(host):
     """Sets up XMPP."""
+    from typhoonae.xmpp import xmpp_service_stub
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
         typhoonae.xmpp.xmpp_service_stub.XmppServiceStub(host=host))
@@ -236,9 +235,10 @@ def setupBlobstore(blobstore_path, app_id):
 
 def setupWebSocket():
     """Sets up Web Socket service."""
+    from typhoonae.websocket import websocket_stub
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-        'websocket', typhoonae.websocket.websocket_stub.WebSocketServiceStub())
+        'websocket', websocket_stub.WebSocketServiceStub())
 
 
 def setupRemoteDatastore(app_id, email, password):
@@ -284,11 +284,18 @@ def setupStubs(conf, options):
 
     setupUserService(options.login_url, options.logout_url)
 
-    setupXMPP(options.xmpp_host)
-
     setupBlobstore(options.blobstore_path, conf.application)
 
-    setupWebSocket()
+    if conf.inbound_services:
+        inbound_services = conf.inbound_services
+    else:
+        inbound_services = []
+
+    if 'xmpp_message' in inbound_services:
+        setupXMPP(options.xmpp_host)
+
+    if 'websocket_message' in inbound_services:
+        setupWebSocket()
 
     try:
         from google.appengine.api.images import images_stub

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ class XmppServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
         Args:
             log: A logger, used for dependency injection.
+            host: Hostname of the XMPP service.
             service_name: Service name expected for all calls.
         """
         super(XmppServiceStub, self).__init__(service_name)

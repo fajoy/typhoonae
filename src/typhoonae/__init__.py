@@ -187,7 +187,12 @@ def setupMemcache():
 
 
 def setupTaskQueue(internal_address, root_path='.'):
-    """Sets up task queue."""
+    """Sets up task queue.
+
+    Args:
+        internal_address: Address to be used for internal HTTP communication.
+        root_path: The app's root directory.
+    """
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('taskqueue',
         typhoonae.taskqueue.taskqueue_stub.TaskQueueServiceStub(
@@ -216,7 +221,11 @@ def setupUserService(login_url='/_ah/login', logout_url='/_ah/logout'):
 
 
 def setupXMPP(host):
-    """Sets up XMPP."""
+    """Sets up XMPP.
+
+    Args:
+        host: Hostname of the XMPP service.
+    """
     from typhoonae.xmpp import xmpp_service_stub
 
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
@@ -224,8 +233,12 @@ def setupXMPP(host):
 
 
 def setupBlobstore(blobstore_path, app_id):
-    """Sets up blobstore service."""
+    """Sets up blobstore service.
 
+    Args:
+        blobstore_path: Directory within which to store blobs.
+        app_id: App id to store blobs on behalf of.
+    """
     storage = typhoonae.blobstore.file_blob_storage.FileBlobStorage(
         blobstore_path, app_id)
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
@@ -242,7 +255,13 @@ def setupWebSocket():
 
 
 def setupRemoteDatastore(app_id, email, password):
-    """Enables remote API mode for all datastore operations."""
+    """Enables remote API mode for all datastore operations.
+
+    Args:
+        app_id: Valid GAE app id.
+        email: User email.
+        password: User password.
+    """
 
     from google.appengine.ext.remote_api import remote_api_stub
     remote_api_stub.ConfigureRemoteApi(
@@ -252,8 +271,12 @@ def setupRemoteDatastore(app_id, email, password):
 
 
 def setupStubs(conf, options):
-    """Sets up api proxy stubs."""
+    """Sets up api proxy stubs.
 
+    Args:
+        conf: An google.appengine.api.appinfo.AppInfoExternal instance.
+        options: Dictionary with command line options.
+    """
     google.appengine.api.apiproxy_stub_map.apiproxy = \
         google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 

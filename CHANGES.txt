@@ -4,8 +4,13 @@ CHANGES
 Version 0.1.6 (2010-??-??)
 --------------------------
 
+  - Supports Google App Engine SDK 1.3.6.
+
   - Adds process monitor for automatically restarting appserver processes
     consuming more than a given amount of memory that is held in RAM (RSS).
+
+  - Appserver imports and initializes API proxy stubs for various service
+    backends only when needed.
 
   - Updated Web Socket Service to provide the latest Web Socket Protocol.
 

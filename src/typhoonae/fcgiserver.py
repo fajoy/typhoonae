@@ -34,6 +34,7 @@ BASIC_AUTH_PATTERN = re.compile(r'Basic (.*)$')
 DESCRIPTION = ("FastCGI application server.")
 USAGE = "usage: %prog [options] <application root>"
 SERVER_SOFTWARE = "TyphoonAE/0.1.6"
+LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
 
 
 class CGIHandlerChain(object):
@@ -364,6 +365,8 @@ def main():
         sys.exit(2)
 
     app_root = sys.argv[-1]
+
+    logging.basicConfig(format=LOG_FORMAT)
 
     if options.debug_mode:
         logging.getLogger().setLevel(logging.DEBUG)

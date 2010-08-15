@@ -45,6 +45,8 @@ USAGE = "usage: %prog [options]"
 
 SERVER_SOFTWARE = "TyphoonAE/0.1.6 AppConfigService/0.1.0"
 
+LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
+
 LIST_DELIMITER = '\n'
 TUPLE_DELIMITER = '|'
 MIME_FILE_HEADER = 'X-Appcfg-File'
@@ -431,6 +433,8 @@ def main():
     (options, args) = op.parse_args()
 
     os.environ['APPS_ROOT'] = options.apps_root
+
+    logging.basicConfig(format=LOG_FORMAT)
 
     if options.debug_mode:
         logging.getLogger().setLevel(logging.DEBUG)

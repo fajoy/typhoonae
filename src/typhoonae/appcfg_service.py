@@ -403,7 +403,7 @@ class AppConfigService(object):
     def serve_forever(self):
         """Start serving."""
 
-        logging.info('Starting')
+        logging.info('Starting (pid:%i)', os.getpid())
         try:
             logging.debug('HTTP server listening on %s:%i',
                           self.host, self.port)

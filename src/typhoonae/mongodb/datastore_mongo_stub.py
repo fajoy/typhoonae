@@ -42,10 +42,8 @@ from pymongo.binary import Binary
 
 datastore_pb.Query.__hash__ = lambda self: hash(self.Encode())
 
-_MAXIMUM_RESULTS = 1000
-_MAX_QUERY_OFFSET = 1000
 _MAX_QUERY_COMPONENTS = 100
-_MAX_BATCH_SIZE = 20
+_MAX_QUERY_OFFSET = 1000
 _CURSOR_CONCAT_STR = '!CURSOR!'
 
 
@@ -570,7 +568,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
     if offset:
       cursor = cursor.skip(int(offset))
-    elif query.has_offset():
+    elif query.has_offset() and query.offset() != _MAX_QUERY_OFFSET:
       cursor = cursor.skip(int(query.offset()))
     if query.has_limit():
       cursor = cursor.limit(int(query.limit()))

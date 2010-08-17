@@ -940,7 +940,7 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
             unit = db.StringProperty(choices=set(['cm', 'm']))
             value = db.IntegerProperty()
 
-        for i in xrange(0, 2000):
+        for i in xrange(0, 3000):
             if i % 2: unit = 'm'
             else: unit = 'cm'
             Number(unit=unit, value=i).put()
@@ -966,12 +966,12 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         self.assertEqual(1199L, c[-1].value)
 
         query.with_cursor(query.cursor())
-        d = query.fetch(500)
+        d = query.fetch(1500)
         self.assertEqual(1200L, d[0].value)
-        self.assertEqual(1699L, d[-1].value)
+        self.assertEqual(2699L, d[-1].value)
 
         query.with_cursor(query.cursor())
-        self.assertEqual(1700L, query.get().value)
+        self.assertEqual(2700L, query.get().value)
 
         # Use a query with filters.
         query = Number.all().filter('value >', 500).filter('value <=', 1000) 
@@ -987,19 +987,19 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
                     .order('-value'))
         f = query.fetch(5)
         self.assertEqual(
-            [1998L, 1996L, 1994L, 1992L, 1990L],
+            [2998L, 2996L, 2994L, 2992L, 2990L],
             [n.value for n in f])
 
         query.with_cursor(query.cursor())
         f = query.fetch(5)
         self.assertEqual(
-            [1988L, 1986L, 1984L, 1982L, 1980L],
+            [2988L, 2986L, 2984L, 2982L, 2980L],
             [n.value for n in f])
 
         query.with_cursor(query.cursor())
         f = query.fetch(6)
         self.assertEqual(
-            [1978L, 1976L, 1974L, 1972L, 1970L, 1968L],
+            [2978L, 2976L, 2974L, 2972L, 2970L, 2968L],
             [n.value for n in f])
 
 #    def testGetSchema(self):

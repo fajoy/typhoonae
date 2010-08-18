@@ -18,6 +18,7 @@
 import datetime
 import django.utils.simplejson
 import google.appengine.api.capabilities
+import google.appengine.api.images
 import google.appengine.api.labs.taskqueue
 import google.appengine.api.memcache
 import google.appengine.api.users
@@ -30,7 +31,6 @@ import google.appengine.ext.webapp.util
 import logging
 import os
 import random
-import simplejson
 import urllib
 
 NUM_SHARDS = 20
@@ -120,6 +120,13 @@ def get_login_or_logout(user):
     return form % vars 
 
 
+class MyBlobInfo(object):
+    def __init__(self, blob_info):
+        self.info = blob_info
+        self.thumbnail_url = google.appengine.api.images.get_serving_url(
+            str(self.info.key()), size=32)
+
+
 class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
     """Simple request handler."""
 
@@ -133,8 +140,10 @@ class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
         count = get_count()
         notes = get_notes()
 
-        blobs = reversed(
+        blob_infos = reversed(
             google.appengine.ext.blobstore.BlobInfo.all().fetch(10))
+
+        blobs = [MyBlobInfo(blob_info) for blob_info in blob_infos]
 
         now = datetime.datetime.now()
         eta = now + datetime.timedelta(seconds=5)
@@ -265,7 +274,7 @@ class AjaxHandler(google.appengine.ext.webapp.RequestHandler):
             google.appengine.api.memcache.add("data", data, 10)
         else:
             logging.info('data from memcache')
-        self.response.out.write(simplejson.dumps({'data': data}))
+        self.response.out.write(django.utils.simplejson.dumps({'data': data}))
 
 
 app = google.appengine.ext.webapp.WSGIApplication([

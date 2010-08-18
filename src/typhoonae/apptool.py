@@ -186,7 +186,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
+command = %(bin)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
 socket = tcp://%(addr)s:%(port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -533,7 +533,6 @@ def write_supervisor_conf(options, conf, app_root):
     password = options.password
     port = options.port
     root = os.getcwd()
-    server_name = options.server_name
     server_software = options.server_software
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
@@ -542,6 +541,11 @@ def write_supervisor_conf(options, conf, app_root):
     smtp_port = options.smtp_port
     smtp_user = options.smtp_user
     smtp_password = options.smtp_password
+
+    if options.multiple:
+        server_name = "%s.%s" % (app_id, options.server_name)
+    else:
+        server_name = options.server_name
 
     additional_options = []
 

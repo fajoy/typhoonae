@@ -72,7 +72,9 @@ def initURLMapping(conf, options):
             # Configure script with login handler
             (options.login_url, '$PYTHON_LIB/typhoonae/handlers/login.py'),
             # Configure script with logout handler
-            (options.logout_url, '$PYTHON_LIB/typhoonae/handlers/login.py')
+            (options.logout_url, '$PYTHON_LIB/typhoonae/handlers/login.py'),
+            # Configure script with images handler
+            ('/_ah/img(?:/.*)?', '$PYTHON_LIB/typhoonae/handlers/images.py')
         ] if url not in [h.url for h in conf.handlers if h.url]
     ]
 
@@ -322,9 +324,10 @@ def setupStubs(conf, options):
 
     try:
         from google.appengine.api.images import images_stub
+        host_prefix = 'http://%s:%s' % (options.server_name, options.http_port)
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'images',
-            images_stub.ImagesServiceStub())
+            images_stub.ImagesServiceStub(host_prefix=host_prefix))
     except ImportError, e:
         logging.warning('Could not initialize images API; you are likely '
                         'missing the Python "PIL" module. ImportError: %s', e)

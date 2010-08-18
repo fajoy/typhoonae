@@ -300,6 +300,10 @@ def main():
     op.add_option("--email", dest="email", metavar="EMAIL",
                   help="the username to use", default='')
 
+    op.add_option("--http_port", dest="http_port", metavar="PORT",
+                  help="port for the HTTP server to listen on",
+                  default=8080)
+
     op.add_option("--internal_address", dest="internal_address",
                   metavar="HOST:PORT",
                   help="the internal application host and port",
@@ -333,6 +337,9 @@ def main():
 
     op.add_option("--password", dest="password", metavar="PASSWORD",
                   help="the password to use", default='')
+
+    op.add_option("--server_name", dest="server_name", metavar="STRING",
+                  help="use this server name", default='localhost')
 
     op.add_option("--server_software", dest="server_software", metavar="STRING",
                   help="use this server software identifier",

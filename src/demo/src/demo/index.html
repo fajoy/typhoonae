@@ -38,10 +38,10 @@
       <ul>
       {% for blob in blobs %}
         <li>
+          <img src="{{ blob.thumbnail_url }}" />
           <a href="/serve/{{blob.info.key}}"
             >{{ blob.info.filename }}</a> ({{blob.info.size}} bytes)
           <a href="/delete/{{blob.info.key}}">Delete</a>
-          <img src="{{ blob.thumbnail_url }}" />
         </li>
       {% endfor %}
       </ul>

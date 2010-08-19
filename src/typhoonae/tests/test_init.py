@@ -40,9 +40,11 @@ class InitTestCase(unittest.TestCase):
         class TestOptions:
             blobstore_path = 'blobstore'
             datastore = 'mongodb'
+            http_port = 8080
             internal_address = 'localhost:8770'
             login_url = '/_ah/login'
             logout_url = '/_ah/logout'
+            server_name = 'localhost'
             smtp_host = 'localhost'
             smtp_port = 25
             smtp_user = ''

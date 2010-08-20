@@ -94,6 +94,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__queries = {}
 
     self.__id_lock = threading.Lock()
+    self.__id_map = {}
 
   def Clear(self):
     """Clears the datastore.
@@ -290,24 +291,22 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     col = self.__db.__datastore
     _id = 'IdSeq_%s' % kind
     if not col.find_one({'_id': _id}):
-      col.insert({'_id': _id, 'next_id': 1, 'block_size': 0})
+      col.insert({'_id': _id, 'next_id': 1})
     if size is not None:
       assert size > 0
-      seq_id = col.find_one({'_id': _id})
-      next_id = seq_id.get('next_id', 0)
-      block_size = seq_id.get('block_size', 0)
+      next_id, block_size = self.__id_map.get(kind, (0, 0))
       if not block_size:
         block_size = (size / 1000 + 1) * 1000
+        next_id = col.find_one({'_id': _id}).get('next_id')
         col.update({'_id': _id}, {'$set': {'next_id': next_id+block_size}})
       if size > block_size:
-        ret = next_id
+        ret = col.find_one({'_id': _id}).get('next_id')
         col.update({'_id': _id}, {'$set': {'next_id': ret+size}})
       else:
         ret = next_id;
         next_id += size
         block_size -= size
-        col.update({'_id': _id},
-                   {'$set': {'next_id': next_id, 'block_size': block_size}})
+        self.__id_map[kind] = (next_id, block_size)
     else:
       ret = col.find_one({'_id': _id}).get('next_id')
       if max and max >= ret:

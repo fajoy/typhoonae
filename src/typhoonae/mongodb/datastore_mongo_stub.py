@@ -94,17 +94,6 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__queries = {}
 
     self.__id_lock = threading.Lock()
-    self.__id_map = {}
-
-    self.Init()
-
-  def Init(self):
-    """Initialize required data structures."""
-
-    self.__datastore = self.__db.__datastore
-    if not self.__datastore.find_one():
-      self.__datastore.insert(
-        {'_id': 'SeqId', 'prefix': self.__app_id, 'next_id': 1})
 
   def Clear(self):
     """Clears the datastore.
@@ -117,7 +106,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__queries = {}
     self.__query_history = {}
     self.__indexes = {}
-    self.__datastore.drop()
+    self.__db.__datastore.drop()
 
   def MakeSyncCall(self, service, call, request, response):
     """ The main RPC entry point. service must be 'datastore_v3'.
@@ -285,11 +274,11 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
     return pb
 
-  def __allocate_ids(self, prefix, size=None, max=None):
+  def __allocate_ids(self, kind, size=None, max=None):
     """Allocates IDs.
 
     Args:
-      prefix: A table namespace prefix.
+      kind: A kind.
       size: Number of IDs to allocate.
       max: Upper bound of IDs to allocate.
 
@@ -298,32 +287,31 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     """
     self.__id_lock.acquire()
     ret = None
+    col = self.__db.__datastore
+    _id = 'IdSeq_%s' % kind
+    if not col.find_one({'_id': _id}):
+      col.insert({'_id': _id, 'next_id': 1, 'block_size': 0})
     if size is not None:
       assert size > 0
-      next_id, block_size = self.__id_map.get(prefix, (0, 0))
+      seq_id = col.find_one({'_id': _id})
+      next_id = seq_id.get('next_id', 0)
+      block_size = seq_id.get('block_size', 0)
       if not block_size:
         block_size = (size / 1000 + 1) * 1000
-        next_id = self.__datastore.find_one(
-          {'_id': 'SeqId', 'prefix': prefix}).get('next_id')
-        self.__datastore.update(
-          {'_id': 'SeqId', 'prefix': prefix},
-          {'$set': {'next_id': next_id+block_size}})
+        col.update({'_id': _id}, {'$set': {'next_id': next_id+block_size}})
       if size > block_size:
-        ret = self.__datastore.find_one(
-          {'_id': 'SeqId', 'prefix': prefix}).get('next_id')
-        self.__datastore.update(
-          {'_id': 'SeqId', 'prefix': prefix}, {'$set': {'next_id': ret+size}})
+        ret = next_id
+        col.update({'_id': _id}, {'$set': {'next_id': ret+size}})
       else:
         ret = next_id;
         next_id += size
         block_size -= size
-        self.__id_map[prefix] = (next_id, block_size)
+        col.update({'_id': _id},
+                   {'$set': {'next_id': next_id, 'block_size': block_size}})
     else:
-      ret = self.__datastore.find_one(
-        {'_id': 'SeqId', 'prefix': prefix}).get('next_id')
+      ret = col.find_one({'_id': _id}).get('next_id')
       if max and max >= ret:
-        self.__datastore.update(
-          {'_id': 'SeqId', 'prefix': prefix}, {'$set': {'next_id': max+1}})
+        col.update({'_id': _id}, {'$set': {'next_id': max+1}})
     self.__id_lock.release()
     return ret
 
@@ -337,7 +325,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
       last_path = clone.key().path().element_list()[-1]
       if last_path.id() == 0 and not last_path.has_name():
-        last_path.set_id(self.__allocate_ids(self.__app_id, 1))
+        last_path.set_id(self.__allocate_ids(last_path.type(), 1))
 
         assert clone.entity_group().element_size() == 0
         group = clone.mutable_entity_group()
@@ -710,6 +698,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
   def _Dynamic_AllocateIds(self, allocate_ids_request, allocate_ids_response):
     model_key = allocate_ids_request.model_key()
+    kind = model_key.path().element(0).type()
     if allocate_ids_request.has_size() and allocate_ids_request.has_max():
       raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
                                              'Both size and max cannot be set.')
@@ -718,8 +707,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       if allocate_ids_request.size() < 1:
         raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
                                                'Size must be greater than 0.')
-      first_id = self.__allocate_ids(self.__app_id,
-                                     size=allocate_ids_request.size())
+      first_id = self.__allocate_ids(kind, size=allocate_ids_request.size())
       allocate_ids_response.set_start(first_id)
       allocate_ids_response.set_end(first_id + allocate_ids_request.size() - 1)
     else:
@@ -727,8 +715,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
         raise apiproxy_errors.ApplicationError(
             datastore_pb.Error.BAD_REQUEST,
             'Max must be greater than or equal to 0.')
-      first_id = self.__allocate_ids(self.__app_id,
-                                     max=allocate_ids_request.max())
+      first_id = self.__allocate_ids(kind, max=allocate_ids_request.max())
       allocate_ids_response.set_start(first_id)
       allocate_ids_response.set_end(max(allocate_ids_request.max(),
                                         first_id - 1))

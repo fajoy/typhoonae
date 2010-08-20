@@ -249,7 +249,8 @@ def serve(conf, options):
                     print('Set-Cookie: ' + typhoonae.handlers.login.
                           getSetCookieHeaderValue(user, admin=True))
                     print('Location: %s\r\n' % os.environ['REQUEST_URI'])
-            elif (login_required or admin_only) and not email and not internal:
+            elif ((login_required or admin_only) and not email
+                    and not internal and not options.debug_mode):
                 print('Status: 302 Requires login')
                 print('Location: %s\r\n' %
                       google.appengine.api.users.create_login_url(path_info))

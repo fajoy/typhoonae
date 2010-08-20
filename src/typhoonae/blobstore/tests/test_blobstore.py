@@ -30,20 +30,6 @@ import typhoonae.mongodb.datastore_mongo_stub
 import unittest
 
 
-class TestIntidClient(object):
-    """Pretends to be an intid server client."""
-
-    def __init__(self, host=None, port=None):
-        self.value = 0
-
-    def get(self):
-        self.value += 1
-        return self.value
-
-    def close(self):
-        pass
-
-
 class BlobstoreTestCase(unittest.TestCase):
     """Testing Blobstore."""
 
@@ -60,7 +46,7 @@ class BlobstoreTestCase(unittest.TestCase):
                     google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
         datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
-            'test', '', require_indexes=False, intid_client=TestIntidClient())
+            'test', '', require_indexes=False)
 
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'datastore_v3', datastore)

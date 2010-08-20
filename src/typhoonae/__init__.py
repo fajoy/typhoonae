@@ -128,7 +128,6 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
     name = options.datastore.lower()
 
     if name == 'mongodb':
-        from typhoonae.intid import IntidClient
         from typhoonae.mongodb import datastore_mongo_stub
         tmp_dir = os.environ['TMPDIR']
         if not os.path.exists(tmp_dir):
@@ -139,8 +138,7 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
 
         datastore = datastore_mongo_stub.DatastoreMongoStub(
             conf.application, datastore_path,
-            require_indexes=require_indexes,
-            intid_client=IntidClient())
+            require_indexes=require_indexes)
     elif name == 'bdbdatastore':
         from notdot.bdbdatastore import socket_apiproxy_stub
         datastore = socket_apiproxy_stub.RecordingSocketApiProxyStub(

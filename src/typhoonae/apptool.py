@@ -163,15 +163,6 @@ directory = %(bin)s
 priority = 10
 redirect_stderr = true
 stdout_logfile = %(var)s/log/mongod.log
-
-[program:intid]
-command = %(bin)s/intid
-process_name = intid
-directory = %(root)s
-priority = 20
-redirect_stderr = true
-stdout_logfile = %(var)s/log/intid.log
-stopsignal = INT
 """
 
 SUPERVISOR_BDBDATASTORE_CONFIG = """

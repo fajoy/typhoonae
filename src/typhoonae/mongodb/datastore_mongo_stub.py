@@ -59,8 +59,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
                app_id,
                datastore_file,
                require_indexes=False,
-               service_name='datastore_v3',
-               intid_client=None):
+               service_name='datastore_v3'):
     """Constructor.
 
     Initializes the datastore stub.
@@ -71,7 +70,6 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       require_indexes: bool, default False.  If True, composite indexes must
           exist in index.yaml for queries that need them.
       service_name: Service name expected for all calls.
-      intid_client: Use this client to obtain integer IDs for new entities.
     """
     super(DatastoreMongoStub, self).__init__(service_name)
 
@@ -82,9 +80,6 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
     # TODO should be a way to configure the connection
     self.__db = Connection()[app_id]
-
-    # Setup the intid client
-    self.intid = intid_client
 
     # NOTE our query history gets reset each time the server restarts...
     # should this be fixed?
@@ -98,6 +93,19 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__next_cursor = 1
     self.__queries = {}
 
+    self.__id_lock = threading.Lock()
+    self.__id_map = {}
+
+    self.Init()
+
+  def Init(self):
+    """Initialize required data structures."""
+
+    self.__datastore = self.__db.__datastore
+    if not self.__datastore.find_one():
+      self.__datastore.insert(
+        {'_id': 'SeqId', 'prefix': self.__app_id, 'next_id': 1})
+
   def Clear(self):
     """Clears the datastore.
 
@@ -109,6 +117,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__queries = {}
     self.__query_history = {}
     self.__indexes = {}
+    self.__datastore.drop()
 
   def MakeSyncCall(self, service, call, request, response):
     """ The main RPC entry point. service must be 'datastore_v3'.
@@ -276,6 +285,48 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
     return pb
 
+  def __allocate_ids(self, prefix, size=None, max=None):
+    """Allocates IDs.
+
+    Args:
+      prefix: A table namespace prefix.
+      size: Number of IDs to allocate.
+      max: Upper bound of IDs to allocate.
+
+    Returns:
+      Integer as the beginning of a range of size IDs.
+    """
+    self.__id_lock.acquire()
+    ret = None
+    if size is not None:
+      assert size > 0
+      next_id, block_size = self.__id_map.get(prefix, (0, 0))
+      if not block_size:
+        block_size = (size / 1000 + 1) * 1000
+        next_id = self.__datastore.find_one(
+          {'_id': 'SeqId', 'prefix': prefix}).get('next_id')
+        self.__datastore.update(
+          {'_id': 'SeqId', 'prefix': prefix},
+          {'$set': {'next_id': next_id+block_size}})
+      if size > block_size:
+        ret = self.__datastore.find_one(
+          {'_id': 'SeqId', 'prefix': prefix}).get('next_id')
+        self.__datastore.update(
+          {'_id': 'SeqId', 'prefix': prefix}, {'$set': {'next_id': ret+size}})
+      else:
+        ret = next_id;
+        next_id += size
+        block_size -= size
+        self.__id_map[prefix] = (next_id, block_size)
+    else:
+      ret = self.__datastore.find_one(
+        {'_id': 'SeqId', 'prefix': prefix}).get('next_id')
+      if max and max >= ret:
+        self.__datastore.update(
+          {'_id': 'SeqId', 'prefix': prefix}, {'$set': {'next_id': max+1}})
+    self.__id_lock.release()
+    return ret
+
   def _Dynamic_Put(self, put_request, put_response):
     for entity in put_request.entity_list():
       clone = entity_pb.EntityProto()
@@ -286,10 +337,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
       last_path = clone.key().path().element_list()[-1]
       if last_path.id() == 0 and not last_path.has_name():
-        if self.intid is not None:
-          last_path.set_id(self.intid.get())
-        else:
-          last_path.set_id(random.randint(-sys.maxint-1, sys.maxint))
+        last_path.set_id(self.__allocate_ids(self.__app_id, 1))
 
         assert clone.entity_group().element_size() == 0
         group = clone.mutable_entity_group()
@@ -662,15 +710,28 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
   def _Dynamic_AllocateIds(self, allocate_ids_request, allocate_ids_response):
     model_key = allocate_ids_request.model_key()
-    size = allocate_ids_request.size()
+    if allocate_ids_request.has_size() and allocate_ids_request.has_max():
+      raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
+                                             'Both size and max cannot be set.')
 
-    start = self.intid.get()
-    for i in xrange(size-1):
-        self.intid.get()
-    end = self.intid.get()
-
-    allocate_ids_response.set_start(start)
-    allocate_ids_response.set_end(end)
+    if allocate_ids_request.has_size():
+      if allocate_ids_request.size() < 1:
+        raise apiproxy_errors.ApplicationError(datastore_pb.Error.BAD_REQUEST,
+                                               'Size must be greater than 0.')
+      first_id = self.__allocate_ids(self.__app_id,
+                                     size=allocate_ids_request.size())
+      allocate_ids_response.set_start(first_id)
+      allocate_ids_response.set_end(first_id + allocate_ids_request.size() - 1)
+    else:
+      if allocate_ids_request.max() < 0:
+        raise apiproxy_errors.ApplicationError(
+            datastore_pb.Error.BAD_REQUEST,
+            'Max must be greater than or equal to 0.')
+      first_id = self.__allocate_ids(self.__app_id,
+                                     max=allocate_ids_request.max())
+      allocate_ids_response.set_start(first_id)
+      allocate_ids_response.set_end(max(allocate_ids_request.max(),
+                                        first_id - 1))
 
   def __has_index(self, index):
     (collection, spec) = self.__collection_and_spec_for_index(index)

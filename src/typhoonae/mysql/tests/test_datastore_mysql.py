@@ -817,7 +817,7 @@ class DatastoreMySQLTestCase(DatastoreMySQLTestCaseBase):
             [], [e.number for e in query.fetch(2, offset=10)])
 
     def testAllocateIds(self):
-        """ """
+        """Tests allocation of id ranges."""
 
         class EmptyModel(db.Model):
             pass

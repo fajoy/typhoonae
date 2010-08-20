@@ -48,20 +48,6 @@ class TaskQueueServiceStubMock(apiproxy_stub.APIProxyStub):
         response.add_taskresult()
 
 
-class TestIntidClient(object):
-    """Pretends to be an intid server client."""
-
-    def __init__(self, host=None, port=None):
-        self.value = 0
-
-    def get(self):
-        self.value += 1
-        return self.value
-
-    def close(self):
-        pass
-
-
 class DatastoreMongoTestCaseBase(unittest.TestCase):
     """Base class for testing the TyphoonAE Datastore MongoDB API proxy stub."""
 
@@ -78,7 +64,7 @@ class DatastoreMongoTestCaseBase(unittest.TestCase):
         apiproxy_stub_map.apiproxy = (apiproxy_stub_map.APIProxyStubMap())
 
         datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
-            'test', '', require_indexes=False, intid_client=TestIntidClient())
+            'test', '', require_indexes=False)
 
         try:
             apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', datastore)
@@ -890,21 +876,21 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         self.assertEqual(
             [], [e.number for e in query.fetch(2, offset=10)])
 
-#    def testAllocateIds(self):
-#        """ """
-#
-#        class EmptyModel(db.Model):
-#            pass
-#
-#        for i in xrange(0, 1000):
-#            key = EmptyModel().put()
-#
-#        query = db.GqlQuery("SELECT * FROM EmptyModel")
-#        self.assertEqual(1000, query.count())
-#
-#        start, end = db.allocate_ids(key, 2000)
-#        self.assertEqual(start, 2001)
-#        self.assertEqual(end, 4000)
+    def testAllocateIds(self):
+        """Tests allocation of id ranges."""
+
+        class EmptyModel(db.Model):
+            pass
+
+        for i in xrange(0, 1000):
+            key = EmptyModel().put()
+
+        query = db.GqlQuery("SELECT * FROM EmptyModel")
+        self.assertEqual(1000, query.count())
+
+        start, end = db.allocate_ids(key, 2000)
+        self.assertEqual(start, 1001)
+        self.assertEqual(end, 3000)
 
     def testBatching(self):
         """Counts in batches with __key__ as offset."""

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,17 +24,16 @@ import google.appengine.api.datastore
 import google.appengine.api.datastore_errors
 import httplib
 import logging
-import md5
 import os
-import random
 import re
-import time
 
 
 BLOB_KEY_HEADER = google.appengine.api.blobstore.BLOB_KEY_HEADER
 
 UPLOAD_INFO_CREATION_HEADER = (google.appengine.api.blobstore.
                                UPLOAD_INFO_CREATION_HEADER)
+
+REDIRECT_HEADER = 'X-Accel-Redirect: %s\n'
 
 UPLOAD_URL_PATTERN = '/%s(.*)'
 
@@ -62,29 +61,36 @@ Content-Disposition: form-data; name="%(name)s"
 %(value)s"""
 
 
-def generateBlobKey():
-    """Generates a unique BlobKey.
+def EncodeBlobKey(path):
+    """Generates a BlobKey.
+
+    Args:
+        path: The original file path.
 
     Returns:
         String version of BlobKey that is unique within the BlobInfo datastore.
         None if there are too many name conflicts.
     """
-    timestamp = str(time.time())
-    tries = 0
-    while tries < 10:
-        number = str(random.random())
-        digester = md5.md5()
-        digester.update(timestamp)
-        digester.update(number)
-        blob_key = base64.urlsafe_b64encode(digester.digest())
-        datastore_key = google.appengine.api.datastore.Key.from_path(
-            google.appengine.api.blobstore.BLOB_INFO_KIND, blob_key)
-        try:
-            google.appengine.api.datastore.Get(datastore_key)
-            tries += 1
-        except google.appengine.api.datastore_errors.EntityNotFoundError:
-            return blob_key
+    blob_key = base64.urlsafe_b64encode(os.path.basename(path))
+    datastore_key = google.appengine.api.datastore.Key.from_path(
+        google.appengine.api.blobstore.BLOB_INFO_KIND, blob_key)
+    try:
+        google.appengine.api.datastore.Get(datastore_key)
+    except google.appengine.api.datastore_errors.EntityNotFoundError:
+        return blob_key
     return None
+
+
+def DecodeBlobKey(blob_key):
+    """Decodes a given BlobKey.
+
+    Args:
+        blob_key: BlobKey instance.
+
+    Returns:
+        Decoded BlobKey string.
+    """
+    return base64.urlsafe_b64decode(str(blob_key.name()))
 
 
 class UploadCGIHandler(object):
@@ -153,16 +159,16 @@ class UploadCGIHandler(object):
         message = []
 
         for field in fields:
-            timestamp = format_timestamp(datetime.datetime.now())
-            blobkey = str(generateBlobKey())
+            now = datetime.datetime.now()
+            timestamp = format_timestamp(now)
+            blobkey = EncodeBlobKey(data[field+'.path'])
 
             blob_entity = google.appengine.api.datastore.Entity(
                 '__BlobInfo__', name=blobkey)
 
             blob_entity['content_type'] = data[field+'.content_type']
-            blob_entity['creation'] = timestamp
+            blob_entity['creation'] = now
             blob_entity['filename'] = data[field+'.name']
-            blob_entity['path'] = os.path.basename(data[field+'.path'])
             blob_entity['size'] = int(data[field+'.size'])
 
             google.appengine.api.datastore.Put(blob_entity)
@@ -245,8 +251,10 @@ class CGIResponseRewriter(object):
                 return '/_ah/blobstore/%s/%s/%s' % (
                     os.environ['APPLICATION_ID'], filename[-1], filename)
 
-            output.write('X-Accel-Redirect: %s\n' % _URI(blob_info['path']))
+            output.write(
+                REDIRECT_HEADER % _URI(DecodeBlobKey(blob_info.key())))
             output.write('\n')
+
             return output
 
         return fp

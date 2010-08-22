@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import google.appengine.api.blobstore.blobstore_stub
 import google.appengine.api.datastore
 import google.appengine.api.datastore_types
 import os
+import typhoonae.blobstore.handlers
 
 
 __all__ = ['FileBlobStorage']
@@ -56,7 +57,7 @@ class FileBlobStorage(
         except google.appengine.api.datastore_errors.EntityNotFoundError:
             return ''
 
-        blob_path = blob_info['path']
+        blob_path = typhoonae.blobstore.handlers.DecodeBlobKey(blob_key)
 
         f = os.path.join(self._storage_directory, self._app_id,
                          blob_path[-1], blob_path)

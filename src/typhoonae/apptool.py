@@ -151,6 +151,7 @@ NGINX_DOWNLOAD_CONFIG = """
 location ~ ^/_ah/blobstore/%(app_id)s/(.*) {
     root "%(blobstore_path)s";
     rewrite ^/_ah/blobstore/%(app_id)s/(.*) /$1 break;
+    expires 5d;
     internal;
 }
 """

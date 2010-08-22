@@ -22,11 +22,14 @@ import datetime
 import google.appengine.api.blobstore
 import google.appengine.api.datastore
 import google.appengine.api.datastore_errors
+import hashlib
 import httplib
 import logging
 import os
 import re
 
+
+SALT = 'salt'
 
 BLOB_KEY_HEADER = google.appengine.api.blobstore.BLOB_KEY_HEADER
 
@@ -71,7 +74,9 @@ def EncodeBlobKey(path):
         String version of BlobKey that is unique within the BlobInfo datastore.
         None if there are too many name conflicts.
     """
-    blob_key = base64.urlsafe_b64encode(os.path.basename(path))
+    blob_key = base64.urlsafe_b64encode(
+        '%i.%s' % (int(os.path.basename(path)),
+                   hashlib.md5(os.environ['APPLICATION_ID']+SALT).digest()))
     datastore_key = google.appengine.api.datastore.Key.from_path(
         google.appengine.api.blobstore.BLOB_INFO_KIND, blob_key)
     try:
@@ -88,9 +93,11 @@ def DecodeBlobKey(blob_key):
         blob_key: BlobKey instance.
 
     Returns:
-        Decoded BlobKey string.
+        Blob id.
     """
-    return base64.urlsafe_b64decode(str(blob_key.name()))
+    id, hash = base64.urlsafe_b64decode(str(blob_key.name())).split('.', 1)
+    assert hashlib.md5(os.environ['APPLICATION_ID']+SALT).digest() == hash
+    return id.zfill(10)
 
 
 class UploadCGIHandler(object):

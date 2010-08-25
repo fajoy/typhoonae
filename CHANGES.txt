@@ -8,6 +8,8 @@ Version 0.1.6 (2010-??-??)
 
     - Support for automatic thumbnailing.
 
+  - Implements Channel API backed by NGINX push module.
+
   - Adds process monitor for automatically restarting appserver processes
     consuming more than a given amount of memory that is held in RAM (RSS).
 

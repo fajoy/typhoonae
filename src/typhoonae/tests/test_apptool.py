@@ -169,7 +169,15 @@ location @sample {
 location ~ ^/_ah/blobstore/sample/(.*) {
     root "/tmp/blobstore/sample";
     rewrite ^/_ah/blobstore/sample/(.*) /$1 break;
+    expires 5d;
     internal;
+}
+
+location ~ ^/_ah/subscribe {
+    push_subscriber long-poll;
+    push_subscriber_concurrency broadcast;
+    set $push_channel_id $arg_id;
+    default_type text/plain;
 }
 
 location ~ {
@@ -198,6 +206,7 @@ location = /50x.html {
 """ % {'app_root': os.getcwd()} in config)
             f.close()
         except Exception, e:
+            print config
             raise e
         finally:
             os.unlink(os.path.join(os.getcwd(), 'etc', 'default-nginx.conf'))

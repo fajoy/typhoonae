@@ -156,6 +156,23 @@ location ~ ^/_ah/blobstore/%(app_id)s/(.*) {
 }
 """
 
+NGINX_PUSH_CONFIG = """
+location ~ ^/_ah/publish {
+    set $push_channel_id $arg_id;
+    push_publisher;
+    push_store_messages off;
+    push_message_timeout 2h;
+    push_max_message_buffer_length 10;
+}
+
+location ~ ^/_ah/subscribe {
+    push_subscriber long-poll;
+    push_subscriber_concurrency broadcast;
+    set $push_channel_id $arg_id;
+    default_type text/plain;
+}
+"""
+
 SUPERVISOR_MONGODB_CONFIG = """
 [program:mongod]
 command = %(bin)s/mongod --dbpath=%(var)s
@@ -500,6 +517,7 @@ def write_nginx_conf(
 
     httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % locals())
     httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % locals())
+    httpd_conf_stub.write(NGINX_PUSH_CONFIG % locals())
     httpd_conf_stub.write(NGINX_FCGI_CONFIG % locals())
     if html_error_pages_root:
         httpd_conf_stub.write(NGINX_ERROR_PAGES %

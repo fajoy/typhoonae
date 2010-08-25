@@ -29,6 +29,7 @@ import typhoonae.blobstore.file_blob_storage
 import typhoonae.capability_stub
 import typhoonae.memcache.memcache_stub
 import typhoonae.taskqueue.taskqueue_stub
+import typhoonae.channel.channel_service_stub
 
 
 SUPPORTED_DATASTORES = frozenset([
@@ -74,7 +75,11 @@ def initURLMapping(conf, options):
             # Configure script with logout handler
             (options.logout_url, '$PYTHON_LIB/typhoonae/handlers/login.py'),
             # Configure script with images handler
-            ('/_ah/img(?:/.*)?', '$PYTHON_LIB/typhoonae/handlers/images.py')
+            ('/_ah/img(?:/.*)?', '$PYTHON_LIB/typhoonae/handlers/images.py'),
+            # Configure script with Channel JS API handler
+            ('/_ah/channel/jsapi', '$PYTHON_LIB/typhoonae/channel/jsapi.py'),
+            # Configure script with Channel JS API handler
+            ('/_ah/dev/null', '$PYTHON_LIB/typhoonae/handlers/devnull.py')
         ] if url not in [h.url for h in conf.handlers if h.url]
     ]
 
@@ -232,6 +237,21 @@ def setupXMPP(host):
         typhoonae.xmpp.xmpp_service_stub.XmppServiceStub(host=host))
 
 
+def setupChannel(internal_addr):
+    """Sets up Channel API.
+
+    Args:
+        internal_addt: Internal address of the Channel service.
+    """
+    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('channel',
+      typhoonae.channel.channel_service_stub.ChannelServiceStub(internal_addr))
+
+    # We have to monkeypatch the SDK to avoid renaming the SERVER_SOFTWARE
+    # variable.
+    from google.appengine.api.channel import channel
+    channel._GetService = lambda : 'channel'
+
+
 def setupBlobstore(blobstore_path, app_id):
     """Sets up blobstore service.
 
@@ -308,6 +328,8 @@ def setupStubs(conf, options):
     setupUserService(options.login_url, options.logout_url)
 
     setupBlobstore(options.blobstore_path, conf.application)
+
+    setupChannel(options.internal_address)
 
     if conf.inbound_services:
         inbound_services = conf.inbound_services

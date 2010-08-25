@@ -92,7 +92,7 @@ image/png
 ------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="file.path"
 
-/test.png
+/0000000001
 ------WebKitFormBoundarygS2PUgJ8Rnizqyb0
 Content-Disposition: form-data; name="file.md5"
 

@@ -23,7 +23,7 @@ import urllib
 
 
 class MainHandler(google.appengine.ext.webapp.RequestHandler):
-    """Provides the file upload form."""
+    """Provides a small Web Socket demo."""
 
     def get(self):
         """Handles get."""

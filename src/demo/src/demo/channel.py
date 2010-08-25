@@ -27,7 +27,7 @@ class MainHandler(webapp.RequestHandler):
     """Provides the main page of this Channel API demo."""
 
     def get(self):
-        channel_id = channel.create_channel('broadcast')
+        channel_id = channel.create_channel('demochannel')
         output = template.render('channel.html', {'channel_id': channel_id})
         self.response.out.write(output)
 

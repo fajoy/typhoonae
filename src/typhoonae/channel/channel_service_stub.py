@@ -102,7 +102,7 @@ class ChannelServiceStub(apiproxy_stub.APIProxyStub):
     #raise apiproxy_errors.ApplicationError(
     #    channel_service_pb.ChannelServiceError.INVALID_CHANNEL_KEY)
 
-    conn = httplib.HTTPConnection("localhost:8080")
+    conn = httplib.HTTPConnection(self._address)
     headers = {'Content-Type': 'text/plain',
                'Last-Modified': rfc1123_date()}
     conn.request("POST", "/_ah/publish?id=%s" %

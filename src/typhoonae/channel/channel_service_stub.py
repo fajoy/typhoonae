@@ -75,15 +75,7 @@ class ChannelServiceStub(apiproxy_stub.APIProxyStub):
       raise apiproxy_errors.ApplicationError(
           channel_service_pb.ChannelServiceError.INVALID_CHANNEL_KEY)
 
-    if application_key == 'broadcast':
-      client_id = application_key
-    else:
-      client_id = 'channel-%s-%s' % (random.randint(0, 2 ** 32),
-                                     application_key)
-    self._log('Creating channel id %s with application key %s',
-              client_id, request.application_key())
-
-    response.set_client_id(client_id)
+    response.set_client_id(application_key)
 
   def _Dynamic_SendChannelMessage(self, request, response):
     """Implementation of channel.send_message.
@@ -99,8 +91,6 @@ class ChannelServiceStub(apiproxy_stub.APIProxyStub):
     if not request.message():
       raise apiproxy_errors.ApplicationError(
           channel_service_pb.ChannelServiceError.BAD_MESSAGE)
-    #raise apiproxy_errors.ApplicationError(
-    #    channel_service_pb.ChannelServiceError.INVALID_CHANNEL_KEY)
 
     conn = httplib.HTTPConnection(self._address)
     headers = {'Content-Type': 'text/plain',

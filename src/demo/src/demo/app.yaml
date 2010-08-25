@@ -87,6 +87,12 @@ handlers:
   script: websocket.py
   login: admin
 
+- url: /channel_message
+  script: channel.py
+
+- url: /channel
+  script: channel.py
+
 - url: /remote_api
   script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
   login: admin

@@ -17,6 +17,7 @@
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import channel
+from google.appengine.runtime import apiproxy_errors
 from typhoonae.channel import channel_service_stub
 import BaseHTTPServer
 import SimpleHTTPServer
@@ -98,6 +99,9 @@ class ChannelTestCase(unittest.TestCase):
 
         self.assertEqual('testchannel', channel.create_channel('testchannel'))
 
+        self.assertRaises(
+            channel.InvalidChannelKeyError, channel.create_channel, '')
+
     def test_send_message(self):
         """Sends a channel message."""
 
@@ -110,6 +114,10 @@ class ChannelTestCase(unittest.TestCase):
 
         # Send our message.
         channel.send_message('testchannel', 'Hello, World!')
+
+        self.assertRaises(
+            channel.InvalidMessageError,
+            channel.send_message, 'testchannel', '')
 
         # Stop server.
         stop_server(9876)

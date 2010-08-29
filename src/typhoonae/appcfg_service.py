@@ -34,6 +34,7 @@ import multifile
 import optparse
 import os
 import signal
+import supervisor.childutils
 import sys
 import time
 import typhoonae
@@ -46,6 +47,8 @@ USAGE = "usage: %prog [options]"
 SERVER_SOFTWARE = "TyphoonAE/0.1.6 AppConfigService/0.1.0"
 
 LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
+
+DEFAULT_SUPERVISOR_SERVER_URL = 'http://localhost:9001'
 
 LIST_DELIMITER = '\n'
 TUPLE_DELIMITER = '|'

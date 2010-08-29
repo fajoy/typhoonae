@@ -58,6 +58,7 @@ setuptools.setup(
         ],
     extras_require=dict(
         amqp=['amqplib'],
+        appcfg=['supervisor'],
         memcached=['pylibmc'],
         mongo=['pymongo'],
         mysql=['MySQL-python'],

@@ -45,6 +45,7 @@ from google.appengine.datastore import sortable_pb_encoder
 from google.appengine.runtime import apiproxy_errors
 
 import MySQLdb
+import MySQLdb.constants.CR
 
 try:
   __import__('google.appengine.api.labs.taskqueue.taskqueue_service_pb')
@@ -916,8 +917,16 @@ class DatastoreMySQLStub(apiproxy_stub.APIProxyStub):
 
     self.AssertPbIsInitialized(request)
 
-    super(DatastoreMySQLStub, self).MakeSyncCall(
-      service, call, request, response)
+    try:
+      super(DatastoreMySQLStub, self).MakeSyncCall(
+        service, call, request, response)
+    except MySQLdb.OperationalError, e:
+      err_code, msg = e
+      # Automatically try reconnect when connection is lost.
+      if err_code == MySQLdb.constants.CR.SERVER_GONE_ERROR:
+        logging.error("%s. Trying to reconnect." % msg)
+        self.__connection = MySQLdb.connect(**self.__database_info_dict)
+        self.MakeSyncCall(service, call, request, response)
 
     self.AssertPbIsInitialized(response)
 

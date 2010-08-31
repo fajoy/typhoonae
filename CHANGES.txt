@@ -38,6 +38,11 @@ Version 0.1.6 (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=65
 
+  - Fixes a critical issue where an application hangs if the connection to the
+    MySQL database server is temporarily lost.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=67
+
 
 Version 0.1.5 (2010-07-09)
 --------------------------

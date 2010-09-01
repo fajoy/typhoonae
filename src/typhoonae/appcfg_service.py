@@ -422,7 +422,7 @@ def main():
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
-    op.add_option("--address", dest="address",
+    op.add_option("-a", "--address", dest="address",
                   metavar="ADDR", help="use this address",
                   default=DEFAULT_ADDRESS)
 

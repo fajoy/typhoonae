@@ -36,6 +36,7 @@ import os
 import signal
 import supervisor.childutils
 import sys
+import re
 import time
 import typhoonae
 
@@ -73,6 +74,11 @@ INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
   </body>
 </html>
 """
+
+FILE_FILTER_PATTERNS = [
+    '\.git.*',
+    '.*/\.git.*',
+]
 
 
 class AppConfigServiceError(Exception):
@@ -161,11 +167,12 @@ class AppversionHandler(webapp.RequestHandler):
     def post(self, func_name):
         app_id = self.request.params.get('app_id')
         version = self.request.params.get('version')
+        path = self.request.params.get('path')
 
         func = getattr(self, func_name, None)
         if func:
             try:
-                func(app_id, version, self.request.body)
+                func(app_id, version, path, self.request.body)
             except AppConfigServiceError, e:
                 self.response.out.write(e)
                 self.response.set_status(403)
@@ -197,8 +204,21 @@ class AppversionHandler(webapp.RequestHandler):
 
     @staticmethod
     def _extractFileTuples(data):
-        return [tuple(f.split(TUPLE_DELIMITER))
-                for f in data.split(LIST_DELIMITER)]
+        tuples = [tuple(f.split(TUPLE_DELIMITER))
+                  for f in data.split(LIST_DELIMITER)]
+        for pattern in FILE_FILTER_PATTERNS:
+            tuples = filter(lambda t:not re.match(pattern, t[0]), tuples)
+        return tuples
+
+    @staticmethod
+    def _createFile(app_dir, file_path, data):
+        path, name = os.path.split(file_path)
+        dst = os.path.join(app_dir, path)
+        if not os.path.isdir(dst):
+            os.makedirs(dst)
+        f = file(os.path.join(dst, name), 'wb')
+        f.write(data)
+        f.close()
 
     @staticmethod
     def getAppversionDirectory(appversion):
@@ -242,13 +262,7 @@ class AppversionHandler(webapp.RequestHandler):
         """
         files = cls._extractMimeParts(cStringIO.StringIO(data))
         for file_path, content_hash, contents in files:
-            path, name = os.path.split(file_path)
-            dst = os.path.join(app_dir, path)
-            if not os.path.isdir(dst):
-                os.makedirs(dst)
-            f = file(os.path.join(dst, name), 'wb')
-            f.write(contents)
-            f.close()
+            cls._createFile(app_dir, file_path, contents)
 
     @staticmethod
     def getAppversion(app_id, version, state):
@@ -268,7 +282,7 @@ class AppversionHandler(webapp.RequestHandler):
 
     # API methods
 
-    def create(self, app_id, version, data):
+    def create(self, app_id, version, path, data):
         if self.getAppversion(app_id, version, STATE_UPDATING):
             raise AppConfigServiceError(
                 u"Already updating application (app_id=u'%s')." % app_id)
@@ -289,32 +303,37 @@ class AppversionHandler(webapp.RequestHandler):
 
         db.run_in_transaction(tx)
 
-    def clonefiles(self, app_id, version, data):
+    def clonefiles(self, app_id, version, path, data):
         files = self._extractFileTuples(data)
         self.response.out.write(
             LIST_DELIMITER.join([filename for filename, _ in files]))
 
-    def cloneblobs(self, app_id, version, data):
+    def cloneblobs(self, app_id, version, path, data):
         files = self._extractFileTuples(data)
         self.response.out.write(
             LIST_DELIMITER.join([filename for filename, _, mimetype in files]))
 
-    def addfiles(self, app_id, version, data):
+    def addfile(self, app_id, version, path, data):
+        appversion = self.getAppversion(app_id, version, STATE_UPDATING)
+        app_dir = self.getAppversionDirectory(appversion)
+        self._createFile(app_dir, path, data)
+
+    def addfiles(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
         self.extractFiles(data, app_dir)
 
-    def addblobs(self, app_id, version, data):
+    def addblobs(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
         self.extractFiles(data, app_dir)
 
-    def deploy(self, app_id, version, data):
+    def deploy(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         appversion.state = STATE_DEPLOYED
         appversion.put()
 
-    def isready(self, app_id, version, data):
+    def isready(self, app_id, version, path, data):
         self.response.out.write('1')
 
 

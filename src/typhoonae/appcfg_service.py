@@ -34,11 +34,9 @@ import multifile
 import optparse
 import os
 import signal
-import supervisor.childutils
 import sys
 import re
 import time
-import typhoonae
 
 APPLICATION_ID = 'appcfg'
 DEFAULT_ADDRESS = 'localhost:9190'
@@ -330,6 +328,34 @@ class AppversionHandler(webapp.RequestHandler):
 
     def deploy(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
+        app_dir = self.getAppversionDirectory(appversion)
+
+        configureAppversion(appversion, app_dir)
+
+        supervisor_rpc = getSupervisorRpcInterface()
+
+        added, changed, removed = supervisor_rpc.reloadConfig()[0]
+
+        for name in removed:
+            results = supervisor_rpc.stopProcessGroup(name)
+            logging.info("%s stopped" % name)
+            supervisor_rpc.removeProcessGroup(name)
+            logging.info("removed process group %s" % name)
+
+        for name in changed:
+            results = supervisor_rpc.stopProcessGroup(name)
+            logging.info("%s stopped" % name)
+            supervisor_rpc.removeProcessGroup(name)
+            supervisor_rpc.addProcessGroup(name)
+            logging.info("updated process group %s" % name)
+
+        for name in added:
+            supervisor_rpc.addProcessGroup(name)
+            logging.info("added process group %s" % name)
+
+        supervisor_rpc.stopProcess('nginx')
+        supervisor_rpc.startProcess('nginx')
+
         appversion.state = STATE_DEPLOYED
         appversion.put()
 
@@ -434,6 +460,86 @@ class AppConfigService(object):
             server.serve_forever()
         except KeyboardInterrupt:
             logging.warn('Interrupted')
+
+
+def getSupervisorRpcInterface(default_url=DEFAULT_SUPERVISOR_SERVER_URL):
+    """Returns the supervisor RPC interface.
+
+    Args:
+        default_url: Specifies the default URL to the supervisor server.
+
+    See http://supervisord.org/api.html for a detailed documentation.
+    """
+    import supervisor.childutils
+
+    env = {}
+    env.update(os.environ)
+    env.setdefault('SUPERVISOR_SERVER_URL', default_url)
+
+    return supervisor.childutils.getRPCInterface(env).supervisor
+
+
+def configureAppversion(appversion, app_dir):
+    """Writes configuration files for the given appversion.
+
+    Args:
+        appversion: An Appversion instance.
+        app_dir: Absolute path to the root directory of our appversion.
+    """
+    import socket
+    import typhoonae.apptool
+    import typhoonae.fcgiserver
+
+    conf = appversion.config
+
+    class Options(object):
+        auth_domain = 'localhost'
+        amqp_host = 'localhost'
+        blobstore_path = os.path.join('var', 'blobstore')
+        crontab = False
+        datastore = 'mongodb'
+        develop_mode = False
+        ejabberd = os.path.join('etc', 'ejabberd.cfg')
+        email = ''
+        ssl_enabled = False
+        addr = 'localhost'
+        port = '8081'
+        html_error_pages_root = None
+        http_base_auth_enabled = False
+        http_port = 8080
+        https_port = 8443
+        internal_address = 'localhost:8770'
+        login_url = None
+        logout_url = None
+        multiple = True
+        mysql_db = 'typhoonae'
+        mysql_host = '127.0.0.1'
+        mysql_passwd = ''
+        mysql_user = 'root'
+        password = ''
+        server_name = socket.getfqdn()
+        server_software = typhoonae.fcgiserver.SERVER_SOFTWARE
+        smtp_host = 'localhost'
+        smtp_port = 25
+        smtp_user = ''
+        smtp_password = ''
+        ssl_certificate = None
+        ssl_certificate_key = None
+        upload_url = 'upload'
+        var = os.environ.get('TMPDIR', '/var')
+        verbose = False
+        xmpp_host = socket.getfqdn()
+
+    options = Options()
+
+    typhoonae.apptool.write_nginx_conf(options, conf, app_dir)
+    typhoonae.apptool.write_nginx_conf(
+        options, conf, app_dir, internal=True, mode='a')
+    typhoonae.apptool.make_blobstore_dirs(
+        os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
+    typhoonae.apptool.write_supervisor_conf(options, conf, app_dir)
+    typhoonae.apptool.write_ejabberd_conf(options)
+    typhoonae.apptool.write_crontab(options, app_dir)
 
 
 def main():

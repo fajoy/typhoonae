@@ -353,6 +353,8 @@ class AppversionHandler(webapp.RequestHandler):
             supervisor_rpc.addProcessGroup(name)
             logging.info("added process group %s" % name)
 
+        time.sleep(2)
+
         supervisor_rpc.stopProcess('nginx')
         supervisor_rpc.startProcess('nginx')
 
@@ -479,6 +481,30 @@ def getSupervisorRpcInterface(default_url=DEFAULT_SUPERVISOR_SERVER_URL):
     return supervisor.childutils.getRPCInterface(env).supervisor
 
 
+class Options(object):
+    """Provides options as attributes.
+
+    Replaces variables with their values from the environment.
+    """
+
+    def __init__(self, options, environ):
+        """Constructor."""
+        self._options = {}
+        for opt in options:
+            val = options[opt]
+            for key in environ:
+                val = re.sub(r'\$%s' % key, environ[key], val)
+            self._options[opt] = val 
+
+    def __getattr__(self, key):
+        val = self._options.get(key)
+        if re.match(r'^([0-9]+)$', val):
+            val = int(val)
+        elif re.match(r'^(False|True)$', val, re.M):
+            val = eval(val)
+        return val
+
+
 def configureAppversion(appversion, app_dir):
     """Writes configuration files for the given appversion.
 
@@ -486,51 +512,23 @@ def configureAppversion(appversion, app_dir):
         appversion: An Appversion instance.
         app_dir: Absolute path to the root directory of our appversion.
     """
+    import ConfigParser
     import socket
     import typhoonae.apptool
     import typhoonae.fcgiserver
 
     conf = appversion.config
 
-    class Options(object):
-        auth_domain = 'localhost'
-        amqp_host = 'localhost'
-        blobstore_path = os.path.join('var', 'blobstore')
-        crontab = False
-        datastore = 'mongodb'
-        develop_mode = False
-        ejabberd = os.path.join('etc', 'ejabberd.cfg')
-        email = ''
-        ssl_enabled = False
-        addr = 'localhost'
-        port = '8081'
-        html_error_pages_root = None
-        http_base_auth_enabled = False
-        http_port = 8080
-        https_port = 8443
-        internal_address = 'localhost:8770'
-        login_url = None
-        logout_url = None
-        multiple = True
-        mysql_db = 'typhoonae'
-        mysql_host = '127.0.0.1'
-        mysql_passwd = ''
-        mysql_user = 'root'
-        password = ''
-        server_name = socket.getfqdn()
-        server_software = typhoonae.fcgiserver.SERVER_SOFTWARE
-        smtp_host = 'localhost'
-        smtp_port = 25
-        smtp_user = ''
-        smtp_password = ''
-        ssl_certificate = None
-        ssl_certificate_key = None
-        upload_url = 'upload'
-        var = os.environ.get('TMPDIR', '/var')
-        verbose = False
-        xmpp_host = socket.getfqdn()
+    env = {
+        'HOST': socket.getfqdn(),
+        'SERVER_SOFTWARE': typhoonae.fcgiserver.SERVER_SOFTWARE,
+        'VAR': os.environ['TMPDIR'],
+    }
 
-    options = Options()
+    p = ConfigParser.ConfigParser()
+    p.read('etc/typhoonae.cfg')
+    
+    options = Options(dict(p.items('typhoonae')), env)
 
     typhoonae.apptool.write_nginx_conf(options, conf, app_dir)
     typhoonae.apptool.write_nginx_conf(

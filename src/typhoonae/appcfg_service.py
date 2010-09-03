@@ -45,7 +45,7 @@ USAGE = "usage: %prog [options]"
 
 SERVER_SOFTWARE = "TyphoonAE/0.1.6 AppConfigService/0.1.0"
 
-CONFIG_FILE = 'typhoonae.cfg'
+CONFIG_FILE_NAME = 'typhoonae.cfg'
 
 LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
 
@@ -529,7 +529,7 @@ def configureAppversion(appversion, app_dir):
     }
 
     p = ConfigParser.ConfigParser()
-    p.read('etc/typhoonae.cfg')
+    p.read(CONFIG_FILE_NAME)
     
     options = Options(dict(p.items('typhoonae')), environ)
 
@@ -545,7 +545,7 @@ def configureAppversion(appversion, app_dir):
 
 def main():
     """The main method."""
-    global CONFIG_FILE
+    global CONFIG_FILE_NAME
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
@@ -575,7 +575,7 @@ def main():
         logging.getLogger().setLevel(logging.INFO)
 
     if options.config_file:
-        CONFIG_FILE = options.config_file
+        CONFIG_FILE_NAME = options.config_file
 
     service = AppConfigService(
         options.address, app, options.apps_root, options.debug_mode)

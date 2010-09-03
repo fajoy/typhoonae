@@ -45,6 +45,8 @@ USAGE = "usage: %prog [options]"
 
 SERVER_SOFTWARE = "TyphoonAE/0.1.6 AppConfigService/0.1.0"
 
+CONFIG_FILE = 'typhoonae.cfg'
+
 LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
 
 DEFAULT_SUPERVISOR_SERVER_URL = 'http://localhost:9001'
@@ -458,7 +460,7 @@ class AppConfigService(object):
             logging.debug('HTTP server listening on %s:%i',
                           self.host, self.port)
             server = make_server(
-                self.host, self.port, app, handler_class=RequestHandler)
+                self.host, self.port, self.app, handler_class=RequestHandler)
             server.serve_forever()
         except KeyboardInterrupt:
             logging.warn('Interrupted')
@@ -519,16 +521,17 @@ def configureAppversion(appversion, app_dir):
 
     conf = appversion.config
 
-    env = {
-        'HOST': socket.getfqdn(),
-        'SERVER_SOFTWARE': typhoonae.fcgiserver.SERVER_SOFTWARE,
-        'VAR': os.environ['TMPDIR'],
+    environ = {
+        'HOSTNAME': os.environ.get('HOSTNAME', socket.getfqdn()),
+        'SERVER_SOFTWARE': os.environ.get('SERVER_SOFTWARE',
+                                          typhoonae.fcgiserver.SERVER_SOFTWARE),
+        'VAR': os.environ.get('TMPDIR', '/tmp'),
     }
 
     p = ConfigParser.ConfigParser()
     p.read('etc/typhoonae.cfg')
     
-    options = Options(dict(p.items('typhoonae')), env)
+    options = Options(dict(p.items('typhoonae')), environ)
 
     typhoonae.apptool.write_nginx_conf(options, conf, app_dir)
     typhoonae.apptool.write_nginx_conf(
@@ -542,12 +545,16 @@ def configureAppversion(appversion, app_dir):
 
 def main():
     """The main method."""
+    global CONFIG_FILE
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
     op.add_option("-a", "--address", dest="address",
                   metavar="ADDR", help="use this address",
                   default=DEFAULT_ADDRESS)
+
+    op.add_option("-c", "--config", dest="config_file",
+                  metavar="FILE", help="read configuration from this file")
 
     op.add_option("-d", "--debug", dest="debug_mode", action="store_true",
                   help="enables debug mode", default=False)
@@ -566,6 +573,9 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.INFO)
+
+    if options.config_file:
+        CONFIG_FILE = options.config_file
 
     service = AppConfigService(
         options.address, app, options.apps_root, options.debug_mode)

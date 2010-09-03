@@ -34,6 +34,7 @@ import multifile
 import optparse
 import os
 import signal
+import socket
 import sys
 import re
 import time
@@ -59,7 +60,10 @@ MIME_HASH_HEADER = 'X-Appcfg-Hash'
 STATE_INACTIVE = 0
 STATE_UPDATING = 1
 STATE_DEPLOYED = 2
-VALID_STATES = frozenset([STATE_INACTIVE, STATE_UPDATING, STATE_DEPLOYED])
+STATE_ROLLBACK = 3
+VALID_STATES = frozenset([
+    STATE_INACTIVE, STATE_UPDATING, STATE_DEPLOYED, STATE_ROLLBACK
+])
 
 INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -107,7 +111,7 @@ class RequestHandler(WSGIRequestHandler):
         handler.run(self.server.get_app())
 
     def log_message(self, format, *args):
-        logging.info(format, *args)
+        logging.debug(format, *args)
 
 
 class Appversion(db.Model):
@@ -277,7 +281,8 @@ class AppversionHandler(webapp.RequestHandler):
         """
         query = db.GqlQuery(
             "SELECT * FROM Appversion WHERE app_id = :1 "
-            "AND version = :2 AND state = :3", app_id, version, state)
+            "AND version = :2 AND state = :3 ORDER BY created DESC", 
+            app_id, version, state)
         return query.get()
 
     # API methods
@@ -336,35 +341,52 @@ class AppversionHandler(webapp.RequestHandler):
 
         supervisor_rpc = getSupervisorRpcInterface()
 
-        added, changed, removed = supervisor_rpc.reloadConfig()[0]
+        try:
+            added, changed, removed = supervisor_rpc.reloadConfig()[0]
+        except socket.error, e:
+            logging.critical("Connecting to supervsord failed %s.", e)
+            appversion.state = STATE_ROLLBACK
+            appversion.put()
+            raise AppConfigServiceError(
+                u"Internal error when deploying application (app_id=u'%s')" %
+                app_id)
 
         for name in removed:
             results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("%s stopped" % name)
+            logging.info("Stoppend %s", name)
             supervisor_rpc.removeProcessGroup(name)
-            logging.info("removed process group %s" % name)
+            logging.info("Removed process group %s", name)
 
         for name in changed:
             results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("%s stopped" % name)
+            logging.info("Stopped %s", name)
             supervisor_rpc.removeProcessGroup(name)
             supervisor_rpc.addProcessGroup(name)
-            logging.info("updated process group %s" % name)
+            logging.info("Updated process group %s", name)
 
         for name in added:
             supervisor_rpc.addProcessGroup(name)
-            logging.info("added process group %s" % name)
+            logging.info("Added process group %s", name)
 
         time.sleep(2)
 
         supervisor_rpc.stopProcess('nginx')
         supervisor_rpc.startProcess('nginx')
+        logging.info("Restarted HTTP frontend")
 
         appversion.state = STATE_DEPLOYED
         appversion.put()
 
     def isready(self, app_id, version, path, data):
         self.response.out.write('1')
+
+    def rollback(self, app_id, version, path, data):
+        appversion = self.getAppversion(app_id, version, STATE_ROLLBACK)
+        app_dir = self.getAppversionDirectory(appversion)
+        os.removedirs(app_dir)
+        logging.info("Deleting application directory '%s'", app_dir)
+        appversion.delete()
+        logging.info("Deleting appversion (app_id=u'&s')", app_id)
 
 
 class DatastoreHandler(webapp.RequestHandler):
@@ -442,7 +464,7 @@ class AppConfigService(object):
         logging.debug('Using datastore: %s', datastore_path)
 
     def _handleSignal(self, sig, frame):
-        logging.debug('Caught signal %d' % sig)
+        logging.debug('Caught signal %d', sig)
         if sig in (3, 6, 15):
             self.shutdown()
 
@@ -515,7 +537,6 @@ def configureAppversion(appversion, app_dir):
         app_dir: Absolute path to the root directory of our appversion.
     """
     import ConfigParser
-    import socket
     import typhoonae.apptool
     import typhoonae.fcgiserver
 
@@ -576,6 +597,10 @@ def main():
 
     if options.config_file:
         CONFIG_FILE_NAME = options.config_file
+
+    if not os.path.isfile(CONFIG_FILE_NAME):
+        logging.error('Configuration file "%s" not found', CONFIG_FILE_NAME)
+        sys.exit(1)
 
     service = AppConfigService(
         options.address, app, options.apps_root, options.debug_mode)

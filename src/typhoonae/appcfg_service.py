@@ -33,6 +33,7 @@ import mimetools
 import multifile
 import optparse
 import os
+import shutil
 import signal
 import socket
 import sys
@@ -60,10 +61,7 @@ MIME_HASH_HEADER = 'X-Appcfg-Hash'
 STATE_INACTIVE = 0
 STATE_UPDATING = 1
 STATE_DEPLOYED = 2
-STATE_ROLLBACK = 3
-VALID_STATES = frozenset([
-    STATE_INACTIVE, STATE_UPDATING, STATE_DEPLOYED, STATE_ROLLBACK
-])
+VALID_STATES = frozenset([STATE_INACTIVE, STATE_UPDATING, STATE_DEPLOYED])
 
 INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -337,19 +335,17 @@ class AppversionHandler(webapp.RequestHandler):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
 
-        configureAppversion(appversion, app_dir)
-
         supervisor_rpc = getSupervisorRpcInterface()
 
         try:
             added, changed, removed = supervisor_rpc.reloadConfig()[0]
         except socket.error, e:
             logging.critical("Connecting to supervsord failed %s.", e)
-            appversion.state = STATE_ROLLBACK
-            appversion.put()
             raise AppConfigServiceError(
-                u"Internal error when deploying application (app_id=u'%s')" %
+                u"Internal error when deploying application (app_id=u'%s')." %
                 app_id)
+
+        configureAppversion(appversion, app_dir)
 
         for name in removed:
             results = supervisor_rpc.stopProcessGroup(name)
@@ -381,12 +377,12 @@ class AppversionHandler(webapp.RequestHandler):
         self.response.out.write('1')
 
     def rollback(self, app_id, version, path, data):
-        appversion = self.getAppversion(app_id, version, STATE_ROLLBACK)
+        appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
-        os.removedirs(app_dir)
         logging.info("Deleting application directory '%s'", app_dir)
+        shutil.rmtree(app_dir)
+        logging.info("Deleting appversion (app_id=u'%s')", app_id)
         appversion.delete()
-        logging.info("Deleting appversion (app_id=u'&s')", app_id)
 
 
 class DatastoreHandler(webapp.RequestHandler):

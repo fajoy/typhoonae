@@ -808,7 +808,7 @@ def main():
 
     op.add_option("--fcgi_port", dest="port", metavar="PORT",
                   help="use this port of the FastCGI host",
-                  default='8081')
+                  default=8081)
 
     op.add_option("--html_error_pages_root", dest="html_error_pages_root",
                   metavar="PATH", help="set root for HTML error pages",

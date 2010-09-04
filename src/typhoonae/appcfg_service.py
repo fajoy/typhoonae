@@ -338,7 +338,7 @@ class AppversionHandler(webapp.RequestHandler):
         supervisor_rpc = getSupervisorRpcInterface()
 
         try:
-            added, changed, removed = supervisor_rpc.reloadConfig()[0]
+            supervisor_rpc.getState()
         except socket.error, e:
             logging.critical("Connecting to supervsord failed %s.", e)
             raise AppConfigServiceError(
@@ -346,6 +346,8 @@ class AppversionHandler(webapp.RequestHandler):
                 app_id)
 
         configureAppversion(appversion, app_dir)
+
+        added, changed, removed = supervisor_rpc.reloadConfig()[0]
 
         for name in removed:
             results = supervisor_rpc.stopProcessGroup(name)

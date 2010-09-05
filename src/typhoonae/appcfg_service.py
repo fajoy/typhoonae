@@ -28,6 +28,7 @@ from google.appengine.ext import webapp
 from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, make_server
 
 import cStringIO
+import datetime
 import logging
 import mimetools
 import multifile
@@ -115,17 +116,12 @@ class RequestHandler(WSGIRequestHandler):
 class Appversion(db.Model):
     """Represents appversions."""
 
-    app_id = db.StringProperty(required=True)
-    version = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now=True)
-    app_yaml = db.BlobProperty(required=True)
+    app_id = db.StringProperty()
+    version = db.StringProperty()
+    current_version_id = db.StringProperty()
+    updated = db.DateTimeProperty()
+    app_yaml = db.BlobProperty()
     state = db.IntegerProperty(choices=VALID_STATES, default=STATE_UPDATING)
-
-    @property
-    def current_version_id(self):
-        version_id = "%s.%i" % (
-            self.version, int(time.mktime(self.created.timetuple())) << 28)
-        return version_id
 
     @property
     def config(self):
@@ -138,7 +134,8 @@ class IndexPage(webapp.RequestHandler):
     def get(self):
         apps = u'<ul>'
         apps += u''.join([
-            u'<li>%s (%s)</li>' % (app.app_id, app.current_version_id)
+            u'<li>%s (%s) %s</li>' % (
+                app.app_id, app.current_version_id, app.updated)
             for app in Appversion.all().fetch(10)
         ])
         apps += u'</ul>'
@@ -279,7 +276,7 @@ class AppversionHandler(webapp.RequestHandler):
         """
         query = db.GqlQuery(
             "SELECT * FROM Appversion WHERE app_id = :1 "
-            "AND version = :2 AND state = :3 ORDER BY created DESC", 
+            "AND version = :2 AND state = :3 ORDER BY updated DESC", 
             app_id, version, state)
         return query.get()
 
@@ -289,10 +286,17 @@ class AppversionHandler(webapp.RequestHandler):
         if self.getAppversion(app_id, version, STATE_UPDATING):
             raise AppConfigServiceError(
                 u"Already updating application (app_id=u'%s')." % app_id)
+
+        def makeCurrentAppversionId(version, date):
+            return "%s.%i" % (version, int(time.mktime(date.timetuple()))<<28)
+
         def tx():
+            now = datetime.datetime.now()
             appversion = Appversion(
                 app_id=app_id,
                 version=version,
+                current_version_id=makeCurrentAppversionId(version, now),
+                updated=now,
                 app_yaml=self.request.body)
             appversion.put()
 
@@ -373,6 +377,7 @@ class AppversionHandler(webapp.RequestHandler):
         logging.info("Restarted HTTP frontend")
 
         appversion.state = STATE_DEPLOYED
+        appversion.updated = datetime.datetime.now()
         appversion.put()
 
     def isready(self, app_id, version, path, data):

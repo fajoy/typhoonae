@@ -102,14 +102,14 @@ NGINX_BASIC_AUTH_LOCATION = """
 location ~ ^/(%(path)s) {
     auth_basic "%(app_id)s";
     auth_basic_user_file %(passwd_file)s;
-    fastcgi_pass %(addr)s:%(port)s;
+    fastcgi_pass %(fcgi_host)s:%(fcgi_port)s;
 %(fcgi_params)s
 }
 """
 
 NGINX_FCGI_CONFIG = """
 location ~ {
-    fastcgi_pass %(addr)s:%(port)s;
+    fastcgi_pass %(fcgi_host)s:%(fcgi_port)s;
 %(fcgi_params)s
 }
 """
@@ -142,7 +142,7 @@ location ~* /%(upload_url)s {
 }
 
 location @%(app_id)s {
-    fastcgi_pass %(addr)s:%(port)s;
+    fastcgi_pass %(fcgi_host)s:%(fcgi_port)s;
 %(fcgi_params)s
 }
 """
@@ -198,7 +198,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
 command = %(bin)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
-socket = tcp://%(addr)s:%(port)s
+socket = tcp://%(fcgi_host)s:%(fcgi_port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
 priority = 999
@@ -374,7 +374,6 @@ def write_nginx_conf(
         options, conf, app_root, internal=False, secure=False, mode='w'):
     """Writes nginx server configuration stub."""
 
-    addr = options.addr
     add_fcgi_params = []
     add_server_params = ''
     if options.multiple:
@@ -384,9 +383,10 @@ def write_nginx_conf(
     app_id = conf.application
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
+    fcgi_host = options.fcgi_host
+    fcgi_port = options.fcgi_port
     html_error_pages_root = options.html_error_pages_root
     http_port = options.http_port
-    port = options.port
     server_name = options.server_name
     ssl_certificate = options.ssl_certificate
     ssl_certificate_key = options.ssl_certificate_key
@@ -505,13 +505,13 @@ def write_nginx_conf(
 
     if urls_require_login and options.http_base_auth_enabled and not internal:
         httpd_conf_stub.write(NGINX_BASIC_AUTH_LOCATION % dict(
-            addr=addr,
             app_id=conf.application,
+            fcgi_host=fcgi_host,
             fcgi_params=FCGI_PARAMS % {
                 'add_fcgi_params': '\n'.join(add_fcgi_params)},
+            fcgi_port=fcgi_port,
             passwd_file=os.path.join(app_root, 'htpasswd'),
             path='|'.join(urls_require_login),
-            port=port
             )
         )
 
@@ -533,7 +533,6 @@ def write_nginx_conf(
 def write_supervisor_conf(options, conf, app_root):
     """Writes supercisord configuration stub."""
 
-    addr = options.addr
     amqp_host = options.amqp_host
     app_id = conf.application
     auth_domain = options.auth_domain
@@ -542,10 +541,11 @@ def write_supervisor_conf(options, conf, app_root):
     datastore = options.datastore.lower()
     develop_mode = options.develop_mode
     email = options.email
+    fcgi_host = options.fcgi_host
+    fcgi_port = options.fcgi_port
     http_port = options.http_port
     internal_address = options.internal_address
     password = options.password
-    port = options.port
     root = os.getcwd()
     server_software = options.server_software
     upload_url = options.upload_url
@@ -803,10 +803,10 @@ def main():
     op.add_option("--enable_ssl", dest="ssl_enabled", action="store_true",
                   help="enable SSL support", default=False)
 
-    op.add_option("--fcgi_host", dest="addr", metavar="ADDR",
+    op.add_option("--fcgi_host", dest="fcgi_host", metavar="HOST",
                   help="use this FastCGI host", default='localhost')
 
-    op.add_option("--fcgi_port", dest="port", metavar="PORT",
+    op.add_option("--fcgi_port", dest="fcgi_port", metavar="PORT",
                   help="use this port of the FastCGI host",
                   default=8081)
 

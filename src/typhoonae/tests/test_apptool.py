@@ -17,6 +17,7 @@
 
 import os
 import re
+import shutil
 import sys
 import tempfile
 import typhoonae
@@ -65,13 +66,13 @@ class ApptoolTestCase(unittest.TestCase):
         """Writes a NGINX configuration file."""
 
         class OptionsMock:
-            addr = "localhost"
             blobstore_path = "/tmp/blobstore"
+            fcgi_host = "localhost"
+            fcgi_port = 8081
             html_error_pages_root = "/tmp/html"
             http_base_auth_enabled = False
             http_port = 8080
             multiple = False
-            port = 8081
             server_name = "host.local"
             ssl_enabled = False
             ssl_certificate = None
@@ -209,5 +210,4 @@ location = /50x.html {
             print config
             raise e
         finally:
-            os.unlink(os.path.join(os.getcwd(), 'etc', 'default-nginx.conf'))
-            os.rmdir(os.path.join(os.getcwd(), 'etc'))
+            shutil.rmtree(os.path.join(os.getcwd(), 'etc'))

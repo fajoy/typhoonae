@@ -48,11 +48,12 @@ USAGE = "usage: %prog [options]"
 
 SERVER_SOFTWARE = "TyphoonAE/0.1.6 AppConfigService/0.1.0"
 
-CONFIG_FILE_NAME = 'typhoonae.cfg'
-
 LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
 
 DEFAULT_SUPERVISOR_SERVER_URL = 'http://localhost:9001'
+
+CONFIG_FILE_KEY = "TYPHOONAE_CONFIG"
+CONFIG_FILE_NAME = "typhoonae.cfg"
 
 LIST_DELIMITER = '\n'
 TUPLE_DELIMITER = '|'
@@ -553,7 +554,7 @@ def configureAppversion(appversion, app_dir):
     }
 
     p = ConfigParser.ConfigParser()
-    p.read(CONFIG_FILE_NAME)
+    p.read(os.environ[CONFIG_FILE_KEY])
     
     options = Options(dict(p.items('typhoonae')), environ)
 
@@ -569,7 +570,6 @@ def configureAppversion(appversion, app_dir):
 
 def main():
     """The main method."""
-    global CONFIG_FILE_NAME
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
@@ -599,10 +599,14 @@ def main():
         logging.getLogger().setLevel(logging.INFO)
 
     if options.config_file:
-        CONFIG_FILE_NAME = options.config_file
+        os.environ[CONFIG_FILE_KEY] = options.config_file
 
-    if not os.path.isfile(CONFIG_FILE_NAME):
-        logging.error('Configuration file "%s" not found', CONFIG_FILE_NAME)
+    if CONFIG_FILE_KEY not in os.environ:
+        os.environ[CONFIG_FILE_KEY] = CONFIG_FILE_NAME
+
+    if not os.path.isfile(os.environ[CONFIG_FILE_KEY]):
+        logging.error('Configuration file "%s" not found',
+                      os.environ[CONFIG_FILE_KEY])
         sys.exit(1)
 
     service = AppConfigService(

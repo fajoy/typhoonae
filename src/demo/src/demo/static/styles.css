@@ -48,18 +48,6 @@ hr {
     font-family: "Courier New", Courier, monospace;
 }
 
-.debug {
-    -moz-border-radius: 10px;
-    -webkit-border-radius: 10px;
-    background: #111;
-    border: 0px solid #111;
-    color: #eee;
-    font-family: Courier, monospace;
-    font-size: 8pt;
-    margin: 0;
-    padding: 0.5em;
-}
-
 .emphasis, em {
     font-weight: bold;
     font-style: normal;

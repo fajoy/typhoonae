@@ -4,13 +4,14 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>TyphoonAE</title>
-    <link rel="stylesheet" href="/static/styles.css" type="text/css"
-          media="all" />
+    <link rel="stylesheet" href="/css/styles.css" type="text/css" media="all" />
   </head>
   <body>
-    <img src="logo.png" alt="TyphoonAE" title="TyphoonAE" />
-    <div style="float:right">User: {{ user }} {{ login_or_logout }}</div>
-    <div class="debug">{{ env }}</div>
+    <img src="/images/logo.png" alt="TyphoonAE" title="TyphoonAE" />
+    <a href="/admin/">Admin</a>
+    <div style="float:right">
+      User: {{ user }} {{ login_or_logout }}
+    </div>
     <div>
       <p>Counter: {{ count }}</p>
       <p>Notes from executed tasks and received XMPP messages (memcached):</p>
@@ -46,7 +47,7 @@
       {% endfor %}
       </ul>
     </div>
-    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
     <script type="text/javascript">
       function callAJAX() {
         $.getJSON("/ajax", function(json) {

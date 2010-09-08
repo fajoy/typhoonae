@@ -55,6 +55,8 @@ DEFAULT_SUPERVISOR_SERVER_URL = 'http://localhost:9001'
 CONFIG_FILE_KEY = "TYPHOONAE_CONFIG"
 CONFIG_FILE_NAME = "typhoonae.cfg"
 
+XMPP_INBOUND_SERVICE_NAME = "xmpp_message"
+
 LIST_DELIMITER = '\n'
 TUPLE_DELIMITER = '|'
 MIME_FILE_HEADER = 'X-Appcfg-File'
@@ -350,7 +352,12 @@ class AppversionHandler(webapp.RequestHandler):
                 u"Internal error when deploying application (app_id=u'%s')." %
                 app_id)
 
-        configureAppversion(appversion, app_dir)
+        options = configureAppversion(appversion, app_dir)
+
+        if XMPP_INBOUND_SERVICE_NAME in appversion.config.inbound_services:
+            supervisor_rpc.stopProcess('ejabberd')
+            supervisor_rpc.startProcess('ejabberd')
+            logging.info("Restarted XMPP gateway")
 
         added, changed, removed = supervisor_rpc.reloadConfig()[0]
 
@@ -525,7 +532,10 @@ class Options(object):
             self._options[opt] = val 
 
     def __getattr__(self, key):
-        val = self._options.get(key)
+        try:
+            val = self._options[key]
+        except KeyError:
+            raise AppConfigServiceError(u"Option key '%s' not found" % key)
         if re.match(r'^([0-9]+)$', val):
             val = int(val)
         elif re.match(r'^(False|True)$', val, re.M):
@@ -566,6 +576,8 @@ def configureAppversion(appversion, app_dir):
     typhoonae.apptool.write_supervisor_conf(options, conf, app_dir)
     typhoonae.apptool.write_ejabberd_conf(options)
     typhoonae.apptool.write_crontab(options, app_dir)
+
+    return options
 
 
 def main():

@@ -354,10 +354,11 @@ class AppversionHandler(webapp.RequestHandler):
 
         options = configureAppversion(appversion, app_dir)
 
-        if XMPP_INBOUND_SERVICE_NAME in appversion.config.inbound_services:
-            supervisor_rpc.stopProcess('ejabberd')
-            supervisor_rpc.startProcess('ejabberd')
-            logging.info("Restarted XMPP gateway")
+        if appversion.config.inbound_services:
+            if XMPP_INBOUND_SERVICE_NAME in appversion.config.inbound_services:
+                supervisor_rpc.stopProcess('ejabberd')
+                supervisor_rpc.startProcess('ejabberd')
+                logging.info("Restarted XMPP gateway")
 
         added, changed, removed = supervisor_rpc.reloadConfig()[0]
 

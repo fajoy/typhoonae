@@ -50,3 +50,10 @@ directory = ${buildout:directory}/parts/nginx/sbin
 priority = 30
 environment = LD_LIBRARY_PATH="${buildout:directory}/parts/pcre/lib"
 redirect_stderr = true
+
+[program:appcfg_service]
+command = ${buildout:directory}/bin/appcfg_service -c ${buildout:directory}/etc/typhoonae.cfg
+process_name = appcfg_service
+directory = ${buildout:directory}
+priority = 40
+redirect_stderr = true

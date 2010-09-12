@@ -27,6 +27,7 @@ from google.appengine.ext import db
 from google.appengine.ext import webapp
 from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, make_server
 
+import ConfigParser
 import cStringIO
 import datetime
 import logging
@@ -40,6 +41,8 @@ import socket
 import sys
 import re
 import time
+import typhoonae.apptool
+import typhoonae.fcgiserver
 
 APPLICATION_ID = 'appcfg'
 DEFAULT_ADDRESS = 'localhost:9190'
@@ -66,6 +69,8 @@ STATE_INACTIVE = 0
 STATE_UPDATING = 1
 STATE_DEPLOYED = 2
 VALID_STATES = frozenset([STATE_INACTIVE, STATE_UPDATING, STATE_DEPLOYED])
+
+MAX_USED_PORTS = 10
 
 INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -114,6 +119,12 @@ class RequestHandler(WSGIRequestHandler):
 
     def log_message(self, format, *args):
         logging.debug(format, *args)
+
+
+class PortConfig(db.Model):
+    """Stores port configurations for a machine."""
+
+    used_ports = db.ListProperty(int)
 
 
 class Appversion(db.Model):
@@ -352,7 +363,26 @@ class AppversionHandler(webapp.RequestHandler):
                 u"Internal error when deploying application (app_id=u'%s')." %
                 app_id)
 
-        options = configureAppversion(appversion, app_dir)
+        options = readDefaultOptions()
+
+        portconfig = PortConfig.get_or_insert(
+            'portconfig_%s' % options.server_name.replace('.', '_'))
+
+        port = options.fcgi_port
+
+        if not portconfig.used_ports:
+            portconfig.used_ports.append(port)
+        else:
+            if len(portconfig.used_ports) == MAX_USED_PORTS:
+                raise AppConfigServiceError(
+                    u"Maximum number of installed applications reached.")
+            for i, p in enumerate(range(port, port+MAX_USED_PORTS)):
+                if p not in portconfig.used_ports:
+                    portconfig.used_ports.insert(i, p)
+                    options.fcgi_port = p
+                    break
+
+        configureAppversion(appversion, app_dir, options)
 
         if appversion.config.inbound_services:
             if XMPP_INBOUND_SERVICE_NAME in appversion.config.inbound_services:
@@ -388,6 +418,8 @@ class AppversionHandler(webapp.RequestHandler):
         appversion.state = STATE_DEPLOYED
         appversion.updated = datetime.datetime.now()
         appversion.put()
+
+        portconfig.put()
 
     def isready(self, app_id, version, path, data):
         self.response.out.write('1')
@@ -544,18 +576,8 @@ class Options(object):
         return val
 
 
-def configureAppversion(appversion, app_dir):
-    """Writes configuration files for the given appversion.
-
-    Args:
-        appversion: An Appversion instance.
-        app_dir: Absolute path to the root directory of our appversion.
-    """
-    import ConfigParser
-    import typhoonae.apptool
-    import typhoonae.fcgiserver
-
-    conf = appversion.config
+def readDefaultOptions():
+    """Reads default options from gloabal config file."""
 
     environ = {
         'HOSTNAME': os.environ.get('HOSTNAME', socket.getfqdn()),
@@ -566,8 +588,19 @@ def configureAppversion(appversion, app_dir):
 
     p = ConfigParser.ConfigParser()
     p.read(os.environ[CONFIG_FILE_KEY])
-    
-    options = Options(dict(p.items('typhoonae')), environ)
+
+    return Options(dict(p.items('typhoonae')), environ)
+
+
+def configureAppversion(appversion, app_dir, options):
+    """Writes configuration files for the given appversion.
+
+    Args:
+        appversion: An Appversion instance.
+        app_dir: Absolute path to the root directory of our appversion.
+        options: An Options instance.
+    """
+    conf = appversion.config
 
     typhoonae.apptool.write_nginx_conf(options, conf, app_dir)
     typhoonae.apptool.write_nginx_conf(
@@ -577,8 +610,6 @@ def configureAppversion(appversion, app_dir):
     typhoonae.apptool.write_supervisor_conf(options, conf, app_dir)
     typhoonae.apptool.write_ejabberd_conf(options)
     typhoonae.apptool.write_crontab(options, app_dir)
-
-    return options
 
 
 def main():

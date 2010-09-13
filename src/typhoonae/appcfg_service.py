@@ -184,7 +184,7 @@ class AppversionHandler(webapp.RequestHandler):
         version = self.request.params.get('version')
         path = self.request.params.get('path')
 
-        func = getattr(self, func_name, None)
+        func = getattr(self, '_RPC_'+func_name, None)
         if func:
             try:
                 func(app_id, version, path, self.request.body)
@@ -298,7 +298,7 @@ class AppversionHandler(webapp.RequestHandler):
 
     # API methods
 
-    def create(self, app_id, version, path, data):
+    def _RPC_create(self, app_id, version, path, data):
         if self.getAppversion(app_id, version, STATE_UPDATING):
             raise AppConfigServiceError(
                 u"Already updating application (app_id=u'%s')." % app_id)
@@ -326,32 +326,32 @@ class AppversionHandler(webapp.RequestHandler):
 
         logging.debug('Appversion directory: %s', app_dir)
 
-    def clonefiles(self, app_id, version, path, data):
+    def _RPC_clonefiles(self, app_id, version, path, data):
         files = self._extractFileTuples(data)
         self.response.out.write(
             LIST_DELIMITER.join([filename for filename, _ in files]))
 
-    def cloneblobs(self, app_id, version, path, data):
+    def _RPC_cloneblobs(self, app_id, version, path, data):
         files = self._extractFileTuples(data)
         self.response.out.write(
             LIST_DELIMITER.join([filename for filename, _, mimetype in files]))
 
-    def addfile(self, app_id, version, path, data):
+    def _RPC_addfile(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
         self._createFile(app_dir, path, data)
 
-    def addfiles(self, app_id, version, path, data):
+    def _RPC_addfiles(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
         self.extractFiles(data, app_dir)
 
-    def addblobs(self, app_id, version, path, data):
+    def _RPC_addblobs(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
         self.extractFiles(data, app_dir)
 
-    def deploy(self, app_id, version, path, data):
+    def _RPC_deploy(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
 
@@ -430,10 +430,10 @@ class AppversionHandler(webapp.RequestHandler):
         appversion.updated = datetime.datetime.now()
         appversion.put()
 
-    def isready(self, app_id, version, path, data):
+    def _RPC_isready(self, app_id, version, path, data):
         self.response.out.write('1')
 
-    def rollback(self, app_id, version, path, data):
+    def _RPC_rollback(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
         logging.info("Deleting application directory '%s'", app_dir)

@@ -518,7 +518,7 @@ class AppConfigService(object):
 
     def _handleSignal(self, sig, frame):
         logging.debug('Caught signal %d', sig)
-        if sig in (3, 6, 15):
+        if sig in (signal.SIGQUIT, signal.SIGABRT, signal.SIGTERM):
             self.shutdown()
 
     def shutdown(self):

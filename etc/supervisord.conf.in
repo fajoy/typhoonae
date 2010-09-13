@@ -56,5 +56,5 @@ command = ${buildout:directory}/bin/appcfg_service -c ${buildout:directory}/etc/
 process_name = appcfg_service
 directory = ${buildout:directory}
 priority = 40
-stopsignal = HUP
+stdout_logfile = ${buildout:directory}/var/log/appcfg_service.log
 redirect_stderr = true

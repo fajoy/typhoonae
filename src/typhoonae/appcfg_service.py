@@ -135,6 +135,8 @@ class Appversion(db.Model):
     current_version_id = db.StringProperty()
     updated = db.DateTimeProperty()
     app_yaml = db.BlobProperty()
+    fcgi_port = db.IntegerProperty()
+    portconfig = db.ReferenceProperty(PortConfig)
     state = db.IntegerProperty(choices=VALID_STATES, default=STATE_UPDATING)
 
     @property
@@ -304,25 +306,25 @@ class AppversionHandler(webapp.RequestHandler):
         def makeCurrentAppversionId(version, date):
             return "%s.%i" % (version, int(time.mktime(date.timetuple()))<<28)
 
-        def tx():
-            now = datetime.datetime.now()
-            appversion = Appversion(
-                app_id=app_id,
-                version=version,
-                current_version_id=makeCurrentAppversionId(version, now),
-                updated=now,
-                app_yaml=self.request.body)
-            appversion.put()
+        appversion = self.getAppversion(app_id, version, STATE_DEPLOYED)
+        now = datetime.datetime.now()
+        if not appversion:
+            appversion = Appversion(app_id=app_id, version=version)
+        else:
+            appversion.state = STATE_UPDATING
+        appversion.current_version_id = makeCurrentAppversionId(
+            version, now)
+        appversion.updated = now
+        appversion.app_yaml = self.request.body
+        appversion.put()
 
-            app_dir = self.createAppversionDirectory(appversion)
+        app_dir = self.createAppversionDirectory(appversion)
 
-            conf = file(os.path.join(app_dir, 'app.yaml'), 'wb')
-            conf.write(self.request.body)
-            conf.close()
+        conf = file(os.path.join(app_dir, 'app.yaml'), 'wb')
+        conf.write(self.request.body)
+        conf.close()
 
-            logging.debug('Appversion directory: %s', app_dir)
-
-        db.run_in_transaction(tx)
+        logging.debug('Appversion directory: %s', app_dir)
 
     def clonefiles(self, app_id, version, path, data):
         files = self._extractFileTuples(data)
@@ -368,19 +370,22 @@ class AppversionHandler(webapp.RequestHandler):
         portconfig = PortConfig.get_or_insert(
             'portconfig_%s' % options.server_name.replace('.', '_'))
 
-        port = options.fcgi_port
-
-        if not portconfig.used_ports:
-            portconfig.used_ports.append(port)
+        if appversion.fcgi_port and appversion.portconfig:
+            port = appversion.fcgi_port
         else:
-            if len(portconfig.used_ports) == MAX_USED_PORTS:
-                raise AppConfigServiceError(
-                    u"Maximum number of installed applications reached.")
-            for i, p in enumerate(range(port, port+MAX_USED_PORTS)):
-                if p not in portconfig.used_ports:
-                    portconfig.used_ports.insert(i, p)
-                    options.fcgi_port = p
-                    break
+            port = options.fcgi_port
+
+            if not portconfig.used_ports:
+                portconfig.used_ports.append(port)
+            else:
+                if len(portconfig.used_ports) == MAX_USED_PORTS:
+                    raise AppConfigServiceError(
+                        u"Maximum number of installed applications reached.")
+                for i, p in enumerate(range(port, port+MAX_USED_PORTS)):
+                    if p not in portconfig.used_ports:
+                        portconfig.used_ports.insert(i, p)
+                        options.fcgi_port = p
+                        break
 
         configureAppversion(appversion, app_dir, options)
 
@@ -415,11 +420,15 @@ class AppversionHandler(webapp.RequestHandler):
         supervisor_rpc.startProcess('nginx')
         logging.info("Restarted HTTP frontend")
 
+        # Update Appversion instance
+        if not appversion.fcgi_port and not appversion.portconfig:
+            appversion.fcgi_port = port
+            appversion.portconfig = portconfig
+            portconfig.put()
+
         appversion.state = STATE_DEPLOYED
         appversion.updated = datetime.datetime.now()
         appversion.put()
-
-        portconfig.put()
 
     def isready(self, app_id, version, path, data):
         self.response.out.write('1')

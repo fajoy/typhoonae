@@ -25,6 +25,7 @@ from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import appinfo
 from google.appengine.ext import db
 from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
 from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, make_server
 
 import ConfigParser
@@ -71,20 +72,6 @@ STATE_DEPLOYED = 2
 VALID_STATES = frozenset([STATE_INACTIVE, STATE_UPDATING, STATE_DEPLOYED])
 
 MAX_USED_PORTS = 10
-
-INDEX_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>TyphoonAE appcfg service</title>
-  </head>
-  <body>
-    <h1>TyphoonAE appcfg service</h1>
-    %(apps)s
-  </body>
-</html>
-"""
 
 FILE_FILTER_PATTERNS = [
     '\.git.*',
@@ -148,15 +135,10 @@ class IndexPage(webapp.RequestHandler):
     """Provides a simple index page."""
 
     def get(self):
-        apps = u'<ul>'
-        apps += u''.join([
-            u'<li>%s (%s) %s</li>' % (
-                app.app_id, app.current_version_id, app.updated)
-            for app in Appversion.all().fetch(10)
-        ])
-        apps += u'</ul>'
-
-        self.response.out.write(INDEX_TEMPLATE % locals())
+        apps = Appversion.all().fetch(10)
+        template_path = os.path.join(os.path.dirname(__file__), 'index.html')
+        output = template.render(template_path, {'apps': apps})
+        self.response.out.write(output)
 
 
 class UpdatecheckHandler(webapp.RequestHandler):

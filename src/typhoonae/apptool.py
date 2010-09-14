@@ -177,9 +177,9 @@ location ~ ^/_ah/subscribe {
 
 SUPERVISOR_MONGODB_CONFIG = """
 [program:mongod]
-command = %(bin)s/mongod --dbpath=%(var)s
+command = %(bin_dir)s/mongod --dbpath=%(var)s
 process_name = mongod
-directory = %(bin)s
+directory = %(bin_dir)s
 priority = 10
 redirect_stderr = true
 stdout_logfile = %(var)s/log/mongod.log
@@ -197,7 +197,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s]
-command = %(bin)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
+command = %(bin_dir)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
 socket = tcp://%(fcgi_host)s:%(fcgi_port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -210,13 +210,13 @@ stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
 
 [eventlistener:%(app_id)s_monitor]
-command=%(bin)s/memmon -g %(app_id)s=200MB
+command=%(bin_dir)s/memmon -g %(app_id)s=200MB
 events=TICK_60
 """
 
 SUPERVISOR_AMQP_CONFIG = """
 [program:%(app_id)s_taskworker]
-command = %(bin)s/taskworker --amqp_host=%(amqp_host)s
+command = %(bin_dir)s/taskworker --amqp_host=%(amqp_host)s
 process_name = %(app_id)s_taskworker
 directory = %(root)s
 priority = 20
@@ -224,7 +224,7 @@ redirect_stderr = true
 stdout_logfile = %(var)s/log/taskworker.log
 
 [program:%(app_id)s_deferred_taskworker]
-command = %(bin)s/deferred_taskworker --amqp_host=%(amqp_host)s
+command = %(bin_dir)s/deferred_taskworker --amqp_host=%(amqp_host)s
 process_name = %(app_id)s_deferred_taskworker
 directory = %(root)s
 priority = 20
@@ -234,7 +234,7 @@ stdout_logfile = %(var)s/log/deferred_taskworker.log
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:%(app_id)s_xmpp_http_dispatch]
-command = %(bin)s/xmpp_http_dispatch --address=%(internal_address)s --jid=%(jid)s --password=%(password)s
+command = %(bin_dir)s/xmpp_http_dispatch --address=%(internal_address)s --jid=%(jid)s --password=%(password)s
 process_name = %(app_id)s_xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
@@ -243,7 +243,7 @@ stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
 [program:%(app_id)s_websocket]
-command = %(bin)s/websocket --address=%(internal_address)s --app_id=%(app_id)s
+command = %(bin_dir)s/websocket --address=%(internal_address)s --app_id=%(app_id)s
 process_name = %(app_id)s_websocket
 priority = 999
 redirect_stderr = true
@@ -285,7 +285,7 @@ override_acls.
 
 {auth_method, [external]}.
 
-{extauth_program, "%(bin)s/ejabberdauth"}.
+{extauth_program, "%(bin_dir)s/ejabberdauth"}.
 
 {shaper, normal, {maxrate, 1000}}.
 
@@ -393,6 +393,7 @@ def write_nginx_conf(
     ssl_enabled = options.ssl_enabled
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
+    version = conf.version
 
     if secure:
         http_port = options.https_port
@@ -403,7 +404,8 @@ def write_nginx_conf(
         ])
 
     if options.multiple:
-        nginx_config_path = os.path.join('etc', app_id+'-nginx.conf')
+        nginx_config_path = os.path.join(
+            'etc', '%s.latest.%s-nginx.conf' % (version, app_id))
     else:
         nginx_config_path = os.path.join('etc', 'default-nginx.conf')
     nginx_config_path = os.path.abspath(nginx_config_path)
@@ -536,7 +538,7 @@ def write_supervisor_conf(options, conf, app_root):
     amqp_host = options.amqp_host
     app_id = conf.application
     auth_domain = options.auth_domain
-    bin = os.path.abspath(os.path.dirname(sys.argv[0]))
+    bin_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
     datastore = options.datastore.lower()
     develop_mode = options.develop_mode
@@ -548,13 +550,14 @@ def write_supervisor_conf(options, conf, app_root):
     password = options.password
     root = os.getcwd()
     server_software = options.server_software
-    upload_url = options.upload_url
-    var = os.path.abspath(options.var)
-    xmpp_host = options.xmpp_host
     smtp_host = options.smtp_host
     smtp_port = options.smtp_port
     smtp_user = options.smtp_user
     smtp_password = options.smtp_password
+    upload_url = options.upload_url
+    var = os.path.abspath(options.var)
+    version = conf.version
+    xmpp_host = options.xmpp_host
 
     if options.multiple:
         server_name = "%s.%s" % (app_id, options.server_name)
@@ -592,8 +595,9 @@ def write_supervisor_conf(options, conf, app_root):
         ['--%s' % opt for opt, arg in additional_options if arg is None] +
         ['--%s=%s' % (opt, arg) for opt, arg in additional_options if arg])
 
+    supervisor_conf_name = '%s.latest.%s-supervisor.conf' % (version, app_id)
     supervisor_conf_stub = open(
-        os.path.join(root, 'etc', conf.application+'-supervisor.conf'), 'w')
+        os.path.join(root, 'etc', supervisor_conf_name), 'w')
     supervisor_conf_stub.write(
         "# Automatically generated supervisor configuration file: don't edit!\n"
         "# Use apptool to modify.\n")
@@ -630,7 +634,7 @@ def write_supervisor_conf(options, conf, app_root):
 def write_ejabberd_conf(options):
     """Writes ejabberd configuration file."""
 
-    bin = os.path.abspath(os.path.dirname(sys.argv[0]))
+    bin_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
     xmpp_host = options.xmpp_host
 
     ejabberd_conf = open(options.ejabberd, 'w')

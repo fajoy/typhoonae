@@ -50,6 +50,16 @@ server {
     error_log   %(var)s/log/httpd-error.log;
 """
 
+NGINX_PROXY = """
+server {
+    listen      %(http_port)s;
+    server_name %(app_domain)s%(server_name)s;
+    location ~* {
+        proxy_pass http://%(app_domain)s%(server_name)s:%(http_port)s;
+    }
+}
+"""
+
 NGINX_ERROR_PAGES = """
 error_page   500 502 503 504  /50x.html;
 location = /50x.html {
@@ -117,7 +127,7 @@ location ~ {
 NGINX_UPLOAD_CONFIG = """
 location ~* /%(upload_url)s {
     # Pass altered request body to this location
-    upload_pass @%(app_id)s;
+    upload_pass @%(app_version_domain)s;
 
     # Store files to this directory
     # The directory is hashed, subdirectories 0 1 2 3 4 5 6 7 8 9
@@ -141,7 +151,7 @@ location ~* /%(upload_url)s {
     upload_cleanup 400 404 499 500-505;
 }
 
-location @%(app_id)s {
+location @%(app_version_domain)s {
     fastcgi_pass %(fcgi_host)s:%(fcgi_port)s;
 %(fcgi_params)s
 }
@@ -376,10 +386,6 @@ def write_nginx_conf(
 
     add_fcgi_params = []
     add_server_params = ''
-    if options.multiple:
-        app_domain = conf.application + '.'
-    else:
-        app_domain = ''
     app_id = conf.application
     blobstore_path = os.path.abspath(
         os.path.join(options.blobstore_path, app_id))
@@ -394,6 +400,13 @@ def write_nginx_conf(
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
     version = conf.version
+
+    app_version_domain = '%s.latest.%s' % (version, app_id)
+
+    if options.multiple:
+        app_domain = app_version_domain + '.'
+    else:
+        app_domain = ''
 
     if secure:
         http_port = options.https_port

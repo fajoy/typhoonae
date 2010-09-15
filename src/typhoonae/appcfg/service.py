@@ -593,6 +593,9 @@ def configureAppversion(appversion, app_dir, options):
     """
     conf = appversion.config
 
+    options.internal_address = '%s.latest.%s.%s' % (
+        appversion.version, appversion.app_id, options.internal_address)
+
     typhoonae.apptool.write_nginx_conf(options, conf, app_dir)
     typhoonae.apptool.write_nginx_conf(
         options, conf, app_dir, internal=True, mode='a')

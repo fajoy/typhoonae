@@ -53,7 +53,7 @@ server {
 NGINX_PROXY = """
 server {
     listen      %(http_port)s;
-    server_name %(app_domain)s%(server_name)s;
+    server_name %(app_id)s.%(server_name)s;
     location ~* {
         proxy_pass http://%(app_domain)s%(server_name)s:%(http_port)s;
     }
@@ -100,7 +100,7 @@ FCGI_PARAMS = """\
     fastcgi_param REMOTE_ADDR $remote_addr;
     fastcgi_param REQUEST_METHOD $request_method;
     fastcgi_param REQUEST_URI $request_uri;
-    fastcgi_param SERVER_NAME $server_name;
+    fastcgi_param SERVER_NAME %(server_name_param)s;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
     %(add_fcgi_params)s
@@ -384,6 +384,7 @@ def write_nginx_conf(
         options, conf, app_root, internal=False, secure=False, mode='w'):
     """Writes nginx server configuration stub."""
 
+    app_domain = ''
     add_fcgi_params = []
     add_server_params = ''
     app_id = conf.application
@@ -394,6 +395,7 @@ def write_nginx_conf(
     html_error_pages_root = options.html_error_pages_root
     http_port = options.http_port
     server_name = options.server_name
+    server_name_param = '$server_name'
     ssl_certificate = options.ssl_certificate
     ssl_certificate_key = options.ssl_certificate_key
     ssl_enabled = options.ssl_enabled
@@ -405,8 +407,7 @@ def write_nginx_conf(
 
     if options.multiple:
         app_domain = app_version_domain + '.'
-    else:
-        app_domain = ''
+        server_name_param = '"%(app_id)s.%(server_name)s"' % locals()
 
     if secure:
         http_port = options.https_port
@@ -436,6 +437,9 @@ def write_nginx_conf(
         add_server_params = ''
     elif secure:
         httpd_conf_stub.write("# Secure configuration.\n")
+
+    if options.multiple and not internal:
+        httpd_conf_stub.write(NGINX_PROXY % locals())
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 
@@ -530,7 +534,8 @@ def write_nginx_conf(
             )
         )
 
-    fcgi_params=FCGI_PARAMS % {'add_fcgi_params': '\n'.join(add_fcgi_params)}
+    fcgi_params=FCGI_PARAMS % {'server_name_param': server_name_param,
+                               'add_fcgi_params': '\n'.join(add_fcgi_params)}
 
     httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % locals())
     httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % locals())

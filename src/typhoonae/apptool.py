@@ -206,7 +206,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 """
 
 SUPERVISOR_APPSERVER_CONFIG = """
-[fcgi-program:%(app_id)s]
+[fcgi-program:%(app_id)s.%(version)s]
 command = %(bin_dir)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
 socket = tcp://%(fcgi_host)s:%(fcgi_port)s
 process_name = %%(program_name)s_%%(process_num)02d
@@ -219,7 +219,7 @@ stdout_logfile_backups = 10
 stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
 
-[eventlistener:%(app_id)s_monitor]
+[eventlistener:%(app_id)s.%(version)s_monitor]
 command=%(bin_dir)s/memmon -g %(app_id)s=200MB
 events=TICK_60
 """
@@ -417,9 +417,16 @@ def write_nginx_conf(
             ('ssl_certificate_key', ssl_certificate_key)
         ])
 
+    if options.multiple and not internal:
+        nginx_proxy_config_path = os.path.join(
+            'etc', '%s-proxy-nginx.conf' % app_id)
+        httpd_proxy_conf_stub = open(nginx_proxy_config_path, 'w')
+        httpd_proxy_conf_stub.write(NGINX_PROXY % locals())
+        httpd_proxy_conf_stub.close()
+
     if options.multiple:
         nginx_config_path = os.path.join(
-            'etc', '%s.latest.%s-nginx.conf' % (version, app_id))
+            'etc', '%s-nginx.conf' % app_version_domain)
     else:
         nginx_config_path = os.path.join('etc', 'default-nginx.conf')
     nginx_config_path = os.path.abspath(nginx_config_path)
@@ -437,9 +444,6 @@ def write_nginx_conf(
         add_server_params = ''
     elif secure:
         httpd_conf_stub.write("# Secure configuration.\n")
-
-    if options.multiple and not internal:
-        httpd_conf_stub.write(NGINX_PROXY % locals())
 
     httpd_conf_stub.write(NGINX_HEADER % locals())
 

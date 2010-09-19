@@ -128,7 +128,7 @@ class UploadCGIHandler(object):
         if match == None:
             return fp
 
-        upload_session_key = match.group(1)
+        upload_session_key = match.group(1).strip('/')
 
         try:
             upload_session = google.appengine.api.datastore.Get(

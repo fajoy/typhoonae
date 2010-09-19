@@ -52,6 +52,7 @@ server {
 
 NGINX_PROXY = """
 server {
+    client_max_body_size 100m;
     listen      %(http_port)s;
     server_name %(app_id)s.%(server_name)s;
     location ~* {

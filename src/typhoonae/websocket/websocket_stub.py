@@ -15,11 +15,13 @@
 # limitations under the License.
 """TyphoonAE's WebSocket service stub."""
 
+from typhoonae import websocket
+from typhoonae.websocket import websocket_service_pb2
+
 import google.appengine.api.apiproxy_stub
-import google.appengine.api.urlfetch
+import httplib
 import os
 import re
-import typhoonae.websocket
 
 
 __all__ = [
@@ -88,7 +90,7 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             app_id=self._GetEnviron('APPLICATION_ID'),
             success_path=re.sub('^/', '', request.success_path))
 
-        response.url = typhoonae.websocket.WEBSOCKET_HANDLER_URL % url_parts
+        response.url = websocket.WEBSOCKET_HANDLER_URL % url_parts
 
     def _SendMessage(self, body, socket, broadcast=False):
         """Sends a Web Socket message.
@@ -99,34 +101,22 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             broadcast: This flag determines whether a message should be sent to
                 all active sockets but the sender.
         """
-
-        rpc = google.appengine.api.urlfetch.create_rpc(deadline=1)
-
         path = 'message'
-        if broadcast:
-            path = 'broadcast'
+        if broadcast: path = 'broadcast'
 
-        google.appengine.api.urlfetch.make_fetch_call(
-            rpc, "http://localhost:%s/%s" % (self._GetPort(), path),
-            headers={typhoonae.websocket.WEBSOCKET_HEADER: socket},
-            payload=body.encode('utf-8'),
-            method='POST')
+        conn = httplib.HTTPConnection("localhost:%s" % self._GetPort())
 
-        status = (
-            typhoonae.websocket.websocket_service_pb2.
-            WebSocketMessageResponse.OTHER_ERROR)
+        headers = {websocket.WEBSOCKET_HEADER: str(socket),
+                   'Content-Type': 'text/plain'}
 
         try:
-            result = rpc.get_result()
-            if result.status_code == 200:
-                status = (
-                    typhoonae.websocket.websocket_service_pb2.
-                    WebSocketMessageResponse.NO_ERROR)
+            conn.request("POST", '/'+path, body.encode('utf-8'), headers)
+        except:
+            status = websocket_service_pb2.WebSocketMessageResponse.OTHER_ERROR
+        finally:
+            conn.close()
 
-        except google.appengine.api.urlfetch.DownloadError:
-            status = (
-                typhoonae.websocket.websocket_service_pb2.
-                WebSocketMessageResponse.OTHER_ERROR)
+        status = websocket_service_pb2.WebSocketMessageResponse.NO_ERROR
 
         return status
 

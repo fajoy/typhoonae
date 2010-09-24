@@ -55,6 +55,11 @@ server {
     client_max_body_size 100m;
     listen      %(http_port)s;
     server_name %(app_id)s.%(server_name)s;
+
+    %(subscribe_config)s
+
+    %(publish_config)s
+
     location ~* {
         proxy_pass http://%(app_domain)s%(server_name)s:%(http_port)s;
     }
@@ -422,7 +427,13 @@ def write_nginx_conf(
         nginx_proxy_config_path = os.path.join(
             'etc', '%s-proxy-nginx.conf' % app_id)
         httpd_proxy_conf_stub = open(nginx_proxy_config_path, 'w')
-        httpd_proxy_conf_stub.write(NGINX_PROXY % locals())
+        proxy_config = dict()
+        proxy_config.update(locals())
+        proxy_config.update({
+            'subscribe_config': NGINX_PUSH_SUBSCRIBE_CONFIG,
+            'publish_config': NGINX_PUSH_PUBLISH_CONFIG
+        })
+        httpd_proxy_conf_stub.write(NGINX_PROXY % proxy_config)
         httpd_proxy_conf_stub.close()
 
     if options.multiple:

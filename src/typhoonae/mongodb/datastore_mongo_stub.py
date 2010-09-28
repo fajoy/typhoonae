@@ -107,7 +107,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__queries = {}
     self.__query_history = {}
     self.__indexes = {}
-    self.__db.__datastore.drop()
+    self.__db.datastore.drop()
 
   def MakeSyncCall(self, service, call, request, response):
     """ The main RPC entry point. service must be 'datastore_v3'.
@@ -288,7 +288,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     """
     self.__id_lock.acquire()
     ret = None
-    col = self.__db.__datastore
+    col = self.__db.datastore
     _id = 'IdSeq_%s' % kind
     if not col.find_one({'_id': _id}):
       col.insert({'_id': _id, 'next_id': 1})
@@ -297,11 +297,19 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       next_id, block_size = self.__id_map.get(kind, (0, 0))
       if not block_size:
         block_size = (size / 1000 + 1) * 1000
-        next_id = col.find_one({'_id': _id}).get('next_id')
-        col.update({'_id': _id}, {'$set': {'next_id': next_id+block_size}})
+        result = self.__db.eval(
+          'db.runCommand({"findandmodify": "datastore", '
+                         '"query": {"_id": "%s"}, '
+                         '"update": {"$inc": {"next_id": %i}}});' % (
+                           _id, next_id+block_size))
+        next_id = int(result['value']['next_id'])
       if size > block_size:
-        ret = col.find_one({'_id': _id}).get('next_id')
-        col.update({'_id': _id}, {'$set': {'next_id': ret+size}})
+        result = self.__db.eval(
+          'db.runCommand({"findandmodify": "datastore", '
+                         '"query": {"_id": "%s"}, '
+                         '"update": {"$inc": {"next_id": %i}}});' % (
+                           _id, size))
+        ret = int(result['value']['next_id'])
       else:
         ret = next_id;
         next_id += size

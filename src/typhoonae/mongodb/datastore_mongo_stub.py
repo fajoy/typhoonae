@@ -297,18 +297,18 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       next_id, block_size = self.__id_map.get(kind, (0, 0))
       if not block_size:
         block_size = (size / 1000 + 1) * 1000
-        result = self.__db.eval(
-          'db.runCommand({"findandmodify": "datastore", '
-                         '"query": {"_id": "%s"}, '
-                         '"update": {"$inc": {"next_id": %i}}});' % (
-                           _id, next_id+block_size))
+        result = self.__db.command(
+          "findandmodify",
+          "datastore",
+          query={"_id": _id},
+          update={"$inc": {"next_id": next_id+block_size}})
         next_id = int(result['value']['next_id'])
       if size > block_size:
-        result = self.__db.eval(
-          'db.runCommand({"findandmodify": "datastore", '
-                         '"query": {"_id": "%s"}, '
-                         '"update": {"$inc": {"next_id": %i}}});' % (
-                           _id, size))
+        result = self.__db.command(
+          "findandmodify",
+          "datastore",
+          query={"_id": _id},
+          update={"$inc": {"next_id": size}})
         ret = int(result['value']['next_id'])
       else:
         ret = next_id;

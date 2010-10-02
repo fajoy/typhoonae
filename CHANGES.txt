@@ -45,6 +45,11 @@ Version 0.1.6 (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=67
 
+  - Incrementing Memcache values now allows initial values to be used if the
+    key does not yet exist in the cache.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=70
+
 
 Version 0.1.5 (2010-07-09)
 --------------------------

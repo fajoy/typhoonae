@@ -159,7 +159,10 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         key = getKey(request.key(), namespace)
         value = self._cache.get(key)
         if value is None:
-            flags, stored_value = (google.appengine.api.memcache.TYPE_INT, '0')
+            if not request.has_initial_value():
+                return None
+            flags, stored_value = (google.appengine.api.memcache.TYPE_INT,
+                                   str(request.initial_value()))
         else:
             flags, stored_value = cPickle.loads(value)
 

@@ -120,7 +120,7 @@ class MemcacheTestCase(unittest.TestCase):
         """Testing automatically incrementing and decrementing."""
 
         google.appengine.api.memcache.incr('unknown_key')
-        assert google.appengine.api.memcache.get('unknown_key') == 1
+        assert google.appengine.api.memcache.get('unknown_key') == None
         google.appengine.api.memcache.set('counter', 0) 
         assert google.appengine.api.memcache.get('counter') == 0
         google.appengine.api.memcache.incr('counter')
@@ -129,6 +129,12 @@ class MemcacheTestCase(unittest.TestCase):
         assert google.appengine.api.memcache.get('counter') == 3
         google.appengine.api.memcache.decr('counter')
         assert google.appengine.api.memcache.get('counter') == 2
+        google.appengine.api.memcache.decr('counter', 2)
+        assert google.appengine.api.memcache.get('counter') == 0
+        google.appengine.api.memcache.incr('second_counter', initial_value=10)
+        assert google.appengine.api.memcache.get('second_counter') == 11
+        google.appengine.api.memcache.decr('third_counter', initial_value=10)
+        assert google.appengine.api.memcache.get('third_counter') == 9
 
         # This should cause an error message, because zero deltas are not
         # allowed.
@@ -165,6 +171,12 @@ class MemcacheTestCase(unittest.TestCase):
 
         self.assertEqual(10, google.appengine.api.memcache.get('low'))
         self.assertEqual(50, google.appengine.api.memcache.get('high'))
+
+        google.appengine.api.memcache.offset_multi(
+            {'max': 5, 'min': -5}, initial_value=10)
+
+        self.assertEqual(15, google.appengine.api.memcache.get('max'))
+        self.assertEqual(5, google.appengine.api.memcache.get('min'))
 
     def testFlushAll(self):
         """Flushes the whole cache."""

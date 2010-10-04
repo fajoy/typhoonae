@@ -17,6 +17,7 @@
 
 from __future__ import with_statement
 from amqplib import client_0_8 as amqp
+from google.appengine.api.labs.taskqueue import taskqueue_service_pb
 import base64
 import logging
 import optparse
@@ -34,6 +35,14 @@ USAGE = "usage: %prog [options]"
 MAX_CONN_RETRIES = 10
 MAX_TASK_RETRIES = 10
 MAX_TIME_LIMIT = 30
+
+HTTP_METHOD_MAP = {
+    taskqueue_service_pb.TaskQueueAddRequest.GET: 'GET',
+    taskqueue_service_pb.TaskQueueAddRequest.POST: 'POST',
+    taskqueue_service_pb.TaskQueueAddRequest.HEAD: 'HEAD',
+    taskqueue_service_pb.TaskQueueAddRequest.PUT: 'PUT',
+    taskqueue_service_pb.TaskQueueAddRequest.DELETE: 'DELETE'
+}
 
 
 class TimeLimitExceededError(Exception):
@@ -75,6 +84,15 @@ class ExecutionTimeLimit(object):
         raise TimeLimitExceededError
 
 
+class RequestWithMethod(urllib2.Request):
+    def __init__(self, method, *args, **kwargs):
+        self._method = method
+        urllib2.Request.__init__(self, *args, **kwargs)
+
+    def get_method(self):
+        return self._method
+
+
 def handle_task(msg):
     """Decodes received message and processes task."""
 
@@ -87,10 +105,12 @@ def handle_task(msg):
                'X-AppEngine-TaskName': task['name'],
                'X-AppEngine-TaskRetryCount': str(task['try_count'])}
 
-    req = urllib2.Request(
+    req = RequestWithMethod(
         url='http://%(host)s:%(port)s%(url)s' % task,
         data=base64.b64decode(task['payload']),
-        headers=headers
+        headers=headers,
+        method=HTTP_METHOD_MAP[task.get(
+                    'method', taskqueue_service_pb.TaskQueueAddRequest.POST)]
     )
 
     try:

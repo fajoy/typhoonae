@@ -117,6 +117,12 @@ class TaskQueueTestCase(unittest.TestCase):
         google.appengine.api.labs.taskqueue.add(
             url='/run', params={'foo': 'bar'})
 
+    def testAddingTaskWithMethod(self):
+        """Adds a task with an HTTP method other than default."""
+
+        google.appengine.api.labs.taskqueue.add(
+            url='/put', params={'foo': 'bar'}, method='PUT')
+
     def testBulkAdd(self):
         """Adds multiple tasks at once."""
 

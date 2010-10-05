@@ -634,6 +634,23 @@ class DatastoreMySQLTestCase(DatastoreMySQLTestCaseBase):
             datastore_types.Key.from_path(u'Employee', 1, _app=app_id),
             query.get())
 
+    def testUnicodeKeyName(self):
+        """Sets and Gets models with unicode key names."""
+
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        Author(name=u'Jes\u00fas Cebri\u00e1n',
+               key_name=u'jes\u00fascebri\u00e1n').put()
+
+        a = Author.get_by_key_name(u'jes\u00fascebri\u00e1n')
+
+        self.assertEqual('Author', a.kind())
+        self.assertEqual(u'Jes\u00fas Cebri\u00e1n', a.name)
+
+        a.delete()
+        del a
+
     def testListProperties(self):
         """Tests list properties."""
 

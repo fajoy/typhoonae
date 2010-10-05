@@ -346,7 +346,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       collection = self.__collection_for_key(clone.key())
       document = self.__mongo_document_for_entity(clone)
 
-      id = self.__db[collection].save(document)
+      id = self.__db[collection].save(document).decode('utf-8')
       put_response.key_list().append(self.__key_for_id(id)._ToPb())
 
   def _Dynamic_Get(self, get_request, get_response):

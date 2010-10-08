@@ -257,6 +257,14 @@ def serve(conf, options):
             else:
                 # Load and run the application module
                 run_module(handler_path, script, debug=options.debug_mode)
+        except Exception, e:
+            # Handle all exceptions and write the traceback to the log
+            logging.error(e, exc_info=sys.exc_info())
+            print('Status: 500 Internal Server Error')
+            print('Content-Type: text/plain')
+            print('Content-Length: 22')
+            print
+            print('Internal Server Error')
         finally:
             # Flush buffers
             sys.stdout.flush()

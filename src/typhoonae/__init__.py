@@ -28,7 +28,6 @@ import typhoonae.blobstore.blobstore_stub
 import typhoonae.blobstore.file_blob_storage
 import typhoonae.capability_stub
 import typhoonae.memcache.memcache_stub
-import typhoonae.taskqueue.taskqueue_stub
 import typhoonae.channel.channel_service_stub
 
 
@@ -191,7 +190,7 @@ def setupMemcache():
         typhoonae.memcache.memcache_stub.MemcacheServiceStub())
 
 
-def setupTaskQueue(internal_address, root_path='.'):
+def setupTaskQueue(internal_address, use_celery=False, root_path='.'):
     """Sets up task queue.
 
     Args:
@@ -199,8 +198,13 @@ def setupTaskQueue(internal_address, root_path='.'):
         root_path: The app's root directory.
     """
 
+    if use_celery:
+        from typhoonae.taskqueue import taskqueue_celery_stub as taskqueue_stub
+    else:
+        from typhoonae.taskqueue import taskqueue_stub
+
     google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('taskqueue',
-        typhoonae.taskqueue.taskqueue_stub.TaskQueueServiceStub(
+        taskqueue_stub.TaskQueueServiceStub(
             internal_address=internal_address, root_path=root_path))
 
 
@@ -321,7 +325,7 @@ def setupStubs(conf, options):
 
     setupMemcache()
 
-    setupTaskQueue(options.internal_address)
+    setupTaskQueue(options.internal_address, use_celery=options.use_celery)
 
     setupURLFetchService()
 

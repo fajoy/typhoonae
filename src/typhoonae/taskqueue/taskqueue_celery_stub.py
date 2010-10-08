@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009, 2010 Tobias Rodäbel
+# Copyright 2009, 2010 Tobias Rodäbel, Joaquin Cuenca Abela
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,10 @@
 # limitations under the License.
 """Task queue API proxy stub."""
 
-from amqplib import client_0_8 as amqp
+from celery.task.base import Task
+
 import base64
+import celery_tasks
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.labs.taskqueue.taskqueue_service_pb
 import google.appengine.api.labs.taskqueue.taskqueue_stub
@@ -26,10 +28,8 @@ import logging
 import os
 import simplejson
 import socket
+import time
 import typhoonae.taskqueue
-
-
-MAX_CONNECTION_RETRIES = 1
 
 
 class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
@@ -56,33 +56,16 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
         self.next_task_id = 1
         self.root_path = root_path
-        self.conn = None
-        self.channel = None
+        self._SetupQueues()
 
-    def __del__(self):
-        if self.channel is not None:
-            self.channel.close()
-        if self.conn is not None:
-            self.conn.close()
-
-    def connect(self):
-        self.conn = amqp.Connection(
-            host="localhost:5672",
-            userid="guest",
-            password="guest",
-            virtual_host="/",
-            insist=False)
-        self.channel = self.conn.channel()
+    def _SetupQueues(self):
+        self.celery_tasks_for_queues = (
+            celery_tasks.create_task_queues_from_yaml(self.root_path))
 
     def _ValidQueue(self, queue_name):
         if queue_name == 'default':
             return True
-        queue_info = self.pyaml(self.root_path)
-        if queue_info and queue_info.queue:
-            for entry in queue_info.queue:
-                if entry.name == queue_name:
-                    return True
-        return False
+        return queue_name in self.celery_tasks_for_queues
 
     def _Dynamic_Add(self, request, response):
         bulk_request = taskqueue_service_pb.TaskQueueBulkAddRequest()
@@ -101,31 +84,19 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             response.set_chosen_task_name(
                 bulk_response.taskresult(0).chosen_task_name())
 
-    def _PublishMessage(self, msg, eta):
-        """Publish message.
-
-        Args:
-            msg: An amqp.Message instance.
-            eta: Estimated time of task execution (UNIX time).
-        """
-
-        conn_retries = 0
-        while conn_retries <= MAX_CONNECTION_RETRIES:
-            try:
-                if typhoonae.taskqueue.is_deferred_eta(eta):
-                    self.channel.basic_publish(
-                        msg, exchange="deferred", routing_key="deferred_worker")
-                else:
-                    self.channel.basic_publish(
-                        msg, exchange="immediate", routing_key="normal_worker")
-                break
-            except Exception, err_obj:
-                conn_retries += 1
-                if conn_retries > MAX_CONNECTION_RETRIES:
-                    raise Exception, err_obj
-                if isinstance(err_obj, socket.error):
-                    logging.error("queue server not reachable. retrying...")
-                self.connect()
+    def _RunAsync(self, **kwargs):
+        queue_name = kwargs.get('queue', 'default')
+        task = self.celery_tasks_for_queues.get(queue_name)
+        if task is None:
+            raise google.appengine.runtime.apiproxy_errors.ApplicationError(
+                google.appengine.api.labs.taskqueue.taskqueue_service_pb.
+                TaskQueueServiceError.UNKNOWN_QUEUE)
+        countdown = max(0, kwargs['eta'] - time.time())
+        logging.warning('Queueing task with ETA %r and countdown %r',
+                        kwargs['eta'], countdown)
+        task.apply_async(kwargs=kwargs,
+                         countdown=countdown,
+                         expires=30 * 24 * 3600)
 
     def _Dynamic_BulkAdd(self, request, response):
         """Add many tasks to a queue using a single request.
@@ -155,7 +126,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
                 content_type=content_type,
                 eta=add_request.eta_usec()/1000000,
                 host=self._internal_host,
-                method=add_request.method(),
+                method=add_request.RequestMethod_Name(add_request.method()),
                 name=add_request.task_name(),
                 payload=base64.b64encode(add_request.body()),
                 port=self._internal_port,
@@ -164,12 +135,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
                 url=add_request.url(),
             )
 
-            msg = amqp.Message(simplejson.dumps(task_dict))
-            msg.properties["delivery_mode"] = 2
-            msg.properties["task_name"] = add_request.task_name()
-
-            self._PublishMessage(msg, task_dict['eta'])
-
+            self._RunAsync(**task_dict)
             task_result = response.add_taskresult()
 
     def GetQueues(self):

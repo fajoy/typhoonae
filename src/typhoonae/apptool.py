@@ -248,6 +248,23 @@ redirect_stderr = true
 stdout_logfile = %(var)s/log/deferred_taskworker.log
 """
 
+SUPERVISOR_CELERY_CONFIG = """
+[program:%(app_id)s_celeryworkers]
+command = %(bin_dir)s/celeryd
+process_name = %(app_id)s_celeryworkers
+directory = %(app_root)s
+priority = 20
+stdout_logfile = %(var)s/log/celery_workers.out.log
+stderr_logfile = %(var)s/log/celery_workers.err.log
+autostart=true
+autorestart=true
+startsecs=10
+
+; Need to wait for currently executing tasks to finish at shutdown.
+; Increase this if you have very long running tasks.
+stopwaitsecs = 600
+"""
+
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
 [program:%(app_id)s_xmpp_http_dispatch]
 command = %(bin_dir)s/xmpp_http_dispatch --address=%(internal_address)s --jid=%(jid)s --password=%(password)s
@@ -375,6 +392,23 @@ override_acls.
   {mod_vcard,    []},
   {mod_version,  []}
  ]}.
+"""
+
+CELERY_CONFIG = """
+BROKER_HOST = "%(amqp_host)s"
+BROKER_PORT = 5672
+BROKER_USER = "guest"
+BROKER_PASSWORD = "guest"
+BROKER_VHOST = "/"
+
+CELERY_RESULT_BACKEND = "amqp"
+CELERY_IMPORTS = ("typhoonae.taskqueue.celery_tasks",)
+
+CELERYD_LOG_FILE = "%(var)s/log/celeryd.log"
+CELERYD_LOG_LEVEL = "INFO"
+CELERYD_MAX_TASKS_PER_CHILD = 1000
+CELERYD_SOFT_TASK_TIME_LIMIT = %(soft_task_time_limit)s
+CELERYD_TASK_TIME_LIMIT = %(task_time_limit)s
 """
 
 
@@ -567,7 +601,7 @@ def write_nginx_conf(
 
 
 def write_supervisor_conf(options, conf, app_root):
-    """Writes supercisord configuration stub."""
+    """Writes supervisord configuration stub."""
 
     amqp_host = options.amqp_host
     app_id = conf.application
@@ -612,6 +646,9 @@ def write_supervisor_conf(options, conf, app_root):
     if options.logout_url:
         additional_options.append(('logout_url', options.logout_url))
 
+    if options.use_celery:
+        additional_options.append(('use_celery', None))
+
     if datastore == 'mysql':
         if options.mysql_db:
             additional_options.append(('mysql_db', options.mysql_db))
@@ -648,7 +685,10 @@ def write_supervisor_conf(options, conf, app_root):
         raise RuntimeError, "unknown datastore"
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
-    supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
+    if options.use_celery:
+        supervisor_conf_stub.write(SUPERVISOR_CELERY_CONFIG % locals())
+    else:
+        supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
 
     jid = conf.application + '@' + xmpp_host
     password = conf.application
@@ -674,6 +714,23 @@ def write_ejabberd_conf(options):
     ejabberd_conf = open(options.ejabberd, 'w')
     ejabberd_conf.write(EJABBERD_CONFIG % locals())
     ejabberd_conf.close()
+
+
+def write_celery_conf(options):
+    """Writes celery configuration file."""
+
+    amqp_host = options.amqp_host
+    task_time_limit = int(options.task_time_limit)
+    if task_time_limit:
+        soft_task_time_limit = task_time_limit - 1
+    else:
+        task_time_limit = 'None'
+        soft_task_time_limit = 'None'
+    var = options.var
+
+    celery_conf = open(options.celery, 'w')
+    celery_conf.write(CELERY_CONFIG % locals())
+    celery_conf.close()
 
 
 def print_error(msg):
@@ -820,6 +877,10 @@ def main():
                   help="path to use for storing Blobstore file stub data",
                   default=os.path.join('var', 'blobstore'))
 
+    op.add_option("--celery", dest="celery", metavar="FILE",
+                  help="write celery configuration to this file",
+                  default=os.path.join('etc', 'celeryconfig.py'))
+
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists", default=False)
 
@@ -923,10 +984,18 @@ def main():
     op.add_option("--ssl_certificate_key", dest="ssl_certificate_key",
                   metavar="PATH", help="use this SSL certificate key file")
 
+    op.add_option("--task_time_limit", dest="task_time_limit",
+                  metavar="SECONDS",
+                  help="Task Queue's task hard time limit in seconds. "
+                       "By default unlimited.", default=0)
+
     op.add_option("--upload_url", dest="upload_url", metavar="URI",
                   help="use this upload URL for the Blobstore configuration "
                        "(no leading '/')",
                   default='upload/')
+
+    op.add_option("--use_celery", dest="use_celery", action="store_true",
+                  help="use Celery as Task Queue backend", default=False)
 
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",
@@ -976,4 +1045,6 @@ def main():
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     write_supervisor_conf(options, conf, app_root)
     write_ejabberd_conf(options)
+    if options.use_celery:
+        write_celery_conf(options)
     write_crontab(options, app_root)

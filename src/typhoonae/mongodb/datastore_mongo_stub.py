@@ -60,8 +60,6 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
   A DatastoreMongoStub instance handles a single app's data.
   """
 
-  _NO_TRANSACTION_WARNING_LOGGED = False
-
   def __init__(self,
                app_id,
                datastore_file,

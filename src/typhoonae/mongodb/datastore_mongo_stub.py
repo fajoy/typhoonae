@@ -15,19 +15,11 @@
 # limitations under the License.
 #
 
-"""MongoDB backed stub for the Python datastore API.
+"""MongoDB backed stub for the Python datastore API."""
 
-Transactions are unsupported.
-"""
-
-import logging
-import re
-import random
-import sys
-import threading
-import types
-
+from google.appengine.api import api_base_pb
 from google.appengine.api import apiproxy_stub
+from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
 from google.appengine.api import datastore_types
 from google.appengine.api import users
@@ -35,16 +27,31 @@ from google.appengine.datastore import datastore_pb
 from google.appengine.datastore import datastore_index
 from google.appengine.runtime import apiproxy_errors
 from google.appengine.datastore import entity_pb
-
-import pymongo
 from pymongo.connection import Connection
 from pymongo.binary import Binary
 
+import logging
+import pymongo
+import re
+import random
+import sys
+import threading
+import types
+
+try:
+  __import__('google.appengine.api.labs.taskqueue.taskqueue_service_pb')
+  taskqueue_service_pb = sys.modules.get(
+      'google.appengine.api.labs.taskqueue.taskqueue_service_pb')
+except ImportError:
+  from google.appengine.api.taskqueue import taskqueue_service_pb
+
+entity_pb.Reference.__hash__ = lambda self: hash(self.Encode())
 datastore_pb.Query.__hash__ = lambda self: hash(self.Encode())
 
 _MAX_QUERY_COMPONENTS = 100
 _MAX_QUERY_OFFSET = 1000
 _CURSOR_CONCAT_STR = '!CURSOR!'
+_MAX_ACTIONS_PER_TXN = 5
 
 
 class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
@@ -73,10 +80,10 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     """
     super(DatastoreMongoStub, self).__init__(service_name)
 
-
     assert isinstance(app_id, basestring) and app_id != ''
     self.__app_id = app_id
     self.__require_indexes = require_indexes
+    self.__trusted = True
 
     # TODO should be a way to configure the connection
     self.__db = Connection()[app_id]
@@ -96,6 +103,13 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__id_lock = threading.Lock()
     self.__id_map = {}
 
+    # Transaction support
+    self.__next_tx_handle = 1
+    self.__tx_writes = {}
+    self.__tx_deletes = set()
+    self.__tx_actions = []
+    self.__tx_lock = threading.Lock()
+
   def Clear(self):
     """Clears the datastore.
 
@@ -107,6 +121,12 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__queries = {}
     self.__query_history = {}
     self.__indexes = {}
+    self.__id_map = {}
+    self.__next_tx_handle = 1
+    self.__tx_writes = {}
+    self.__tx_deletes = set()
+    self.__tx_actions = []
+
     self.__db.datastore.drop()
 
   def MakeSyncCall(self, service, call, request, response):
@@ -115,11 +135,18 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     So far, the supported calls are 'Get', 'Put', 'Delete', 'RunQuery', 'Next',
     and 'AllocateIds'.
     """
+    self.AssertPbIsInitialized(request)
+
     super(DatastoreMongoStub, self).MakeSyncCall(
         service, call, request, response)
 
+    self.AssertPbIsInitialized(response)
+
+  def AssertPbIsInitialized(self, pb):
+    """Raises an exception if the given PB is not initialized and valid."""
     explanation = []
-    assert response.IsInitialized(explanation), explanation
+    assert pb.IsInitialized(explanation), explanation
+    pb.Encode()
 
   def QueryHistory(self):
     """Returns a dict that maps Query PBs to times they've been run."""
@@ -322,40 +349,114 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     self.__id_lock.release()
     return ret
 
+  def __ValidateAppId(self, app_id):
+    """Verify that this is the stub for app_id.
+
+    Args:
+      app_id: An application ID.
+
+    Raises:
+      datastore_errors.BadRequestError: if this is not the stub for app_id.
+    """
+    assert app_id
+    if not self.__trusted and app_id != self.__app_id:
+      raise datastore_errors.BadRequestError(
+          'app %s cannot access app %s\'s data' % (self.__app_id, app_id))
+
+  def __ValidateTransaction(self, tx):
+    """Verify that this transaction exists and is valid.
+
+    Args:
+      tx: datastore_pb.Transaction
+
+    Raises:
+      datastore_errors.BadRequestError: if the tx is valid or doesn't exist.
+    """
+    assert isinstance(tx, datastore_pb.Transaction)
+    self.__ValidateAppId(tx.app())
+
+  def __ValidateKey(self, key):
+    """Validate this key.
+
+    Args:
+      key: entity_pb.Reference
+
+    Raises:
+      datastore_errors.BadRequestError: if the key is invalid
+    """
+    assert isinstance(key, entity_pb.Reference)
+
+    self.__ValidateAppId(key.app())
+
+    for elem in key.path().element_list():
+      if elem.has_id() == elem.has_name():
+        raise datastore_errors.BadRequestError(
+            'each key path element should have id or name but not both: %r'
+            % key)
+
+  def __PutEntities(self, entities):
+    """Inserts or updates entities in the DB.
+
+    Args:
+      entities: A list of entities to store.
+    """
+    for entity in entities:
+      collection = self.__collection_for_key(entity.key())
+      document = self.__mongo_document_for_entity(entity)
+      unused_id = self.__db[collection].save(document).decode('utf-8')
+
+  def __DeleteEntities(self, keys):
+    """Deletes entities from the DB.
+
+    Args:
+      keys: A list of keys to delete index entries for.
+    Returns:
+      The number of rows deleted.
+    """
+    for key in keys:
+      collection = self.__collection_for_key(key)
+      _id = self.__id_for_key(key)
+      self.__db[collection].remove({"_id": _id})
+    return len(keys)
+
   def _Dynamic_Put(self, put_request, put_response):
-    for entity in put_request.entity_list():
-      clone = entity_pb.EntityProto()
-      clone.CopyFrom(entity)
+    entities = put_request.entity_list()
 
-      assert clone.has_key()
-      assert clone.key().path().element_size() > 0
+    for entity in entities:
+      self.__ValidateKey(entity.key())
 
-      last_path = clone.key().path().element_list()[-1]
+      assert entity.has_key()
+      assert entity.key().path().element_size() > 0
+
+      last_path = entity.key().path().element_list()[-1]
       if last_path.id() == 0 and not last_path.has_name():
-        last_path.set_id(self.__allocate_ids(last_path.type(), 1))
+        id_ = self.__allocate_ids(last_path.type(), 1)
+        last_path.set_id(id_)
 
-        assert clone.entity_group().element_size() == 0
-        group = clone.mutable_entity_group()
-        root = clone.key().path().element(0)
+        assert entity.entity_group().element_size() == 0
+        group = entity.mutable_entity_group()
+        root = entity.key().path().element(0)
         group.add_element().CopyFrom(root)
 
       else:
-        assert (clone.has_entity_group() and
-                clone.entity_group().element_size() > 0)
+        assert (entity.has_entity_group() and
+                entity.entity_group().element_size() > 0)
 
-      collection = self.__collection_for_key(clone.key())
-      document = self.__mongo_document_for_entity(clone)
+      if put_request.transaction().handle():
+        self.__tx_writes[entity.key()] = entity
+        self.__tx_deletes.discard(entity.key())
 
-      id = self.__db[collection].save(document).decode('utf-8')
-      put_response.key_list().append(self.__key_for_id(id)._ToPb())
+    if not put_request.transaction().handle():
+      self.__PutEntities(entities)
+    put_response.key_list().extend([e.key() for e in entities])
 
   def _Dynamic_Get(self, get_request, get_response):
     for key in get_request.key_list():
       collection = self.__collection_for_key(key)
-      id = self.__id_for_key(key)
+      _id = self.__id_for_key(key)
 
       group = get_response.add_entity()
-      document = self.__db[collection].find_one({"_id": id})
+      document = self.__db[collection].find_one({"_id": _id})
       if document is None:
         entity = None
       else:
@@ -365,10 +466,15 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
         group.mutable_entity().CopyFrom(entity)
 
   def _Dynamic_Delete(self, delete_request, delete_response):
-    for key in delete_request.key_list():
-      collection = self.__collection_for_key(key)
-      id = self.__id_for_key(key)
-      self.__db[collection].remove({"_id": id})
+    keys = delete_request.key_list()
+    for key in keys:
+      self.__ValidateAppId(key.app())
+      if delete_request.transaction().handle():
+        self.__tx_deletes.add(key)
+        self.__tx_writes.pop(key, None)
+
+    if not delete_request.transaction().handle():
+      self.__DeleteEntities(delete_request.key_list())
 
   def __special_props(self, value, direction):
     if isinstance(value, datastore_types.Category):
@@ -662,20 +768,67 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     query_result.set_more_results(True)
 
   def _Dynamic_BeginTransaction(self, request, transaction):
-    transaction.set_handle(0)
-    if not self._NO_TRANSACTION_WARNING_LOGGED:
-      logging.log(logging.WARN, 'transactions unsupported')
-      self._NO_TRANSACTION_WARNING_LOGGED = True
+    self.__ValidateAppId(request.app())
+
+    self.__tx_lock.acquire()
+    handle = self.__next_tx_handle
+    self.__next_tx_handle += 1
+
+    transaction.set_app(request.app())
+    transaction.set_handle(handle)
+
+    self.__tx_actions = []
+
+  def _Dynamic_AddActions(self, request, _):
+    """Associates the creation of one or more tasks with a transaction.
+
+    Args:
+      request: A taskqueue_service_pb.TaskQueueBulkAddRequest containing the
+          tasks that should be created when the transaction is comitted.
+    """
+    if ((len(self.__tx_actions) + request.add_request_size()) >
+        _MAX_ACTIONS_PER_TXN):
+      raise apiproxy_errors.ApplicationError(
+          datastore_pb.Error.BAD_REQUEST,
+          'Too many messages, maximum allowed %s' % _MAX_ACTIONS_PER_TXN)
+
+    new_actions = []
+    for add_request in request.add_request_list():
+      self.__ValidateTransaction(add_request.transaction())
+      clone = taskqueue_service_pb.TaskQueueAddRequest()
+      clone.CopyFrom(add_request)
+      clone.clear_transaction()
+      new_actions.append(clone)
+
+    self.__tx_actions.extend(new_actions)
 
   def _Dynamic_Commit(self, transaction, transaction_response):
-    if not self._NO_TRANSACTION_WARNING_LOGGED:
-      logging.log(logging.WARN, 'transactions unsupported')
-      self._NO_TRANSACTION_WARNING_LOGGED = True
+    self.__ValidateTransaction(transaction)
+
+    try:
+      self.__PutEntities(self.__tx_writes.values())
+      self.__DeleteEntities(self.__tx_deletes)
+      for action in self.__tx_actions:
+        try:
+          apiproxy_stub_map.MakeSyncCall(
+              'taskqueue', 'Add', action, api_base_pb.VoidProto())
+        except apiproxy_errors.ApplicationError, e:
+          logging.warning('Transactional task %s has been dropped, %s',
+                          action, e)
+          pass
+    finally:
+      self.__tx_writes = {}
+      self.__tx_deletes = set()
+      self.__tx_actions = []
+      self.__tx_lock.release()
 
   def _Dynamic_Rollback(self, transaction, transaction_response):
-    if not self._NO_TRANSACTION_WARNING_LOGGED:
-      logging.log(logging.WARN, 'transactions unsupported')
-      self._NO_TRANSACTION_WARNING_LOGGED = True
+    self.__ValidateTransaction(transaction)
+
+    self.__tx_writes = {}
+    self.__tx_deletes = set()
+    self.__tx_actions = []
+    self.__tx_lock.release()
 
   def _Dynamic_GetSchema(self, app_str, schema):
     # TODO this is used for the admin viewer to introspect.

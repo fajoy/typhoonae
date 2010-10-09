@@ -321,6 +321,30 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
             datastore_errors.BadRequestError,
             db.run_in_transaction, query_tx)
 
+    def testTransactionRollback(self):
+        """Performs a transaction rollback."""
+
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        marktwain = Author(name='Mark Twain', key_name='marktwain').put()
+
+        def tx():
+            assert db.get(marktwain).name == "Mark Twain"
+
+            b = Book(parent=marktwain, title="The Adventures Of Tom Sawyer")
+            b.put()
+
+            raise db.Rollback()
+
+        db.run_in_transaction(tx)
+
+        self.assertEqual(1, Author.all().count())
+        self.assertEqual(0, Book.all().count())
+
 #    def testKindlessAncestorQueries(self):
 #        """Perform kindless queries for entities with a given ancestor."""
 #

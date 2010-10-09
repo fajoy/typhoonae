@@ -15,4 +15,4 @@ cleanup:
 	- @epmd -kill
 	@rm -rf var
 	@mkdir -p var/log
-	@rm -f etc/*.conf etc/ejabberd.cfg etc/celeryconfig.py
+	@rm -f etc/*.conf etc/ejabberd.cfg etc/celeryconfig.py*

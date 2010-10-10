@@ -56,7 +56,6 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
         (self._internal_host, self._internal_port) = internal_address.split(':')
 
-        self.next_task_id = 1
         self.root_path = root_path
         self.conn = None
         self.channel = None

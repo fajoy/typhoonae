@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Messages</title>
+  <script type="text/javascript" src="js/jquery.min.js" charset="utf-8"></script>
+  <script type="text/javascript" src="/_ah/channel/jsapi" charset="utf-8"></script>
+  <script type="text/javascript" charset="utf-8">
+
+  function addmsg(type, msg) {
+    $("#messages").append(
+      "<div class='msg "+ type +"'>"+ msg +"</div>"
+    );
+  }
+
+  var channel = new goog.appengine.Channel('{{ channel_id }}');
+  var socket = channel.open()
+  socket.onopen = function() {
+    addmsg("new", "Connected!");
+  }
+  socket.onmessage = function(evt) {
+    addmsg("new", evt.data);
+  }
+
+  sendMessage = function(msg) {
+    if (msg) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/channel_message?channel_id={{ channel_id }}', true);
+      xhr.send(msg);
+    }
+  }
+
+  $(document).ready(function(){
+    $('#new_message').keypress(function(event) {
+      if (event.keyCode == '13') {
+        event.preventDefault();
+        sendMessage($("#new_message").val());
+        $("#new_message").attr("value", "");
+      }
+    });
+
+    $('#bye').click(function(event) {
+      sendMessage("Bye!");
+    });
+  });
+
+  </script>
+  <style type="text/css" media="screen">
+    body{ background:#fff; color:#000; font-size:.9em; font-family:"Helvetica Neue", Arial, Helvetica, sans-serif; }
+    .msg{ background:#e4e4e4; padding:.2em; border-bottom:1px #fff solid; }
+    .title{ background-color: #246499; color: #fff; }
+    .new{ color: #000; }
+    .new_message{ border: 1px solid #ccc; width: 400px; }
+    .clear{ float: clear; }
+  </style>
+</head>
+<body>
+  <div>
+    <form>
+      <label for="new_message">Message:</label>
+      <input id="new_message" class="new_message" />
+      <input id="bye" type="button" value="Bye" />
+    </form>
+  </div>
+  <div class="clear">&nbsp;</div>
+  <div id="messages">
+    <div class="msg title">Message log:</div>
+  </div>
+</body>
+</html>

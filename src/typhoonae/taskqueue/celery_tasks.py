@@ -104,7 +104,7 @@ def create_task_queues_from_yaml(app_root):
 
 
 def load_queue_config(signal, sender=None, **kwargs):
-    create_task_queues_from_yaml(os.getcwd())
+    create_task_queues_from_yaml(os.environ['APP_ROOT'])
 
 
 worker_init.connect(load_queue_config)

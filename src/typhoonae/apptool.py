@@ -252,13 +252,14 @@ SUPERVISOR_CELERY_CONFIG = """
 [program:%(app_id)s_celeryworkers]
 command = %(bin_dir)s/celeryd
 process_name = %(app_id)s_celeryworkers
-directory = %(app_root)s
+directory = %(root)s
 priority = 20
 stdout_logfile = %(var)s/log/celery_workers.out.log
 stderr_logfile = %(var)s/log/celery_workers.err.log
 autostart=true
 autorestart=true
 startsecs=10
+environment=APP_ROOT="%(app_root)s"
 
 ; Need to wait for currently executing tasks to finish at shutdown.
 ; Increase this if you have very long running tasks.

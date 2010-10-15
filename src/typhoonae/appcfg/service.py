@@ -41,6 +41,7 @@ import signal
 import socket
 import sys
 import re
+import threading
 import time
 import typhoonae.apptool
 import typhoonae.fcgiserver
@@ -160,6 +161,8 @@ class AppversionHandler(webapp.RequestHandler):
 
     Handles all POST requests for /api/appversion.
     """
+
+    __deploy_lock = threading.Lock()
 
     def post(self, func_name):
         app_id = self.request.params.get('app_id')
@@ -337,83 +340,17 @@ class AppversionHandler(webapp.RequestHandler):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
 
-        supervisor_rpc = getSupervisorRpcInterface()
-
-        try:
-            supervisor_rpc.getState()
-        except socket.error, e:
-            logging.critical("Connecting to supervsord failed %s.", e)
-            raise AppConfigServiceError(
-                u"Internal error when deploying application (app_id=u'%s')." %
-                app_id)
-
-        options = readDefaultOptions()
-
-        portconfig = PortConfig.get_or_insert(
-            'portconfig_%s' % options.server_name.replace('.', '_'))
-
-        if appversion.fcgi_port and appversion.portconfig:
-            port = appversion.fcgi_port
-        else:
-            port = options.fcgi_port
-
-            if not portconfig.used_ports:
-                portconfig.used_ports.append(port)
-            else:
-                if len(portconfig.used_ports) == MAX_USED_PORTS:
-                    raise AppConfigServiceError(
-                        u"Maximum number of installed applications reached.")
-                for i, p in enumerate(range(port, port+MAX_USED_PORTS)):
-                    if p not in portconfig.used_ports:
-                        portconfig.used_ports.insert(i, p)
-                        options.fcgi_port = p
-                        break
-
-        configureAppversion(appversion, app_dir, options)
-
-        if appversion.config.inbound_services:
-            if XMPP_INBOUND_SERVICE_NAME in appversion.config.inbound_services:
-                supervisor_rpc.stopProcess('ejabberd')
-                supervisor_rpc.startProcess('ejabberd')
-                logging.info("Restarted XMPP gateway")
-
-        added, changed, removed = supervisor_rpc.reloadConfig()[0]
-
-        for name in removed:
-            results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("Stoppend %s", name)
-            supervisor_rpc.removeProcessGroup(name)
-            logging.info("Removed process group %s", name)
-
-        for name in changed:
-            results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("Stopped %s", name)
-            supervisor_rpc.removeProcessGroup(name)
-            supervisor_rpc.addProcessGroup(name)
-            logging.info("Updated process group %s", name)
-
-        for name in added:
-            supervisor_rpc.addProcessGroup(name)
-            logging.info("Added process group %s", name)
-
-        time.sleep(2)
-
-        supervisor_rpc.stopProcess('nginx')
-        supervisor_rpc.startProcess('nginx')
-        logging.info("Restarted HTTP frontend")
-
-        # Update Appversion instance
-        if not appversion.fcgi_port and not appversion.portconfig:
-            appversion.fcgi_port = port
-            appversion.portconfig = portconfig
-            portconfig.put()
-
-        appversion.state = STATE_DEPLOYED
-        appversion.updated = datetime.datetime.now()
-        appversion.put()
+        deployment = DeploymentThread(appversion, app_dir)
+        self.__deploy_lock.acquire()
+        deployment.start()
+        self.__deploy_lock.release()
 
     def _RpcMethod_isready(self, app_id, version, path, data):
-        self.response.out.write('1')
+        appversion = self.getAppversion(app_id, version, STATE_DEPLOYED)
+        if appversion:
+            self.response.out.write('1')
+            return
+        self.response.out.write('0')
 
     def _RpcMethod_rollback(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
@@ -604,6 +541,93 @@ def configureAppversion(appversion, app_dir, options):
     typhoonae.apptool.write_supervisor_conf(options, conf, app_dir)
     typhoonae.apptool.write_ejabberd_conf(options)
     typhoonae.apptool.write_crontab(options, app_dir)
+
+
+class DeploymentThread(threading.Thread):
+    """Asynchronously deploy a given appversion."""
+
+    def __init__(self, appversion, app_dir):
+        threading.Thread.__init__(self)
+        self.appversion = appversion
+        self.app_dir = app_dir
+
+    def run(self):
+        supervisor_rpc = getSupervisorRpcInterface()
+
+        try:
+            supervisor_rpc.getState()
+        except socket.error, e:
+            logging.critical("Connecting to supervsord failed %s.", e)
+            raise AppConfigServiceError(
+                u"Internal error when deploying application (app_id=u'%s')." %
+                self.app_id)
+
+        options = readDefaultOptions()
+
+        portconfig = PortConfig.get_or_insert(
+            'portconfig_%s' % options.server_name.replace('.', '_'))
+
+        if self.appversion.fcgi_port and self.appversion.portconfig:
+            port = self.appversion.fcgi_port
+        else:
+            port = options.fcgi_port
+
+            if not portconfig.used_ports:
+                portconfig.used_ports.append(port)
+            else:
+                if len(portconfig.used_ports) == MAX_USED_PORTS:
+                    raise AppConfigServiceError(
+                        u"Maximum number of installed applications reached.")
+                for i, p in enumerate(range(port, port+MAX_USED_PORTS)):
+                    if p not in portconfig.used_ports:
+                        portconfig.used_ports.insert(i, p)
+                        options.fcgi_port = p
+                        break
+
+        configureAppversion(self.appversion, self.app_dir, options)
+
+        app_config = self.appversion.config
+
+        if self.appversion.config.inbound_services:
+            if XMPP_INBOUND_SERVICE_NAME in app_config.inbound_services:
+                supervisor_rpc.stopProcess('ejabberd')
+                supervisor_rpc.startProcess('ejabberd')
+                logging.info("Restarted XMPP gateway")
+
+        added, changed, removed = supervisor_rpc.reloadConfig()[0]
+
+        for name in removed:
+            results = supervisor_rpc.stopProcessGroup(name)
+            logging.info("Stoppend %s", name)
+            supervisor_rpc.removeProcessGroup(name)
+            logging.info("Removed process group %s", name)
+
+        for name in changed:
+            results = supervisor_rpc.stopProcessGroup(name)
+            logging.info("Stopped %s", name)
+            supervisor_rpc.removeProcessGroup(name)
+            supervisor_rpc.addProcessGroup(name)
+            logging.info("Updated process group %s", name)
+
+        for name in added:
+            supervisor_rpc.addProcessGroup(name)
+            logging.info("Added process group %s", name)
+
+        time.sleep(2)
+
+        supervisor_rpc.stopProcess('nginx')
+        supervisor_rpc.startProcess('nginx')
+        logging.info("Restarted HTTP frontend")
+
+        # Update Appversion instance
+        if not self.appversion.fcgi_port and not self.appversion.portconfig:
+            self.appversion.fcgi_port = port
+            self.appversion.portconfig = portconfig
+            portconfig.put()
+
+        self.appversion.state = STATE_DEPLOYED
+        self.appversion.updated = datetime.datetime.now()
+        self.appversion.put()
 
 
 def main():

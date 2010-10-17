@@ -862,6 +862,13 @@ def write_crontab(options, app_root):
     return tab
 
 
+def setdir(path):
+    """Returns the path if present."""
+
+    if os.path.isdir(path): return path
+    raise RuntimeError('Directory not found: "%s"' % path)
+
+
 def main():
     """Runs the apptool console script."""
 
@@ -1000,7 +1007,7 @@ def main():
 
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",
-                  default=os.environ.get('TMPDIR', '/var'))
+                  default=setdir(os.path.abspath(os.path.join('.', 'var'))))
 
     op.add_option("--verbose", dest="verbose", action="store_true",
                   help="set verbosity mode to display all warnings",

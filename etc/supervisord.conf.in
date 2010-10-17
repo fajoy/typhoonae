@@ -52,7 +52,7 @@ environment = LD_LIBRARY_PATH="${buildout:directory}/parts/pcre/lib"
 redirect_stderr = true
 
 [program:appcfg_service]
-command = ${buildout:directory}/bin/appcfg_service -c ${buildout:directory}/etc/typhoonae.cfg
+command = ${buildout:directory}/bin/appcfg_service -c ${buildout:directory}/etc/typhoonae.cfg --var=${buildout:directory}/var --apps_root=${buildout:directory}/var
 process_name = appcfg_service
 directory = ${buildout:directory}
 priority = 40

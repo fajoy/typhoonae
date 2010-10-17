@@ -393,13 +393,14 @@ app = webapp.WSGIApplication([
 class AppConfigService(object):
     """Uses a simple single-threaded WSGI server and signal handling."""
 
-    def __init__(self, addr, app, apps_root, verbose=False):
+    def __init__(self, addr, app, apps_root, var, verbose=False):
         """Initialize the WSGI server.
 
         Args:
             app: A webapp.WSGIApplication.
             addr: Use this address to initialize the HTTP server.
             apps_root: Applications root directory.
+            var: Directory for platform independent data.
             verbose: Boolean, default False. If True, enable verbose mode.
         """
         assert isinstance(app, webapp.WSGIApplication)
@@ -424,8 +425,7 @@ class AppConfigService(object):
         from google.appengine.datastore import datastore_sqlite_stub
         apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
 
-        datastore_path = os.path.join(
-            os.environ['TMPDIR'], APPLICATION_ID+'.sqlite')
+        datastore_path = os.path.join(var, APPLICATION_ID+'.sqlite')
 
         datastore = datastore_sqlite_stub.DatastoreSqliteStub(
             APPLICATION_ID, datastore_path)
@@ -511,7 +511,6 @@ def readDefaultOptions():
         'HOSTNAME': os.environ.get('HOSTNAME', socket.getfqdn()),
         'SERVER_SOFTWARE': os.environ.get('SERVER_SOFTWARE',
                                           typhoonae.fcgiserver.SERVER_SOFTWARE),
-        'VAR': os.environ.get('TMPDIR', '/tmp'),
     }
 
     p = ConfigParser.ConfigParser()
@@ -639,15 +638,21 @@ def main():
                   metavar="ADDR", help="use this address",
                   default=DEFAULT_ADDRESS)
 
+    op.add_option("--apps_root", dest="apps_root", metavar="PATH",
+                  help="the root directory of all application directories",
+                  default=typhoonae.apptool.setdir(
+                        os.path.abspath(os.path.join('.', 'var'))))
+
     op.add_option("-c", "--config", dest="config_file",
                   metavar="FILE", help="read configuration from this file")
 
     op.add_option("-d", "--debug", dest="debug_mode", action="store_true",
                   help="enables debug mode", default=False)
 
-    op.add_option("--apps_root", dest="apps_root", metavar="PATH",
-                  help="the root directory of all application directories",
-                  default=os.environ.get("TMPDIR", "/tmp"))
+    op.add_option("--var", dest="var", metavar="PATH",
+                  help="use this directory for platform independent data",
+                  default=typhoonae.apptool.setdir(
+                        os.path.abspath(os.path.join('.', 'var'))))
 
     (options, args) = op.parse_args()
 
@@ -672,5 +677,10 @@ def main():
         sys.exit(1)
 
     service = AppConfigService(
-        options.address, app, options.apps_root, options.debug_mode)
+        options.address,
+        app,
+        options.apps_root,
+        options.var,
+        options.debug_mode)
+
     service.serve_forever()

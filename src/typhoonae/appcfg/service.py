@@ -41,6 +41,7 @@ import signal
 import socket
 import sys
 import re
+import threading
 import time
 import typhoonae.apptool
 import typhoonae.fcgiserver
@@ -160,6 +161,8 @@ class AppversionHandler(webapp.RequestHandler):
 
     Handles all POST requests for /api/appversion.
     """
+
+    __deploy_lock = threading.Lock()
 
     def post(self, func_name):
         app_id = self.request.params.get('app_id')
@@ -337,83 +340,17 @@ class AppversionHandler(webapp.RequestHandler):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
 
-        supervisor_rpc = getSupervisorRpcInterface()
-
-        try:
-            supervisor_rpc.getState()
-        except socket.error, e:
-            logging.critical("Connecting to supervsord failed %s.", e)
-            raise AppConfigServiceError(
-                u"Internal error when deploying application (app_id=u'%s')." %
-                app_id)
-
-        options = readDefaultOptions()
-
-        portconfig = PortConfig.get_or_insert(
-            'portconfig_%s' % options.server_name.replace('.', '_'))
-
-        if appversion.fcgi_port and appversion.portconfig:
-            port = appversion.fcgi_port
-        else:
-            port = options.fcgi_port
-
-            if not portconfig.used_ports:
-                portconfig.used_ports.append(port)
-            else:
-                if len(portconfig.used_ports) == MAX_USED_PORTS:
-                    raise AppConfigServiceError(
-                        u"Maximum number of installed applications reached.")
-                for i, p in enumerate(range(port, port+MAX_USED_PORTS)):
-                    if p not in portconfig.used_ports:
-                        portconfig.used_ports.insert(i, p)
-                        options.fcgi_port = p
-                        break
-
-        configureAppversion(appversion, app_dir, options)
-
-        if appversion.config.inbound_services:
-            if XMPP_INBOUND_SERVICE_NAME in appversion.config.inbound_services:
-                supervisor_rpc.stopProcess('ejabberd')
-                supervisor_rpc.startProcess('ejabberd')
-                logging.info("Restarted XMPP gateway")
-
-        added, changed, removed = supervisor_rpc.reloadConfig()[0]
-
-        for name in removed:
-            results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("Stoppend %s", name)
-            supervisor_rpc.removeProcessGroup(name)
-            logging.info("Removed process group %s", name)
-
-        for name in changed:
-            results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("Stopped %s", name)
-            supervisor_rpc.removeProcessGroup(name)
-            supervisor_rpc.addProcessGroup(name)
-            logging.info("Updated process group %s", name)
-
-        for name in added:
-            supervisor_rpc.addProcessGroup(name)
-            logging.info("Added process group %s", name)
-
-        time.sleep(2)
-
-        supervisor_rpc.stopProcess('nginx')
-        supervisor_rpc.startProcess('nginx')
-        logging.info("Restarted HTTP frontend")
-
-        # Update Appversion instance
-        if not appversion.fcgi_port and not appversion.portconfig:
-            appversion.fcgi_port = port
-            appversion.portconfig = portconfig
-            portconfig.put()
-
-        appversion.state = STATE_DEPLOYED
-        appversion.updated = datetime.datetime.now()
-        appversion.put()
+        deployment = DeploymentThread(appversion, app_dir)
+        self.__deploy_lock.acquire()
+        deployment.start()
+        self.__deploy_lock.release()
 
     def _RpcMethod_isready(self, app_id, version, path, data):
-        self.response.out.write('1')
+        appversion = self.getAppversion(app_id, version, STATE_DEPLOYED)
+        if appversion:
+            self.response.out.write('1')
+            return
+        self.response.out.write('0')
 
     def _RpcMethod_rollback(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
@@ -456,13 +393,14 @@ app = webapp.WSGIApplication([
 class AppConfigService(object):
     """Uses a simple single-threaded WSGI server and signal handling."""
 
-    def __init__(self, addr, app, apps_root, verbose=False):
+    def __init__(self, addr, app, apps_root, var, verbose=False):
         """Initialize the WSGI server.
 
         Args:
             app: A webapp.WSGIApplication.
             addr: Use this address to initialize the HTTP server.
             apps_root: Applications root directory.
+            var: Directory for platform independent data.
             verbose: Boolean, default False. If True, enable verbose mode.
         """
         assert isinstance(app, webapp.WSGIApplication)
@@ -487,8 +425,7 @@ class AppConfigService(object):
         from google.appengine.datastore import datastore_sqlite_stub
         apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
 
-        datastore_path = os.path.join(
-            os.environ['TMPDIR'], APPLICATION_ID+'.sqlite')
+        datastore_path = os.path.join(var, APPLICATION_ID+'.sqlite')
 
         datastore = datastore_sqlite_stub.DatastoreSqliteStub(
             APPLICATION_ID, datastore_path)
@@ -574,7 +511,6 @@ def readDefaultOptions():
         'HOSTNAME': os.environ.get('HOSTNAME', socket.getfqdn()),
         'SERVER_SOFTWARE': os.environ.get('SERVER_SOFTWARE',
                                           typhoonae.fcgiserver.SERVER_SOFTWARE),
-        'VAR': os.environ.get('TMPDIR', '/tmp'),
     }
 
     p = ConfigParser.ConfigParser()
@@ -606,6 +542,93 @@ def configureAppversion(appversion, app_dir, options):
     typhoonae.apptool.write_crontab(options, app_dir)
 
 
+class DeploymentThread(threading.Thread):
+    """Asynchronously deploy a given appversion."""
+
+    def __init__(self, appversion, app_dir):
+        threading.Thread.__init__(self)
+        self.appversion = appversion
+        self.app_dir = app_dir
+
+    def run(self):
+        supervisor_rpc = getSupervisorRpcInterface()
+
+        try:
+            supervisor_rpc.getState()
+        except socket.error, e:
+            logging.critical("Connecting to supervsord failed %s.", e)
+            raise AppConfigServiceError(
+                u"Internal error when deploying application (app_id=u'%s')." %
+                self.app_id)
+
+        options = readDefaultOptions()
+
+        portconfig = PortConfig.get_or_insert(
+            'portconfig_%s' % options.server_name.replace('.', '_'))
+
+        if self.appversion.fcgi_port and self.appversion.portconfig:
+            port = self.appversion.fcgi_port
+        else:
+            port = options.fcgi_port
+
+            if not portconfig.used_ports:
+                portconfig.used_ports.append(port)
+            else:
+                if len(portconfig.used_ports) == MAX_USED_PORTS:
+                    raise AppConfigServiceError(
+                        u"Maximum number of installed applications reached.")
+                for i, p in enumerate(range(port, port+MAX_USED_PORTS)):
+                    if p not in portconfig.used_ports:
+                        portconfig.used_ports.insert(i, p)
+                        options.fcgi_port = p
+                        break
+
+        configureAppversion(self.appversion, self.app_dir, options)
+
+        app_config = self.appversion.config
+
+        if self.appversion.config.inbound_services:
+            if XMPP_INBOUND_SERVICE_NAME in app_config.inbound_services:
+                supervisor_rpc.stopProcess('ejabberd')
+                supervisor_rpc.startProcess('ejabberd')
+                logging.info("Restarted XMPP gateway")
+
+        added, changed, removed = supervisor_rpc.reloadConfig()[0]
+
+        for name in removed:
+            results = supervisor_rpc.stopProcessGroup(name)
+            logging.info("Stoppend %s", name)
+            supervisor_rpc.removeProcessGroup(name)
+            logging.info("Removed process group %s", name)
+
+        for name in changed:
+            results = supervisor_rpc.stopProcessGroup(name)
+            logging.info("Stopped %s", name)
+            supervisor_rpc.removeProcessGroup(name)
+            supervisor_rpc.addProcessGroup(name)
+            logging.info("Updated process group %s", name)
+
+        for name in added:
+            supervisor_rpc.addProcessGroup(name)
+            logging.info("Added process group %s", name)
+
+        time.sleep(2)
+
+        supervisor_rpc.stopProcess('nginx')
+        supervisor_rpc.startProcess('nginx')
+        logging.info("Restarted HTTP frontend")
+
+        # Update Appversion instance
+        if not self.appversion.fcgi_port and not self.appversion.portconfig:
+            self.appversion.fcgi_port = port
+            self.appversion.portconfig = portconfig
+            portconfig.put()
+
+        self.appversion.state = STATE_DEPLOYED
+        self.appversion.updated = datetime.datetime.now()
+        self.appversion.put()
+
+
 def main():
     """The main method."""
 
@@ -615,15 +638,21 @@ def main():
                   metavar="ADDR", help="use this address",
                   default=DEFAULT_ADDRESS)
 
+    op.add_option("--apps_root", dest="apps_root", metavar="PATH",
+                  help="the root directory of all application directories",
+                  default=typhoonae.apptool.setdir(
+                        os.path.abspath(os.path.join('.', 'var'))))
+
     op.add_option("-c", "--config", dest="config_file",
                   metavar="FILE", help="read configuration from this file")
 
     op.add_option("-d", "--debug", dest="debug_mode", action="store_true",
                   help="enables debug mode", default=False)
 
-    op.add_option("--apps_root", dest="apps_root", metavar="PATH",
-                  help="the root directory of all application directories",
-                  default=os.environ.get("TMPDIR", "/tmp"))
+    op.add_option("--var", dest="var", metavar="PATH",
+                  help="use this directory for platform independent data",
+                  default=typhoonae.apptool.setdir(
+                        os.path.abspath(os.path.join('.', 'var'))))
 
     (options, args) = op.parse_args()
 
@@ -648,5 +677,10 @@ def main():
         sys.exit(1)
 
     service = AppConfigService(
-        options.address, app, options.apps_root, options.debug_mode)
+        options.address,
+        app,
+        options.apps_root,
+        options.var,
+        options.debug_mode)
+
     service.serve_forever()

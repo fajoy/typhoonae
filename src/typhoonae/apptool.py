@@ -721,8 +721,11 @@ def write_celery_conf(options):
     """Writes celery configuration file."""
 
     amqp_host = options.amqp_host
-    celery_imports_list = options.celery_imports.split(',')
-    celery_imports = ','.join('"%s"' % i for i in celery_imports_list)
+    if options.celery_imports:
+        celery_imports_list = options.celery_imports.split(',')
+        celery_imports = ','.join('"%s"' % i for i in celery_imports_list)
+    else:
+        celery_imports = ''
     task_time_limit = int(options.task_time_limit)
     if task_time_limit:
         soft_task_time_limit = task_time_limit - 1
@@ -893,7 +896,7 @@ def main():
 
     op.add_option("--celery_imports", dest="celery_imports", metavar="LIST",
                   help="sequence of modules to import when the celery daemon "
-                  "starts", default='')
+                  "starts")
 
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists", default=False)

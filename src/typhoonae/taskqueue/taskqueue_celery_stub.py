@@ -18,6 +18,7 @@
 from celery.task.base import Task
 
 import base64
+import datetime
 import google.appengine.api.api_base_pb
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.apiproxy_stub_map
@@ -29,7 +30,6 @@ import logging
 import os
 import simplejson
 import socket
-import time
 import typhoonae.taskqueue
 import typhoonae.taskqueue.celery_tasks
 
@@ -97,11 +97,13 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             raise google.appengine.runtime.apiproxy_errors.ApplicationError(
                 google.appengine.api.labs.taskqueue.taskqueue_service_pb.
                 TaskQueueServiceError.UNKNOWN_QUEUE)
-        countdown = max(0, kwargs['eta'] - time.time())
-        logging.warning('Queueing task with ETA %r and countdown %r',
-                        kwargs['eta'], countdown)
+
+        eta = datetime.datetime.fromtimestamp(kwargs['eta'])
+        if datetime.datetime.utcnow() > eta:
+            eta = None
+
         task.apply_async(kwargs=kwargs,
-                         countdown=countdown,
+                         eta=eta,
                          expires=30 * 24 * 3600)
 
     def _Dynamic_BulkAdd(self, request, response):

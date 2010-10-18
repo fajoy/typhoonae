@@ -22,6 +22,7 @@ from google.appengine.api import queueinfo
 from google.appengine.api.labs.taskqueue.taskqueue_stub import _ParseQueueYaml
 
 import base64
+import datetime
 import logging
 import os
 import re
@@ -37,9 +38,15 @@ class RequestWithMethod(urllib2.Request):
         return self._method
 
 
+def get_short_task_description(name=None, url=None, **kw):
+    return "%s (%s)" % (name, url)
+
+
 def handle_task(task, **task_args):
     """Decodes received message and processes task."""
 
+    logger = task.get_logger(task_id=task_args['task_id'],
+                             task_name=task_args['task_name'])
     headers = {'Content-Type': task_args['content_type'],
                'X-AppEngine-TaskName': task_args['name'],
                'X-AppEngine-TaskRetryCount': str(task_args['try_count'])}
@@ -56,16 +63,22 @@ def handle_task(task, **task_args):
         data=base64.b64decode(task_args['payload']),
         headers=headers
     )
-
+    task_description = get_short_task_description(**task_args)
     try:
         res = urllib2.urlopen(req)
     except urllib2.URLError, err_obj:
         reason = getattr(err_obj, 'reason', err_obj)
-        logging.error("failed task %s %s", task_args, reason)
+        logger.error("failed task %s %s", task_description, reason)
         task.retry(kwargs=task_args, exc=err_obj)
     except SoftTimeLimitExceeded, err_obj:
-        logging.error("failed task %s (time limit exceeded)", task_args)
+        logger.error("failed task %s (time limit exceeded)" % task_description)
         task.retry(kwargs=task_args, exc=err_obj)
+    finally:
+        logger.info("finished with task %s" % task_description)
+
+
+def get_task_class_name(gae_queue_name):
+    return re.sub('[^a-zA-Z_]', '', gae_queue_name.replace('-', '_')) + '_Task'
 
 
 def create_task_queue(queue_name, rate_qps, bucket_size=5):
@@ -77,14 +90,20 @@ def create_task_queue(queue_name, rate_qps, bucket_size=5):
 
     Args:
         queue_name: The name of the queue that we want to create.
-        rate_qps: The rate in queries per second for this queue.
+        rate_qps: The rate in queries per second for this queue. -1 for
+            unbounded rate limit. 0 for stopping this queue.
         bucket_size: Ignored, it's still not supported by celery.
     """
-    task_class_name = re.sub('[^a-zA-Z]', '', queue_name) + '_Task'
-    rate_limit = "%d/h" % int(rate_qps * 3600)
+    task_class_name = get_task_class_name(queue_name)
+    if rate_qps == -1:
+        rate_limit = "%d/h" % int(rate_qps * 3600)
+    else:
+        rate_limit = None
+
     # TODO: We ignore the bucket_size parameter
     return type(task_class_name, (Task,), dict(
-         name=queue_name,
+         queue=queue_name,
+         name=task_class_name,
          rate_limit=rate_limit,
          run=handle_task,
          ignore_result=True,

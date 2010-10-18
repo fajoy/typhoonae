@@ -252,18 +252,18 @@ SUPERVISOR_CELERY_CONFIG = """
 [program:%(app_id)s_celeryworkers]
 command = %(bin_dir)s/celeryd
 process_name = %(app_id)s_celeryworkers
-directory = %(root)s
+directory = %(app_root)s
 priority = 20
 stdout_logfile = %(var)s/log/celery_workers.out.log
 stderr_logfile = %(var)s/log/celery_workers.err.log
 autostart=true
 autorestart=true
 startsecs=10
-environment=APP_ROOT="%(app_root)s"
+environment=APP_ROOT="%(app_root)s",TZ="UTC"
 
 ; Need to wait for currently executing tasks to finish at shutdown.
 ; Increase this if you have very long running tasks.
-stopwaitsecs = 600
+stopwaitsecs = 30
 """
 
 SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG = """
@@ -403,7 +403,7 @@ BROKER_PASSWORD = "guest"
 BROKER_VHOST = "/"
 
 CELERY_RESULT_BACKEND = "amqp"
-CELERY_IMPORTS = ("typhoonae.taskqueue.celery_tasks",)
+CELERY_IMPORTS = ("typhoonae.taskqueue.celery_tasks",%(celery_imports)s)
 
 CELERYD_LOG_FILE = "%(var)s/log/celeryd.log"
 CELERYD_LOG_LEVEL = "INFO"
@@ -721,6 +721,8 @@ def write_celery_conf(options):
     """Writes celery configuration file."""
 
     amqp_host = options.amqp_host
+    celery_imports_list = options.celery_imports.split(',')
+    celery_imports = ','.join('"%s"' % i for i in celery_imports_list)
     task_time_limit = int(options.task_time_limit)
     if task_time_limit:
         soft_task_time_limit = task_time_limit - 1
@@ -881,6 +883,10 @@ def main():
     op.add_option("--celery", dest="celery", metavar="FILE",
                   help="write celery configuration to this file",
                   default=os.path.join('etc', 'celeryconfig.py'))
+
+    op.add_option("--celery_imports", dest="celery_imports", metavar="LIST",
+                  help="sequence of modules to import when the celery daemon "
+                  "starts", default='')
 
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists", default=False)

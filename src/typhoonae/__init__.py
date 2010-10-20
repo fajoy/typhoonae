@@ -133,16 +133,8 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
 
     if name == 'mongodb':
         from typhoonae.mongodb import datastore_mongo_stub
-        tmp_dir = os.environ['TMPDIR']
-        if not os.path.exists(tmp_dir):
-            os.mkdir(tmp_dir)
-
-        datastore_path = os.path.join(tmp_dir, datastore_file)
-        history_path = os.path.join(tmp_dir, history)
-
         datastore = datastore_mongo_stub.DatastoreMongoStub(
-            conf.application, datastore_path,
-            require_indexes=require_indexes)
+            conf.application, require_indexes=require_indexes)
     elif name == 'bdbdatastore':
         from notdot.bdbdatastore import socket_apiproxy_stub
         datastore = socket_apiproxy_stub.RecordingSocketApiProxyStub(

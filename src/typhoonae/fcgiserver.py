@@ -318,10 +318,6 @@ def main():
                   help="the internal application host and port",
                   default='localhost:8770')
 
-    op.add_option("--log", dest="logfile", metavar="FILE",
-                  help="write logging output to this file",
-                  default=os.path.join(os.environ['TMPDIR'], 'fcgi.log'))
-
     op.add_option("--login_url", dest="login_url", metavar="URL",
                   help="login URL", default='/_ah/login')
 

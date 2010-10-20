@@ -62,7 +62,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
   def __init__(self,
                app_id,
-               datastore_file,
+               datastore_file=None,
                require_indexes=False,
                service_name='datastore_v3'):
     """Constructor.

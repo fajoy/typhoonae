@@ -199,6 +199,7 @@ directory = %(bin_dir)s
 priority = 10
 redirect_stderr = true
 stdout_logfile = %(var)s/log/mongod.log
+environment = %(environment)s
 """
 
 SUPERVISOR_BDBDATASTORE_CONFIG = """
@@ -213,7 +214,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s.%(version)s]
-command = %(bin_dir)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --log=%(var)s/log/%(app_id)s.log --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
+command = %(bin_dir)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
 socket = tcp://%(fcgi_host)s:%(fcgi_port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -224,6 +225,7 @@ stdout_logfile_maxbytes = 1MB
 stdout_logfile_backups = 10
 stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
+environment = %(environment)s
 
 [eventlistener:%(app_id)s.%(version)s_monitor]
 command=%(bin_dir)s/memmon -g %(app_id)s=200MB
@@ -238,6 +240,7 @@ directory = %(root)s
 priority = 20
 redirect_stderr = true
 stdout_logfile = %(var)s/log/taskworker.log
+environment = %(environment)s
 
 [program:%(app_id)s_deferred_taskworker]
 command = %(bin_dir)s/deferred_taskworker --amqp_host=%(amqp_host)s
@@ -246,6 +249,7 @@ directory = %(root)s
 priority = 20
 redirect_stderr = true
 stdout_logfile = %(var)s/log/deferred_taskworker.log
+environment = %(environment)s
 """
 
 SUPERVISOR_CELERY_CONFIG = """
@@ -259,7 +263,7 @@ stderr_logfile = %(var)s/log/celery_workers.err.log
 autostart=true
 autorestart=true
 startsecs=10
-environment=APP_ROOT="%(app_root)s",TZ="UTC"
+environment=APP_ROOT="%(app_root)s",TZ="UTC" %(environment)s
 
 ; Need to wait for currently executing tasks to finish at shutdown.
 ; Increase this if you have very long running tasks.
@@ -273,6 +277,7 @@ process_name = %(app_id)s_xmpp_http_dispatch
 priority = 999
 redirect_stderr = true
 stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
+environment = %(environment)s
 """
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
@@ -282,6 +287,7 @@ process_name = %(app_id)s_websocket
 priority = 999
 redirect_stderr = true
 stdout_logfile = %(var)s/log/websocket.log
+environment = %(environment)s
 """
 
 EJABBERD_CONFIG = """
@@ -612,6 +618,7 @@ def write_supervisor_conf(options, conf, app_root):
     datastore = options.datastore.lower()
     develop_mode = options.develop_mode
     email = options.email
+    environment = options.environment
     fcgi_host = options.fcgi_host
     fcgi_port = options.fcgi_port
     http_port = options.http_port
@@ -915,6 +922,9 @@ def main():
 
     op.add_option("--email", dest="email", metavar="EMAIL",
                   help="the username to use", default='')
+
+    op.add_option("--environment", dest="environment", metavar="STRING",
+                  help="specify additional environment variables", default='')
 
     op.add_option("--enable_ssl", dest="ssl_enabled", action="store_true",
                   help="enable SSL support", default=False)

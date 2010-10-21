@@ -47,8 +47,7 @@ class ApptoolTestCase(unittest.TestCase):
         """Tests the configuration for scheduled tasks."""
 
         class OptionsMock:
-            http_port = 8080
-            server_name = 'localhost'
+            internal_address = 'localhost:8080'
             set_crontab = False
 
         options = OptionsMock()

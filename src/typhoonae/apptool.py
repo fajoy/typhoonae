@@ -853,8 +853,10 @@ def write_crontab(options, app_root):
 
         row.command = os.path.join(
             os.path.dirname(os.path.abspath(sys.argv[0])), 'runtask')
-        row.command += ' http://%s:%s%s' % (
-            options.server_name, options.http_port, entry.url)
+
+        server_name, http_port = options.internal_address.split(':')
+
+        row.command += ' http://%s:%s%s' % (server_name, http_port, entry.url)
 
         row.description = '%s (%s)' % (entry.description, entry.schedule)
 

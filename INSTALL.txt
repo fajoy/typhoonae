@@ -89,7 +89,8 @@ On Debian Lenny you will need to have the following packages installed::
   * python-dev
   * libexpat-dev (libexpat1-dev)
   * gettext
-  * erlang-nox and erlang-dev
+  * xsltproc
+  * erlang-nox, erlang-dev and erlang-src
 
 The Images API uses the Python Imaging Library to transform images. TyphoonAE's
 buildout does not set up PIL for you. You'll need to download the PIL module

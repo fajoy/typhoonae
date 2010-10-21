@@ -1,0 +1,111 @@
+application: demo
+version: 1
+runtime: python
+api_version: 1
+
+inbound_services:
+- xmpp_message
+- websocket_message
+
+handlers:
+
+- url: /images/(.*\.(gif|jpg|png))
+  static_files: static/\1
+  upload: static/(.*\.(gif|jpg|png))
+  expiration: 5h
+
+- url: /favicon.ico
+  static_files: static/favicon.ico
+  upload: static/favicon.ico
+
+- url: /css
+  static_dir: static
+
+- url: /js
+  static_dir: static
+
+- url: /media
+  static_dir: files
+
+- url: /static.html
+  static_files: static.html
+  upload: static.html
+
+- url: /
+  script: app.py
+
+- url: /count
+  script: app.py
+
+- url: /invite
+  script: app.py
+
+- url: /log
+  script: app.py
+
+- url: /makenote
+  script: app.py
+  login: admin
+
+- url: /getnote
+  script: app.py
+
+- url: /blobstore
+  script: blobstore.py
+  login: required
+
+- url: /upload
+  script: blobstore.py
+
+- url: /serve/([^/]+)?
+  script: blobstore.py
+
+- url: /delete/([^/]+)?
+  script: app.py
+  login: admin
+
+- url: /ajax
+  script: app.py
+
+- url: /_ah/login
+  script: login.py
+  secure: always
+
+- url: /_ah/logout
+  script: login.py
+
+- url: /_ah/xmpp/message/chat/
+  script: app.py
+  login: admin
+
+- url: /websocket
+  script: websocket.py
+  secure: never
+
+- url: /_ah/websocket/handshake/(.*)
+  script: websocket.py
+  login: admin
+
+- url: /_ah/websocket/message/(.*)
+  script: websocket.py
+  login: admin
+
+- url: /channel_message
+  script: channel.py
+
+- url: /channel
+  script: channel.py
+
+- url: /remote_api
+  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
+  login: admin
+
+- url: /stats.*
+  script: $PYTHON_LIB/google/appengine/ext/appstats/ui.py
+
+- url: /admin.*
+  script: $PYTHON_LIB/google/appengine/ext/admin
+  login: admin
+
+- url: .*
+  script: failure.py

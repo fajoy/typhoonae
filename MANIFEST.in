@@ -1,0 +1,5 @@
+include CHANGES.txt
+include src/typhoonae/appcfg/index.html
+include src/typhoonae/tests/sample/app.yaml
+include src/typhoonae/taskqueue/tests/queue.yaml
+include version.txt

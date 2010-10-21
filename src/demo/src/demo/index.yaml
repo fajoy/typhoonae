@@ -1,0 +1,6 @@
+indexes:
+
+- kind: Note
+  properties:
+  - name: date
+    direction: desc

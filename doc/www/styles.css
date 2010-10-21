@@ -1,0 +1,52 @@
+body {
+    background: #fff;
+    font-family: Arial, Sans-Serif;
+    font-size: 1.0em;
+    color: #111;
+    padding: 0px;
+}
+
+a, a:active, a:visited {
+    color: #00449f;
+    text-decoration: none;
+}   
+     
+a:hover {
+    text-decoration: underline;
+}
+
+h1 {
+    font-size: 1.5em;
+    font-weight: normal;
+}
+
+hr {
+    border-right: 0px;
+    border-top: 0px;
+    background: #999;
+    border-left: 0px;
+    border-bottom: 0px;
+    height: 1px;
+    text-align: center
+}
+
+.center {
+    width: 500px;
+    margin: 100px auto;
+}
+
+.note {
+    background: url(note.jpg) no-repeat center center;
+    height: 400px;
+    width: 400px;
+}
+
+.note .text {
+    color: #555;
+    font: 1.0em "Courier New" Courier, monospace;
+    padding: 20px 40px 0px 45px;
+}
+
+.note li {
+    margin-bottom: 10px;
+}

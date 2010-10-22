@@ -158,7 +158,8 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
                         url=add_request.url(),
                     )
                     self._RunAsync(publishers[queue], **task_dict)
-                    task_result = response.add_taskresult()
+
+                task_result = response.add_taskresult()
         finally:
             for p in publishers.values():
                 p.close()

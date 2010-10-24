@@ -1,5 +1,6 @@
 include CHANGES.txt
 include src/typhoonae/appcfg/index.html
+include src/typhoonae/channel/tae-channel-js.js
 include src/typhoonae/handlers/dummy.png
 include src/typhoonae/tests/sample/app.yaml
 include src/typhoonae/taskqueue/tests/queue.yaml

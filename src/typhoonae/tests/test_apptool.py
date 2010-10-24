@@ -132,8 +132,8 @@ class ApptoolTestCase(unittest.TestCase):
     # should exist
     upload_store /tmp/blobstore/sample 1;
 
-    # Allow uploaded files to be read only by user
-    upload_store_access user:r;
+    # Set permissions for uploaded files
+    upload_store_access user:rw group:rw;
 
     # Set specified fields in request body
     upload_set_form_field $upload_field_name.name "$upload_file_name";

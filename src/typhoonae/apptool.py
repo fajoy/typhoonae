@@ -50,22 +50,6 @@ server {
     error_log   %(var)s/log/httpd-error.log;
 """
 
-NGINX_PROXY = """
-server {
-    client_max_body_size 100m;
-    listen      %(http_port)s;
-    server_name %(app_id)s.%(server_name)s;
-
-    %(subscribe_config)s
-
-    %(publish_config)s
-
-    location ~* {
-        proxy_pass http://%(app_domain)s%(server_name)s:%(http_port)s;
-    }
-}
-"""
-
 NGINX_ERROR_PAGES = """
 error_page   500 502 503 504  /50x.html;
 location = /50x.html {
@@ -106,7 +90,7 @@ FCGI_PARAMS = """\
     fastcgi_param REMOTE_ADDR $remote_addr;
     fastcgi_param REQUEST_METHOD $request_method;
     fastcgi_param REQUEST_URI $request_uri;
-    fastcgi_param SERVER_NAME %(server_name_param)s;
+    fastcgi_param SERVER_NAME $server_name;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
     %(add_fcgi_params)s
@@ -428,7 +412,13 @@ def make_blobstore_dirs(blobstore_path):
             os.makedirs(p)
 
 def write_nginx_conf(
-        options, conf, app_root, internal=False, secure=False, mode='w'):
+        options,
+        conf,
+        app_root,
+        default_version=True,
+        internal=False,
+        secure=False,
+        mode='w'):
     """Writes nginx server configuration stub."""
 
     app_domain = ''
@@ -442,7 +432,6 @@ def write_nginx_conf(
     html_error_pages_root = options.html_error_pages_root
     http_port = options.http_port
     server_name = options.server_name
-    server_name_param = '$server_name'
     ssl_certificate = options.ssl_certificate
     ssl_certificate_key = options.ssl_certificate_key
     ssl_enabled = options.ssl_enabled
@@ -450,11 +439,12 @@ def write_nginx_conf(
     var = os.path.abspath(options.var)
     version = conf.version
 
-    app_version_domain = '%s.latest.%s' % (version, app_id)
+    app_version_domain = app_id
+    if not default_version:
+        app_version_domain = ('%s.latest.' % version) + app_version_domain
 
     if options.multiple:
         app_domain = app_version_domain + '.'
-        server_name_param = '"%(app_id)s.%(server_name)s"' % locals()
 
     if secure:
         http_port = options.https_port
@@ -463,19 +453,6 @@ def write_nginx_conf(
             ('ssl_certificate', ssl_certificate),
             ('ssl_certificate_key', ssl_certificate_key)
         ])
-
-    if options.multiple and not internal:
-        nginx_proxy_config_path = os.path.join(
-            'etc', '%s-proxy-nginx.conf' % app_id)
-        httpd_proxy_conf_stub = open(nginx_proxy_config_path, 'w')
-        proxy_config = dict()
-        proxy_config.update(locals())
-        proxy_config.update({
-            'subscribe_config': NGINX_PUSH_SUBSCRIBE_CONFIG,
-            'publish_config': NGINX_PUSH_PUBLISH_CONFIG
-        })
-        httpd_proxy_conf_stub.write(NGINX_PROXY % proxy_config)
-        httpd_proxy_conf_stub.close()
 
     if options.multiple:
         nginx_config_path = os.path.join(
@@ -591,8 +568,7 @@ def write_nginx_conf(
             )
         )
 
-    fcgi_params=FCGI_PARAMS % {'server_name_param': server_name_param,
-                               'add_fcgi_params': '\n'.join(add_fcgi_params)}
+    fcgi_params=FCGI_PARAMS % {'add_fcgi_params': '\n'.join(add_fcgi_params)}
 
     httpd_conf_stub.write(NGINX_UPLOAD_CONFIG % locals())
     httpd_conf_stub.write(NGINX_DOWNLOAD_CONFIG % locals())
@@ -1066,10 +1042,17 @@ def main():
 
     conf = typhoonae.getAppConfig(app_root)
 
-    write_nginx_conf(options, conf, app_root)
-    if options.ssl_enabled:
-        write_nginx_conf(options, conf, app_root, secure=True, mode='a')
-    write_nginx_conf(options, conf, app_root, internal=True, mode='a')
+    def write_httpd_conf(default_version=False):
+        f = write_nginx_conf
+        f(options, conf, app_root, default_version)
+        if options.ssl_enabled:
+            f(options, conf, app_root, default_version, secure=True, mode='a')
+        f(options, conf, app_root, default_version, internal=True, mode='a')
+
+    write_httpd_conf()
+    if options.multiple:
+        write_httpd_conf(True)
+
     make_blobstore_dirs(
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     write_supervisor_conf(options, conf, app_root)

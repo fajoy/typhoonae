@@ -532,9 +532,16 @@ def configureAppversion(appversion, app_dir, options):
     options.internal_address = '%s.latest.%s.%s' % (
         appversion.version, appversion.app_id, options.internal_address)
 
-    typhoonae.apptool.write_nginx_conf(options, conf, app_dir)
-    typhoonae.apptool.write_nginx_conf(
-        options, conf, app_dir, internal=True, mode='a')
+    def write_httpd_conf(default_version=False):
+        f = typhoonae.apptool.write_nginx_conf
+        f(options, conf, app_dir, default_version)
+        if options.ssl_enabled:
+            f(options, conf, app_dir, default_version, secure=True, mode='a')
+        f(options, conf, app_dir, default_version, internal=True, mode='a')
+
+    write_httpd_conf()
+    write_httpd_conf(True)
+
     typhoonae.apptool.make_blobstore_dirs(
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     typhoonae.apptool.write_supervisor_conf(options, conf, app_dir)

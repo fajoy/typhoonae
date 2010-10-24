@@ -125,7 +125,7 @@ class ApptoolTestCase(unittest.TestCase):
 
             self.assertTrue("""location ~* /upload/ {
     # Pass altered request body to this location
-    upload_pass @1.latest.sample;
+    upload_pass @sample;
 
     # Store files to this directory
     # The directory is hashed, subdirectories 0 1 2 3 4 5 6 7 8 9
@@ -149,7 +149,7 @@ class ApptoolTestCase(unittest.TestCase):
     upload_cleanup 400 404 499 500-505;
 }
 
-location @1.latest.sample {
+location @sample {
     fastcgi_pass localhost:8081;
     fastcgi_param CONTENT_LENGTH $content_length;
     fastcgi_param CONTENT_TYPE $content_type;

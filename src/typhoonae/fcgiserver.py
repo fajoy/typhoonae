@@ -114,7 +114,7 @@ def load_module(handler_path, cgi_path, module_dict=sys.modules, debug=False):
         handler_path)
     script_module = module_dict.get(module_fullname)
     if debug and script_module:
-        logging.warn(
+        logging.info(
             'Debug mode enabled. Forcing reload of "%s"', handler_path)
         script_module = None
     module_code = None
@@ -387,6 +387,8 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.INFO)
+
+    logging.getLogger("amqplib").setLevel(logging.ERROR)
 
     # Change the current working directory to the application root and load
     # the application configuration

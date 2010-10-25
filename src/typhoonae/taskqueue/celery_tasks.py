@@ -49,7 +49,8 @@ def handle_task(task, **task_args):
                              task_name=task_args['task_name'])
     headers = {'Content-Type': task_args['content_type'],
                'X-AppEngine-TaskName': task_args['name'],
-               'X-AppEngine-TaskRetryCount': str(task_args['try_count'])}
+               'X-AppEngine-TaskRetryCount': str(task_args['try_count']),
+               'X-AppEngine-QueueName': task_args['queue']}
 
     # TODO: We run this query as an HTTP request, which has a significant
     # overhead (the query needs to go to nginx, and from there to the python

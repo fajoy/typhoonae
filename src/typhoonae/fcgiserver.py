@@ -157,7 +157,7 @@ def load_module(handler_path, cgi_path, module_dict=sys.modules, debug=False):
     return module_fullname, script_module, module_code
 
 
-def run_module(handler_path, cgi_path, debug=False):
+def run_module(handler_path, cgi_path):
     """Executes a CGI script by importing it as a new module.
 
     Args:
@@ -168,7 +168,7 @@ def run_module(handler_path, cgi_path, debug=False):
         debug: Boolean which enables/disables debug mode.
     """
     module_fullname, script_module, module_code = load_module(
-        handler_path, cgi_path, debug=debug)
+        handler_path, cgi_path)
 
     script_module.__name__ = '__main__'
     sys.modules['__main__'] = script_module
@@ -256,7 +256,9 @@ def serve(conf, options):
                       google.appengine.api.users.create_login_url(path_info))
             else:
                 # Load and run the application module
-                run_module(handler_path, script, debug=options.debug_mode)
+                run_module(handler_path, script)
+                if options.debug_mode:
+                    return
         except Exception, e:
             # Handle all exceptions and write the traceback to the log
             logging.error(e, exc_info=sys.exc_info())

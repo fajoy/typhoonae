@@ -210,6 +210,7 @@ stdout_logfile_backups = 10
 stderr_logfile = %(var)s/log/%(app_id)s-error.log
 stderr_logfile_maxbytes = 1MB
 environment = %(environment)s
+autorestart = True
 
 [eventlistener:%(app_id)s.%(version)s_monitor]
 command=%(bin_dir)s/memmon -g %(app_id)s=200MB

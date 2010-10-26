@@ -60,10 +60,6 @@ class TestCase(unittest.TestCase):
         mod_obj = module_cache['app']
         typhoonae.fcgiserver.load_module(handler_path, cgi_path, module_cache)
         self.assertEqual(mod_obj, module_cache['app'])
-        mod_obj = module_cache['app']
-        typhoonae.fcgiserver.load_module(
-            handler_path, cgi_path, module_cache, debug=True)
-        self.assertNotEqual(mod_obj, module_cache['app'])
 
     def testRunModule(self):
         """Tries to load and run a python module."""
@@ -79,7 +75,7 @@ class TestCase(unittest.TestCase):
             sys.stdout = buffer
             os.environ['PATH_INFO'] = uri
             os.environ['REQUEST_METHOD'] = method
-            typhoonae.fcgiserver.run_module(handler_path, cgi_path, debug=True)
+            typhoonae.fcgiserver.run_module(handler_path, cgi_path)
             sys.stdout = sys.__stdout__
             del os.environ['PATH_INFO']
             del os.environ['REQUEST_METHOD']

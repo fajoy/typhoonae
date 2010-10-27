@@ -38,6 +38,18 @@ class MemcacheTestCase(unittest.TestCase):
         self.stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
             'memcache')
 
+    def testBehaviors(self):
+        """Gets memcache behavior."""
+
+        self.assertEqual(
+            [('buffer_requests', 0), ('cache_lookups', 0), ('cas', 0),
+             ('connect_timeout', 4000), ('distribution', 'modula'),
+             ('failure_limit', 0), ('hash', 'default'), ('ketama', 0),
+             ('ketama_hash', 0), ('ketama_weighted', 0), ('no_block', 0),
+             ('receive_timeout', 0), ('send_timeout', 0), ('tcp_nodelay', 0),
+             ('verify_keys', 0)],
+            self.stub._GetMemcacheBehavior())
+
     def testAddingItem(self):
         """Adds items of different types."""
 

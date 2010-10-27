@@ -71,10 +71,12 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
         self._cache = pylibmc.Client(['%(addr)s:%(port)i' % config])
 
+    def _GetMemcacheBehavior(self):
         behaviors = self._cache.behaviors
         keys = sorted(k for k in behaviors if not k.startswith('_'))
-        logging.info("Memcache behavior: %s" %
-                     [(k, behaviors[k]) for k in keys])
+        sorted_behaviors = [(k, behaviors[k]) for k in keys]
+        logging.debug("Memcache behavior: %s" % sorted_behaviors)
+        return sorted_behaviors
 
     def _Dynamic_Get(self, request, response):
         """Implementation of MemcacheService::Get().

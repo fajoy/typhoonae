@@ -1,0 +1,60 @@
+[inet_http_server]
+port = 9001
+
+[supervisord]
+logfile = ${buildout:directory}/var/log/supervisord.log
+logfile_maxbytes = 50MB
+logfile_backups = 10
+loglevel = info
+pidfile = ${buildout:directory}/var/supervisord.pid
+nodaemon = false
+
+[supervisorctl]
+serverurl = http://localhost:9001
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface
+
+[program:memcached]
+command = ${buildout:directory}/bin/memcached 
+process_name = memcached
+directory = ${buildout:directory}/bin
+priority = 10
+redirect_stderr = true
+environment = LD_LIBRARY_PATH="${buildout:directory}/parts/libevent/lib"
+stdout_logfile = ${buildout:directory}/var/log/memcached.log
+
+[program:rabbitmq]
+command = ${buildout:directory}/bin/rabbitmq-server
+process_name = rabbitmq
+directory = ${buildout:directory}
+priority = 10
+redirect_stderr = true
+stdout_logfile = ${buildout:directory}/var/log/rabbitmq-server.log
+
+[program:ejabberd]
+command = ${buildout:directory}/bin/ejabberd
+process_name = ejabberd
+directory = ${buildout:directory}
+priority = 10
+redirect_stderr = true
+stdout_logfile = ${buildout:directory}/var/log/ejabberd.log
+
+[include]
+files = ${buildout:directory}/etc/*-supervisor.conf
+
+[program:nginx]
+command = ${buildout:directory}/parts/nginx/sbin/nginx -c ${buildout:directory}/parts/nginxctl/nginxctl.conf
+process_name = nginx
+directory = ${buildout:directory}/parts/nginx/sbin
+priority = 30
+environment = LD_LIBRARY_PATH="${buildout:directory}/parts/pcre/lib"
+redirect_stderr = true
+
+[program:appcfg_service]
+command = ${buildout:directory}/bin/appcfg_service -c ${buildout:directory}/etc/typhoonae.cfg --var=${buildout:directory}/var --apps_root=${buildout:directory}/var
+process_name = appcfg_service
+directory = ${buildout:directory}
+priority = 40
+stdout_logfile = ${buildout:directory}/var/log/appcfg_service.log
+redirect_stderr = true

@@ -76,6 +76,7 @@ setuptools.setup(
         runtask = typhoonae.runtask:main
         taskworker = typhoonae.taskqueue.worker:main
         websocket = typhoonae.websocket.server:main
-        xmpp_http_dispatch = typhoonae.xmpp.xmpp_http_dispatch:main""",
+        xmpp_http_dispatch = typhoonae.xmpp.xmpp_http_dispatch:main
+        imap_http_dispatch = typhoonae.mail.imap_http_dispatch:main""",
     zip_safe=False,
     )

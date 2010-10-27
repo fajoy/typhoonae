@@ -266,6 +266,16 @@ stdout_logfile = %(var)s/log/xmpp_http_dispatch.log
 environment = %(environment)s
 """
 
+SUPERVISOR_IMAP_HTTP_DISPATCH_CONFIG = """
+[program:%(app_id)s_imap_http_dispatch]
+command = %(bin_dir)s/imap_http_dispatch --address=%(internal_address)s --imap_host=%(imap_host)s --imap_port=%(imap_port)s %(imap_ssl_option_key)s  --imap_mailbox=%(imap_mailbox)s --imap_user=%(imap_user)s --imap_password=%(imap_password)s
+process_name = %(app_id)s_imap_http_dispatch
+priority = 999
+redirect_stderr = true
+stdout_logfile = %(var)s/log/imap_http_dispatch.log
+environment = %(environment)s
+"""
+
 SUPERVISOR_WEBSOCKET_CONFIG = """
 [program:%(app_id)s_websocket]
 command = %(bin_dir)s/websocket --address=%(internal_address)s --app_id=%(app_id)s
@@ -606,6 +616,12 @@ def write_supervisor_conf(options, conf, app_root):
     fcgi_host = options.fcgi_host
     fcgi_port = options.fcgi_port
     http_port = options.http_port
+    imap_host = options.imap_host
+    imap_port = options.imap_port
+    imap_ssl_option_key = "--imap_ssl" if options.imap_ssl else ""
+    imap_user = options.imap_user
+    imap_password = options.imap_password
+    imap_mailbox = options.imap_mailbox
     internal_address = options.internal_address
     password = options.password
     root = os.getcwd()
@@ -693,6 +709,9 @@ def write_supervisor_conf(options, conf, app_root):
             elif service == 'websocket_message':
                 supervisor_conf_stub.write(
                     SUPERVISOR_WEBSOCKET_CONFIG % locals())
+            elif service == 'mail':
+                supervisor_conf_stub.write(
+                    SUPERVISOR_IMAP_HTTP_DISPATCH_CONFIG % locals())
 
     supervisor_conf_stub.close()
 
@@ -947,6 +966,25 @@ def main():
     op.add_option("--https_port", dest="https_port", metavar="PORT",
                   help="use this port for HTTPS",
                   default=8443)
+
+    op.add_option("--imap_host", dest="imap_host", metavar="ADDR",
+                  help="use this IMAP host", default="localhost")
+
+    op.add_option("--imap_port", dest="imap_port", metavar="PORT",
+                  help="use this IMAP port", type="int", default=143)
+    
+    op.add_option("--imap_ssl", dest="imap_ssl", metavar="IMAPSSL",
+                  action="store_true", help="connect to IMAP server via SSL",
+                  default=False)
+    
+    op.add_option("--imap_user", dest="imap_user", metavar="STRING",
+                  help="use this IMAP user", default="")
+    
+    op.add_option("--imap_password", dest="imap_password", metavar="STRING",
+                  help="user this IMAP password", default="")
+    
+    op.add_option("--imap_mailbox", dest="imap_mailbox", metavar="STRING",
+                  help="use this IMAP mailbox", default="INBOX")
 
     op.add_option("--internal_address", dest="internal_address",
                   metavar="HOST:PORT",

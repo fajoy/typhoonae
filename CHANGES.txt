@@ -8,7 +8,16 @@ Version 0.1.6 (2010-??-??)
 
   - Implements Channel API backed by NGINX push module.
 
+    - http://code.google.com/p/typhoonae/issues/detail?id=57
+
   - Adds appcfg upload support.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=49
+
+  - Incoming Mail Service through a configurable IMAP listener and HTTP
+    dispatcher.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=73
 
   - Adds process monitor for automatically restarting appserver processes
     consuming more than a given amount of memory that is held in RAM (RSS).

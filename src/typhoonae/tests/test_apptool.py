@@ -151,6 +151,10 @@ class ApptoolTestCase(unittest.TestCase):
 
 location @sample {
     fastcgi_pass localhost:8081;
+    set $stripped_http_host $http_host;
+    if ($http_host ~ ^(.*):([0-9]+)$) {
+      set $stripped_http_host $1;
+    }
     fastcgi_param CONTENT_LENGTH $content_length;
     fastcgi_param CONTENT_TYPE $content_type;
     fastcgi_param PATH_INFO $fastcgi_script_name;
@@ -158,7 +162,7 @@ location @sample {
     fastcgi_param REMOTE_ADDR $remote_addr;
     fastcgi_param REQUEST_METHOD $request_method;
     fastcgi_param REQUEST_URI $request_uri;
-    fastcgi_param SERVER_NAME $server_name;
+    fastcgi_param SERVER_NAME $stripped_http_host;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
     
@@ -182,6 +186,10 @@ location ~ ^/_ah/subscribe {
 
 location ~ {
     fastcgi_pass localhost:8081;
+    set $stripped_http_host $http_host;
+    if ($http_host ~ ^(.*):([0-9]+)$) {
+      set $stripped_http_host $1;
+    }
     fastcgi_param CONTENT_LENGTH $content_length;
     fastcgi_param CONTENT_TYPE $content_type;
     fastcgi_param PATH_INFO $fastcgi_script_name;
@@ -189,7 +197,7 @@ location ~ {
     fastcgi_param REMOTE_ADDR $remote_addr;
     fastcgi_param REQUEST_METHOD $request_method;
     fastcgi_param REQUEST_URI $request_uri;
-    fastcgi_param SERVER_NAME $server_name;
+    fastcgi_param SERVER_NAME $stripped_http_host;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
     

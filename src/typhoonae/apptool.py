@@ -45,7 +45,7 @@ NGINX_HEADER = """
 server {
     client_max_body_size 100m;
     listen      %(http_port)s;
-    server_name %(app_domain)s%(server_name)s;
+    server_name %(app_domain)s.*;
     %(add_server_params)s
     access_log  %(var)s/log/httpd-access.log;
     error_log   %(var)s/log/httpd-error.log;
@@ -84,6 +84,10 @@ location ~* ^%(regex)s$ {
 """
 
 FCGI_PARAMS = """\
+    set $stripped_http_host $http_host;
+    if ($http_host ~ ^(.*):([0-9]+)$) {
+      set $stripped_http_host $1;
+    }
     fastcgi_param CONTENT_LENGTH $content_length;
     fastcgi_param CONTENT_TYPE $content_type;
     fastcgi_param PATH_INFO $fastcgi_script_name;
@@ -91,7 +95,7 @@ FCGI_PARAMS = """\
     fastcgi_param REMOTE_ADDR $remote_addr;
     fastcgi_param REQUEST_METHOD $request_method;
     fastcgi_param REQUEST_URI $request_uri;
-    fastcgi_param SERVER_NAME $server_name;
+    fastcgi_param SERVER_NAME $stripped_http_host;
     fastcgi_param SERVER_PORT $server_port;
     fastcgi_param SERVER_PROTOCOL $server_protocol;
     %(add_fcgi_params)s
@@ -462,7 +466,7 @@ def write_nginx_conf(
         app_version_domain = ('%s.latest.' % version) + app_version_domain
 
     if options.multiple:
-        app_domain = app_version_domain + '.'
+        app_domain = app_version_domain
 
     if secure:
         http_port = options.https_port

@@ -878,9 +878,14 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
       allocate_ids_response.set_end(max(allocate_ids_request.max(),
                                         first_id - 1))
 
+  def __gen_index_name(self, keys):
+    """Generate an index name from the set of fields it is over."""
+
+    return u"_".join([u"%s_%s" % item for item in keys])
+
   def __has_index(self, index):
     (collection, spec) = self.__collection_and_spec_for_index(index)
-    if (self.__db[collection]._gen_index_name(spec)
+    if (self.__gen_index_name(spec)
         in self.__db[collection].index_information().keys()):
       return True
     return False

@@ -60,6 +60,19 @@ class DatastoreMongoTestCaseBase(unittest.TestCase):
         os.environ['USER_EMAIL'] = 'tester@mydomain.local'
         os.environ['USER_IS_ADMIN'] = '1'
 
+        # Read index definitions.
+        index_yaml = open(
+            os.path.join(os.path.dirname(__file__), 'index.yaml'), 'r')
+
+        try:
+            self.indices = datastore_index.IndexDefinitionsToProtos(
+                'test',
+                datastore_index.ParseIndexDefinitions(index_yaml).indexes)
+        except TypeError:
+            self.indices = []
+
+        index_yaml.close()
+
         # Register API proxy stub.
         apiproxy_stub_map.apiproxy = (apiproxy_stub_map.APIProxyStubMap())
 
@@ -1048,3 +1061,13 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
             taskqueue.add(url='/path/to/my/worker', transactional=True)
 
         db.run_in_transaction(my_transaction)
+
+    def testIndices(self):
+        """Creates, updates and deletes an index."""
+
+        from google.appengine.api.datastore_admin import (
+            CreateIndex, UpdateIndex, DeleteIndex)
+
+        self.assertEqual(1, CreateIndex(self.indices[0]))
+        UpdateIndex(self.indices[0])
+        DeleteIndex(self.indices[0])

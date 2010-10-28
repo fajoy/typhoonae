@@ -712,8 +712,9 @@ class DatastoreMySQLStub(apiproxy_stub.APIProxyStub):
     for indexes in self.__indexes[app].values():
       indices.index_list().extend(indexes)
 
-    conn.execute('UPDATE Apps SET indexes = ? WHERE app_id = ?',
-                 (app, indices.Encode()))
+    cursor = conn.cursor()
+    cursor.execute('UPDATE Apps SET indexes = %s WHERE app_id = %s',
+                   (app, indices.Encode()))
 
   def __GetTablePrefix(self, data):
     """Returns the namespace prefix for a query.

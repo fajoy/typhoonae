@@ -29,6 +29,7 @@ from google.appengine.ext.webapp import template
 from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, make_server
 
 import ConfigParser
+import Cookie
 import cStringIO
 import datetime
 import logging
@@ -142,6 +143,14 @@ class IndexPage(webapp.RequestHandler):
         self.response.out.write(output)
 
 
+class LoginPage(webapp.RequestHandler):
+    """Provides a simple login page."""
+
+    def get(self):
+        self.response.set_status(403)
+        self.response.out.write("Login page not supported.")
+
+
 class UpdatecheckHandler(webapp.RequestHandler):
     """Informs a client about available updates.
 
@@ -169,6 +178,13 @@ class AppversionHandler(webapp.RequestHandler):
         version = self.request.params.get('version')
         path = self.request.params.get('path')
 
+        if not self._authenticated():
+            self.response.set_status(302)
+            host = "%s://%s" % (self.request.environ['wsgi.url_scheme'],
+                                self.request.environ['HTTP_HOST'])
+            self.response.headers['Location'] = host + '/_ah/login'
+            return
+
         func = getattr(self, '_RpcMethod_'+func_name, None)
         if func:
             try:
@@ -176,6 +192,19 @@ class AppversionHandler(webapp.RequestHandler):
             except AppConfigServiceError, e:
                 self.response.out.write(e)
                 self.response.set_status(403)
+
+    def _authenticated(self):
+        cookie = self.request.environ.get('HTTP_COOKIE')
+        if not cookie:
+            return False
+
+        auth_cookie = Cookie.SimpleCookie(cookie)['dev_appserver_login']
+
+        email, is_admin, user_id = auth_cookie.value.split(':')
+        if is_admin:
+            return True
+
+        return False
 
     @staticmethod
     def _extractMimeParts(stream):
@@ -383,6 +412,7 @@ class CronHandler(webapp.RequestHandler):
 
 app = webapp.WSGIApplication([
     ('/', IndexPage),
+    ('/_ah/login', LoginPage),
     ('/api/updatecheck', UpdatecheckHandler),
     ('/api/appversion/(.*)', AppversionHandler),
     ('/api/datastore/(.*)/(.*)', DatastoreHandler),

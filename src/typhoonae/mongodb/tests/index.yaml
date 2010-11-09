@@ -1,0 +1,26 @@
+indexes:
+
+- kind: Author
+  ancestor: yes
+  properties:
+  - name: name
+
+- kind: Planet
+  properties:
+  - name: moon_count
+  - name: name
+    direction: desc
+  - name: distance
+
+- kind: Song
+  properties:
+  - name: album
+  - name: artist
+  - name: title
+
+- kind: Number
+  properties:
+  - name: unit
+  - name: value
+    direction: desc
+

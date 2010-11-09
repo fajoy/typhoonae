@@ -1,0 +1,158 @@
+======================================================
+TyphoonAE - Typhoon App Engine Development Environment
+======================================================
+
+The TyphoonAE project aims at providing a full-featured and productive serving
+environment to run Google App Engine (Python) applications. It delivers the
+parts for building your own scalable App Engine while staying compatible with
+Google's API.
+
+
+The Stack
+=========
+
+The key components are::
+
+  * Google App Engine SDK - http://code.google.com/appengine
+  * mongoDB - http://www.mongodb.org
+  * BDBDatastore - http://arachnid.github.com/bdbdatastore
+  * memcached - http://memcached.org
+  * RabbitMQ - http://www.rabbitmq.com
+  * ejabberd - http://www.process-one.net/en/ejabberd
+  * tornado - http://www.tornadoweb.org
+  * FastCGI - http://www.fastcgi.com
+  * nginx - http://nginx.net/
+  * Supervisor - http://supervisord.org
+
+All these components will be automatically installed by zc.buildout into an
+isolated directory tree on your development machine. If you want to remove the
+TyphoonAE development environment you just have to delete this single
+directory.
+
+
+Copyright and License
+=====================
+
+Copyright 2009, 2010 Tobias Rodäbel
+
+This software is released under the Apache License, Version 2.0. You may obtain
+a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+
+Before You Install
+==================
+
+Python Interpreter
+------------------
+
+It is possible to run TyphoonAE's Python parts with Python 2.5.x and 2.6.x, but
+it is recommended to use a version which is supported by the Google App Engine
+SDK. See http://code.google.com/intl/de/appengine/docs/python/overview.html for
+further information.
+
+We recommend to install TyphoonAE into a virtualenv in order to obtain
+isolation from any 'system' packages you've got installed in your Python
+version. If you are using OS X it is not recommended to use the system's
+Python.
+
+Google App Engine SDK
+---------------------
+
+You don't have to install the Google App Engine SDK, because zc.buildout will
+install it for you.
+
+Other Requirements
+------------------
+
+Most of the required libraries and programs will be installed by zc.buildout.
+See the buildout.cfg file.
+
+The buildout needs Python and the tools contained in /bin and /usr/bin of a
+standard installation of the Linux operating environment. You should ensure
+that these directories are on your PATH and following programs can be found::
+
+  * Python 2.5.2+ (3.x is not supported!)
+  * gcc and g++
+  * make
+  * JAVA
+  * locally installed sendmail (if you want to send emails)
+  * Erlang
+  * MySQL (if you want to use it as alternate Datastore backend)
+
+On Debian Lenny you will need to have the following packages installed::
+
+  * libmysql++-dev
+  * libncurses5-dev
+  * libssl-dev
+  * python-dev
+  * libexpat-dev (libexpat1-dev)
+  * gettext
+  * xsltproc
+  * erlang-nox, erlang-dev and erlang-src
+
+The Images API uses the Python Imaging Library to transform images. TyphoonAE's
+buildout does not set up PIL for you. You'll need to download the PIL module
+and install it. For instance, on Debian use apt-get to install the
+python-imaging package.
+
+
+Installing and Running
+======================
+
+Build the whole stack by typing the following commands::
+
+  $ python bootstrap.py
+  $ ./bin/buildout
+
+Configure the demo application::
+
+  $ ./bin/apptool parts/demo/
+
+Run the supervisor daemon which starts and controls all services at once::
+
+  $ ./bin/supervisord
+
+You can access the application using a web browser with the following URL::
+
+  http://localhost:8080/
+
+
+Uploading Data
+==============
+
+The appcfg tool (original script from the SDK) can upload and download data to
+and from your application's datastore.
+
+An already prepared configuration is placed in the demo application source
+directory and can be tested by typing::
+
+  $ bin/appcfg upload_data --config_file=src/demo/note_loader.py --filename=src/demo/notes.csv --kind=Note --url=http://localhost:8080/remote_api parts/demo/
+
+
+Downloading Data
+================
+
+  $ bin/python parts/google_appengine/google/appengine/tools/bulkloader.py --url=http://localhost:8080/remote_api --kind=Note --filename=notes.csv --config_file=src/demo/note_loader.py --app_id=demo --download --debug
+
+
+Google's Development Application Server
+=======================================
+
+You may have recognized the dev_appserver script in the bin directory after
+building the environment. It's included to check whether your application runs
+with the installed original SDK.
+
+It can be used as expected::
+
+  $ bin/dev_appserver parts/demo
+
+
+Testing
+=======
+
+In order to run all unit-tests, make sure TyphoonAE's services are up and
+running, then type::
+
+  $ bin/nosetests

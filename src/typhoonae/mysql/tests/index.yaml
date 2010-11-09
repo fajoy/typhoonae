@@ -1,0 +1,6 @@
+indexes:
+
+- kind: Author
+  ancestor: yes
+  properties:
+  - name: name

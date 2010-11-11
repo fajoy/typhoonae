@@ -195,7 +195,7 @@ SUPERVISOR_BDBDATASTORE_CONFIG = """
 [program:bdbdatastore]
 command = java -jar %(root)s/parts/bdbdatastore/bdbdatastore-0.2.2.jar %(var)s
 process_name = bdbdatastore
-directory = "%(app_root)s"
+directory = %(app_root)s
 priority = 10
 redirect_stderr = true
 stdout_logfile = %(var)s/log/bdbdatastore.log

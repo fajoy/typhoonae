@@ -167,6 +167,13 @@ location @sample {
     fastcgi_param SERVER_PROTOCOL $server_protocol;
     
     fastcgi_pass_header Authorization;
+
+    # Increase the allowed size of the response.
+    fastcgi_buffer_size 128k;
+    fastcgi_buffers 4 256k;
+    fastcgi_busy_buffers_size 256k;
+    fastcgi_temp_file_write_size 256k;
+
     fastcgi_intercept_errors off;
 }
 
@@ -202,6 +209,13 @@ location ~ {
     fastcgi_param SERVER_PROTOCOL $server_protocol;
     
     fastcgi_pass_header Authorization;
+
+    # Increase the allowed size of the response.
+    fastcgi_buffer_size 128k;
+    fastcgi_buffers 4 256k;
+    fastcgi_busy_buffers_size 256k;
+    fastcgi_temp_file_write_size 256k;
+
     fastcgi_intercept_errors off;
 }
 

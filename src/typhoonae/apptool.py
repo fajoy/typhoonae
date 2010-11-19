@@ -490,7 +490,6 @@ def write_nginx_conf(
             "# Use apptool to modify.\n")
     elif internal:
         httpd_conf_stub.write("# Internal configuration.\n")
-        app_domain = ''
         server_name, http_port = options.internal_address.split(':')
         add_fcgi_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
         add_server_params = ''

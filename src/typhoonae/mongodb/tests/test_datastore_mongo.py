@@ -731,6 +731,7 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         class Numbers(db.Model):
             values = db.ListProperty(int)
 
+        Numbers().put()
         Numbers(values=[0, 1, 2, 3]).put()
         Numbers(values=[4, 5, 6, 7]).put()
 
@@ -776,15 +777,29 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         Pizza(topping=["tomatoe", "cheese"]).put()
         Pizza(topping=["tomatoe", "cheese", "salami"]).put()
         Pizza(topping=["tomatoe", "cheese", "prosciutto"]).put()
+        Pizza(topping=["salami"]).put()
+        Pizza(topping=["prosciutto"]).put()
 
         query = Pizza.all(keys_only=True).filter('topping =', "salami")
-        self.assertEqual(1, query.count())
+        self.assertEqual(2, query.count())
 
         query = Pizza.all(keys_only=True).filter('topping =', "cheese")
         self.assertEqual(3, query.count())
 
         query = Pizza.all().filter('topping IN', ["salami", "prosciutto"])
-        self.assertEqual(2, query.count())
+        self.assertEqual(4, query.count())
+
+        query = Pizza.all(keys_only=True).filter('topping <', "salami")
+        self.assertEqual(4, query.count())
+
+        query = Pizza.all(keys_only=True).filter('topping <', "prosciutto")
+        self.assertEqual(3, query.count())
+
+        query = Pizza.all(keys_only=True).filter('topping >', "salami")
+        self.assertEqual(3, query.count())
+
+        query = Pizza.all(keys_only=True).filter('topping >', "prosciutto")
+        self.assertEqual(4, query.count())
 
         key = datastore_types.Key.from_path('Pizza', 1)
         query = db.GqlQuery("SELECT * FROM Pizza WHERE __key__ IN :1", [key])

@@ -16,3 +16,7 @@ cleanup:
 	@rm -rf var
 	@mkdir -p var/log
 	@rm -f etc/*.conf etc/ejabberd.cfg etc/celeryconfig.py*
+
+update:
+	@hg pull
+	@hg update -v

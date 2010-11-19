@@ -17,9 +17,9 @@ Public functions: Internaldate2Time
 __all__ = ("IMAP4", "IMAP4_SSL", "IMAP4_stream",
            "Internaldate2Time", "ParseFlags", "Time2Internaldate")
 
-__version__ = "2.17'"
+__version__ = "2.19"
 __release__ = "2"
-__revision__ = "17'"
+__revision__ = "19"
 __credits__ = """
 Authentication code contributed by Donn Cave <donn@u.washington.edu> June 1998.
 String method conversion by ESR, February 2001.
@@ -33,7 +33,8 @@ COMPRESS/DEFLATE contributed by Bron Gondwana <brong@brong.net> May 2009.
 STARTTLS from Jython's imaplib by Alan Kennedy.
 ID contributed by Dave Baggett <dave@baggett.org> November 2009.
 Improved untagged responses handling suggested by Dave Baggett <dave@baggett.org> November 2009.
-Improved thread naming, and 0 read detection contributed by Grant Edwards <grant.b.edwards@gmail.com> June 2010."""
+Improved thread naming, and 0 read detection contributed by Grant Edwards <grant.b.edwards@gmail.com> June 2010.
+Improved timeout handling contributed by Ivan Vovnenko <ivovnenko@gmail.com> October 2010."""
 __author__ = "Piers Lauder <piers@janeelix.com>"
 __URL__ = "http://janeelix.com/piers/python/imaplib2"
 __license__ = "Python License"
@@ -51,7 +52,7 @@ IMAP4_SSL_PORT = 993
 
 IDLE_TIMEOUT_RESPONSE = '* IDLE TIMEOUT\r\n'
 IDLE_TIMEOUT = 60*29                            # Don't stay in IDLE state longer
-READ_POLL_TIMEMOUT = 30                         # Without this timeout sometimes its impossible to perform logout if network connection is interrupted
+READ_POLL_TIMEMOUT = 30                         # Without this timeout interrupted network connections can hang reader
 
 AllowedVersions = ('IMAP4REV1', 'IMAP4')        # Most recent first
 
@@ -131,7 +132,7 @@ class Request(object):
 
     def __init__(self, parent, name=None, callback=None, cb_arg=None):
         self.name = name
-        self._callback = callback    # Function called to process result
+        self.callback = callback    # Function called to process result
         self.callback_arg = cb_arg  # Optional arg passed to "callback"
 
         self.tag = '%s%s' % (parent.tagpre, parent.tagnum)
@@ -149,7 +150,7 @@ class Request(object):
 
 
     def get_response(self, exc_fmt=None):
-        self._callback = None
+        self.callback = None
         self.ready.wait()
 
         if self.aborted is not None:
@@ -162,8 +163,8 @@ class Request(object):
 
 
     def deliver(self, response):
-        if self._callback is not None:
-            self._callback((response, self.callback_arg, self.aborted))
+        if self.callback is not None:
+            self.callback((response, self.callback_arg, self.aborted))
             return
 
         self.response = response
@@ -256,7 +257,7 @@ class IMAP4(object):
     mapCRLF_cre = re.compile(r'\r\n|\r|\n')
         # Need to quote "atom-specials" :-
         #   "(" / ")" / "{" / SP / 0x00 - 0x1f / 0x7f / "%" / "*" / DQUOTE / "\" / "]"
-	# so match not the inverse set
+  # so match not the inverse set
     mustquote_cre = re.compile(r"[^!#$&'+,./0-9:;<=>?@A-Z\[^_`a-z|}~-]")
     response_code_cre = re.compile(r'\[(?P<type>[A-Z-]+)( (?P<data>[^\]]*))?\]')
     untagged_response_cre = re.compile(r'\* (?P<type>[A-Z-]+)( (?P<data>.*))?')
@@ -269,8 +270,8 @@ class IMAP4(object):
         self.literal = None             # A literal argument to a command
         self.tagged_commands = {}       # Tagged commands awaiting response
         self.untagged_responses = []    # [[typ: [data, ...]], ...]
-        self.mailbox = None		# Current mailbox selected
-        self.mailboxes = {}		# Untagged responses state per mailbox
+        self.mailbox = None    # Current mailbox selected
+        self.mailboxes = {}    # Untagged responses state per mailbox
         self.is_readonly = False        # READ-ONLY desired state
         self.idle_rqb = None            # Server IDLE Request - see _IdleCont
         self.idle_timeout = None        # Must prod server occasionally
@@ -785,7 +786,7 @@ class IMAP4(object):
         """(typ, [data]) = logout()
         Shutdown connection to server.
         Returns server 'BYE' response.
-	NB: You must call this to shut down threads before discarding an instance."""
+  NB: You must call this to shut down threads before discarding an instance."""
 
         self.state = LOGOUT
         if __debug__: self._log(1, 'state => LOGOUT')
@@ -919,7 +920,7 @@ class IMAP4(object):
             if __debug__: self._log(1, 'state => SELECTED')
         finally:
             self.state_change_pending.release()
-	
+  
         if self._get_untagged_response('READ-ONLY', leave=True) and not readonly:
             if __debug__: self._dump_ur(1)
             self._deliver_exc(self.readonly, '%s is not writable' % mailbox, kw)
@@ -1030,7 +1031,7 @@ class IMAP4(object):
             self.state_change_pending.release()
 
 
-    def __thread(self, threading_algorithm, charset, *search_criteria, **kw):
+    def thread(self, threading_algorithm, charset, *search_criteria, **kw):
         """(type, [data]) = thread(threading_alogrithm, charset, search_criteria, ...)
         IMAPrev1 extension THREAD command."""
 
@@ -1094,16 +1095,16 @@ class IMAP4(object):
 
         self.commands_lock.acquire()
 
-	if self.untagged_responses:
+        if self.untagged_responses:
             urn, urd = self.untagged_responses[-1]
             if urn != typ:
                  urd = None
         else:
             urd = None
 
-	if urd is None:
+        if urd is None:
             urd = []
-	    self.untagged_responses.append([typ, urd])
+            self.untagged_responses.append([typ, urd])
 
         urd.append(dat)
 
@@ -1260,7 +1261,7 @@ class IMAP4(object):
 
         # Called for callback commands
         rqb, kw = cb_arg
-        rqb._callback = kw['callback']
+        rqb.callback = kw['callback']
         rqb.callback_arg = kw.get('cb_arg')
         if error is not None:
             if __debug__: self._print_log()
@@ -1320,7 +1321,7 @@ class IMAP4(object):
                 return dat
 
         self.commands_lock.release()
-        return None	
+        return None  
 
 
     def _match(self, cre, s):
@@ -1661,7 +1662,7 @@ class IMAP4(object):
             if self.state == LOGOUT:
                 timeout = 1
             else:
-                timeout = None
+                timeout = READ_POLL_TIMEMOUT
             try:
                 r,w,e = select.select([self.read_fd], [], [], timeout)
                 if __debug__: self._log(5, 'select => %s, %s, %s' % (r,w,e))

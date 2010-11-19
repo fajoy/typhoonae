@@ -202,7 +202,7 @@ SUPERVISOR_BDBDATASTORE_CONFIG = """
 [program:bdbdatastore]
 command = java -jar %(root)s/parts/bdbdatastore/bdbdatastore-0.2.2.jar %(var)s
 process_name = bdbdatastore
-directory = "%(app_root)s"
+directory = %(app_root)s
 priority = 10
 redirect_stderr = true
 stdout_logfile = %(var)s/log/bdbdatastore.log
@@ -497,7 +497,6 @@ def write_nginx_conf(
             "# Use apptool to modify.\n")
     elif internal:
         httpd_conf_stub.write("# Internal configuration.\n")
-        app_domain = ''
         server_name, http_port = options.internal_address.split(':')
         add_fcgi_params = ['fastcgi_param X-TyphoonAE-Secret "secret";']
         add_server_params = ''

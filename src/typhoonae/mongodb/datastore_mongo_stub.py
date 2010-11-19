@@ -748,7 +748,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     del cloned_cursor
 
     query_result.mutable_cursor().set_cursor(cursor_index)
-    query_result.set_more_results(True)
+    query_result.set_more_results(False)
 
   def _Dynamic_Next(self, next_request, query_result):
     cursor = next_request.cursor().cursor()

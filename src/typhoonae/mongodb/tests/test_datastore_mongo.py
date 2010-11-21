@@ -23,6 +23,7 @@ from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
 from google.appengine.api import taskqueue
 from google.appengine.api import users
+from google.appengine.api import datastore_admin
 from google.appengine.datastore import datastore_index
 from google.appengine.ext import db
 from google.appengine.ext.db import polymodel
@@ -51,7 +52,7 @@ class TaskQueueServiceStubMock(apiproxy_stub.APIProxyStub):
 class DatastoreMongoTestCaseBase(unittest.TestCase):
     """Base class for testing the TyphoonAE Datastore MongoDB API proxy stub."""
 
-    def setUp(self, require_indexes=False):
+    def setUp(self):
         """Sets up test environment and regisers stub."""
 
         # Set required environment variables
@@ -77,7 +78,7 @@ class DatastoreMongoTestCaseBase(unittest.TestCase):
         apiproxy_stub_map.apiproxy = (apiproxy_stub_map.APIProxyStubMap())
 
         datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
-            'test', '', require_indexes=require_indexes)
+            'test', '', require_indexes=True)
 
         try:
             apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', datastore)
@@ -90,8 +91,15 @@ class DatastoreMongoTestCaseBase(unittest.TestCase):
         apiproxy_stub_map.apiproxy.RegisterStub(
             'taskqueue', TaskQueueServiceStubMock())
 
+        # Create indices.
+        for i in self.indices:
+            datastore_admin.CreateIndex(i)
+
     def tearDown(self):
         """Clears all data."""
+
+        for i in self.indices:
+            datastore_admin.DeleteIndex(i) 
 
         self.stub.Clear()
 
@@ -1076,37 +1084,7 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         db.run_in_transaction(my_transaction)
 
     def testIndices(self):
-        """Creates, updates and deletes an index."""
+        """Update all indices."""
 
-        from google.appengine.api.datastore_admin import (
-            CreateIndex, UpdateIndex, DeleteIndex)
-        self.assertEqual(1, CreateIndex(self.indices[0]))
-        UpdateIndex(self.indices[0])
-        DeleteIndex(self.indices[0])
-
-
-class DatastoreMongoRequireIndexesTestCase(DatastoreMongoTestCase):
-    """Testing the TyphoonAE Datastore MongoDB API proxy stub.
-
-    NOTE: This runs ALL THE TESTS in DatastoreMongoTestCase, except for the
-    ones that are special cased here.
-
-    The tests are run with the require_indexes flag set to True.
-    """
-
-    def setUp(self):
-        DatastoreMongoTestCaseBase.setUp(self, require_indexes=True)
-        from google.appengine.api.datastore_admin import (
-            CreateIndex, UpdateIndex, DeleteIndex)
-        for i in self.indices:
-            CreateIndex(i)
-
-    def tearDown(self):
-        from google.appengine.api.datastore_admin import (
-            CreateIndex, UpdateIndex, DeleteIndex)
-        for i in self.indices:
-            DeleteIndex(i)
-        DatastoreMongoTestCaseBase.tearDown(self)
-
-    def testIndices(self):
-        pass
+        for index in self.indices:
+            datastore_admin.UpdateIndex(index)

@@ -21,8 +21,8 @@ from google.appengine.api import datastore
 from google.appengine.api import datastore_admin
 from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
+from google.appengine.api import taskqueue
 from google.appengine.api import users
-from google.appengine.api.labs import taskqueue
 from google.appengine.datastore import datastore_index
 from google.appengine.ext import db
 from google.appengine.ext.db import polymodel

@@ -48,9 +48,9 @@ import MySQLdb
 import MySQLdb.constants.CR
 
 try:
-  __import__('google.appengine.api.labs.taskqueue.taskqueue_service_pb')
+  __import__('google.appengine.api.taskqueue.taskqueue_service_pb')
   taskqueue_service_pb = sys.modules.get(
-      'google.appengine.api.labs.taskqueue.taskqueue_service_pb')
+      'google.appengine.api.taskqueue.taskqueue_service_pb')
 except ImportError:
   from google.appengine.api.taskqueue import taskqueue_service_pb
 

@@ -15,8 +15,9 @@
 # limitations under the License.
 """Console script to perform common tasks on configuring an application."""
 
+from google.appengine.api.taskqueue.taskqueue_stub import _ParseQueueYaml
+
 import google.appengine.api.croninfo
-from google.appengine.api.labs.taskqueue.taskqueue_stub import _ParseQueueYaml
 import google.appengine.cron
 import getpass
 import logging

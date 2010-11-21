@@ -102,33 +102,33 @@ class TaskQueueTestCase(unittest.TestCase):
     def testAddingTasks(self):
         """Tests for adding tasks."""
 
-        google.appengine.api.labs.taskqueue.add(url='/run')
-        google.appengine.api.labs.taskqueue.Queue('test').add(
-            google.appengine.api.labs.taskqueue.Task(url='/foo'))
+        google.appengine.api.taskqueue.add(url='/run')
+        google.appengine.api.taskqueue.Queue('test').add(
+            google.appengine.api.taskqueue.Task(url='/foo'))
 
         self.assertRaises(
-            google.appengine.api.labs.taskqueue.UnknownQueueError,
-            google.appengine.api.labs.taskqueue.Queue('unknown').add,
-            google.appengine.api.labs.taskqueue.Task(url='/foo'))
+            google.appengine.api.taskqueue.UnknownQueueError,
+            google.appengine.api.taskqueue.Queue('unknown').add,
+            google.appengine.api.taskqueue.Task(url='/foo'))
 
     def testAddingTaskWithContentType(self):
         """Adds a task with a distinct content-type header."""
 
-        google.appengine.api.labs.taskqueue.add(
+        google.appengine.api.taskqueue.add(
             url='/run', params={'foo': 'bar'})
 
     def testAddingTaskWithMethod(self):
         """Adds a task with an HTTP method other than default."""
 
-        google.appengine.api.labs.taskqueue.add(
+        google.appengine.api.taskqueue.add(
             url='/put', params={'foo': 'bar'}, method='PUT')
 
     def testBulkAdd(self):
         """Adds multiple tasks at once."""
 
-        google.appengine.api.labs.taskqueue.Queue('test').add([
-            google.appengine.api.labs.taskqueue.Task(url='/foo'),
-            google.appengine.api.labs.taskqueue.Task(url='/bar'),
+        google.appengine.api.taskqueue.Queue('test').add([
+            google.appengine.api.taskqueue.Task(url='/foo'),
+            google.appengine.api.taskqueue.Task(url='/bar'),
         ])
 
     def testGetQueues(self):

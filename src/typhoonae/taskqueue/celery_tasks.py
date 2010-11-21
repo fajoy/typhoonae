@@ -19,7 +19,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from celery.signals import worker_init
 from celery.task.base import Task
 from google.appengine.api import queueinfo
-from google.appengine.api.labs.taskqueue.taskqueue_stub import _ParseQueueYaml
+from google.appengine.api.taskqueue.taskqueue_stub import _ParseQueueYaml
 
 import base64
 import datetime

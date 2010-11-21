@@ -22,8 +22,8 @@ import datetime
 import google.appengine.api.api_base_pb
 import google.appengine.api.apiproxy_stub
 import google.appengine.api.apiproxy_stub_map
-import google.appengine.api.labs.taskqueue.taskqueue_service_pb
-import google.appengine.api.labs.taskqueue.taskqueue_stub
+import google.appengine.api.taskqueue.taskqueue_service_pb
+import google.appengine.api.taskqueue.taskqueue_stub
 import google.appengine.api.urlfetch
 import google.appengine.runtime.apiproxy_errors
 import logging
@@ -37,7 +37,7 @@ import typhoonae.taskqueue.celery_tasks
 class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     """Task queue service stub."""
 
-    pyaml = google.appengine.api.labs.taskqueue.taskqueue_stub._ParseQueueYaml
+    pyaml = google.appengine.api.taskqueue.taskqueue_stub._ParseQueueYaml
 
     def __init__(
             self,
@@ -70,9 +70,9 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         return queue_name in self.celery_tasks_for_queues
 
     def _Dynamic_Add(self, request, response):
-        bulk_request = (google.appengine.api.labs.taskqueue.
+        bulk_request = (google.appengine.api.taskqueue.
                         taskqueue_service_pb.TaskQueueBulkAddRequest())
-        bulk_response = (google.appengine.api.labs.taskqueue.
+        bulk_response = (google.appengine.api.taskqueue.
                          taskqueue_service_pb.TaskQueueBulkAddResponse())
 
         bulk_request.add_add_request().CopyFrom(request)
@@ -81,7 +81,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         assert bulk_response.taskresult_size() == 1
         result = bulk_response.taskresult(0).result()
 
-        OK = (google.appengine.api.labs.taskqueue.
+        OK = (google.appengine.api.taskqueue.
               taskqueue_service_pb.TaskQueueServiceError.OK)
         if result != OK:
             raise google.appengine.runtime.apiproxy_errors.ApplicationError(
@@ -99,7 +99,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         task = self._GetCeleryTaskForQueue(kwargs.get('queue'))
         if task is None:
             raise google.appengine.runtime.apiproxy_errors.ApplicationError(
-                google.appengine.api.labs.taskqueue.taskqueue_service_pb.
+                google.appengine.api.taskqueue.taskqueue_service_pb.
                 TaskQueueServiceError.UNKNOWN_QUEUE)
 
         eta = datetime.datetime.fromtimestamp(kwargs['eta'])
@@ -125,7 +125,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
 
         if not self._ValidQueue(request.add_request(0).queue_name()):
             raise google.appengine.runtime.apiproxy_errors.ApplicationError(
-                google.appengine.api.labs.taskqueue.taskqueue_service_pb.
+                google.appengine.api.taskqueue.taskqueue_service_pb.
                 TaskQueueServiceError.UNKNOWN_QUEUE)
 
         if request.add_request(0).has_transaction():
@@ -180,7 +180,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         except google.appengine.runtime.apiproxy_errors.ApplicationError, e:
             raise google.appengine.runtime.apiproxy_errors.ApplicationError(
                 e.application_error +
-                google.appengine.api.labs.taskqueue.taskqueue_service_pb.
+                google.appengine.api.taskqueue.taskqueue_service_pb.
                 TaskQueueServiceError.DATASTORE_ERROR,
                 e.error_detail)
 

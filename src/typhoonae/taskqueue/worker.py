@@ -17,7 +17,7 @@
 
 from __future__ import with_statement
 from amqplib import client_0_8 as amqp
-from google.appengine.api.labs.taskqueue import taskqueue_service_pb
+from google.appengine.api.taskqueue import taskqueue_service_pb
 import base64
 import logging
 import optparse

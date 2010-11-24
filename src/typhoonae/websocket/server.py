@@ -8,14 +8,16 @@ import threading
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
+import tornado.websocket
 import typhoonae.websocket
-import typhoonae.websocket.tornado_handler
 import urllib
 import urllib2
 
 
 DESCRIPTION = "Web Socket Service."
 USAGE       = "usage: %prog [options]"
+LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
+
 WEB_SOCKETS = {}
 
 HANDSHAKE = 1 << 0
@@ -128,7 +130,7 @@ class Dispatcher(threading.Thread):
         post_multipart(url, [(u'body', self._body), (u'from', self._socket)])
 
 
-class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
+class WebSocketHandler(tornado.websocket.WebSocketHandler):
     """Dispatcher for incoming web socket requests."""
 
     def __init__(self, *args, **kw):
@@ -139,7 +141,6 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
         WEB_SOCKETS[sock_id] = self
         dispatcher = Dispatcher(str(sock_id), HANDSHAKE, param_path)
         dispatcher.start()
-        self.receive_message(self.on_message)
 
     def on_message(self, message):
         param_path = re.match(r'/%s/(.*)' % APP_ID, self.request.uri).group(1)
@@ -150,7 +151,9 @@ class WebSocketHandler(typhoonae.websocket.tornado_handler.WebSocketHandler):
             param_path,
             body=message)
         dispatcher.start()
-        self.receive_message(self.on_message)
+
+    def on_close(self):
+        pass
 
 
 def main():
@@ -171,6 +174,8 @@ def main():
 
     ADDRESS = options.address
     APP_ID = options.app_id
+
+    logging.basicConfig(format=LOG_FORMAT, level=logging.ERROR)
 
     application = tornado.web.Application([
         (r"/broadcast", BroadcastHandler),

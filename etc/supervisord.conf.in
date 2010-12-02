@@ -1,5 +1,5 @@
 [inet_http_server]
-port = 9001
+port = 127.0.0.1:9001
 
 [supervisord]
 logfile = ${buildout:directory}/var/log/supervisord.log

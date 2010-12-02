@@ -100,7 +100,7 @@ class ChannelTestCase(unittest.TestCase):
         self.assertEqual('testchannel', channel.create_channel('testchannel'))
 
         self.assertRaises(
-            channel.InvalidChannelKeyError, channel.create_channel, '')
+            channel.InvalidChannelClientIdError, channel.create_channel, '')
 
     def test_send_message(self):
         """Sends a channel message."""

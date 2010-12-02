@@ -8,3 +8,4 @@ include src/typhoonae/tests/sample/app.yaml
 include src/typhoonae/tests/sample/cron.yaml
 include src/typhoonae/taskqueue/tests/queue.yaml
 include version.txt
+recursive-include src/typhoonae/blobstore/tests/test *

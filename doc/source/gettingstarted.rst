@@ -12,10 +12,10 @@ Before you install
 ==================
 
 First of all, TyphoonAE is tested on Mac OS X Leopard, Snow Leopard
-[#SnowLeopard]_, Debian Lenny and Ubuntu 9.0.4/9.10. Since TyphoonAE integrates
-an extensive number of open source products its installing process must cover
-many dependencies. Hence, the group of platforms which can run TyphoonAE
-shrinks slightly.
+[#SnowLeopard]_, Debian Lenny and Ubuntu 9.0.4/9.10/10.10. Since TyphoonAE
+integrates an extensive number of open source products its installing process
+must cover many dependencies. Hence, the group of platforms which can run
+TyphoonAE shrinks slightly.
 
 This is a very short overview of the *larger* parts. Later on, we will have a
 closer look at these parts and what keeps them together.
@@ -71,11 +71,11 @@ Installation
 ============
 
 Download and unpack the `buildout archive
-<http://typhoonae.googlecode.com/files/typhoonae-buildout-0.1.6.tar.gz>`_ to
+<http://typhoonae.googlecode.com/files/typhoonae-buildout-0.2.0.tar.gz>`_ to
 get a starting point::
 
-  $ tar xvzf typhoonae-buildout-0.1.6.tar.gz
-  $ cd typhoonae-buildout-0.1.6
+  $ tar xvzf typhoonae-buildout-0.2.0.tar.gz
+  $ cd typhoonae-buildout-0.2.0
 
 Build the stack::
 
@@ -101,6 +101,7 @@ Run the supervisor console::
 When all services are up and running, the supervisor console shows something
 like this::
 
+  appcfg_service                   RUNNING    pid 40173, uptime 0:00:16
   appserver:appserver_00           RUNNING    pid 40169, uptime 0:00:16
   appserver:appserver_01           RUNNING    pid 40168, uptime 0:00:16
   deferred_taskworker              RUNNING    pid 40194, uptime 0:00:09
@@ -124,6 +125,8 @@ Commands in alphabetical order
 
  * **appcfg** - Links to the SDK's original appcfg.py. It can upload and
    download data to and from your application's datastore.
+ * **appcfg_service** - HTTP service for deploying and managing GAE
+   applications.
  * **appserver** - FastCGI application server. Runs an application (mainly
    request handlers) in processes isolated from the core web server.
  * **apptool** - Console script to perform common tasks on configuring an

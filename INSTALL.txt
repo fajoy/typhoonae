@@ -40,6 +40,8 @@ a copy of the License at
 
   http://www.apache.org/licenses/LICENSE-2.0
 
+Google App Engine is a trademark of Google Inc.
+
 
 Before You Install
 ==================
@@ -87,6 +89,7 @@ On Debian Lenny you will need to have the following packages installed::
   * libncurses5-dev
   * libssl-dev
   * python-dev
+  * python-setuptools
   * libexpat-dev (libexpat1-dev)
   * gettext
   * xsltproc

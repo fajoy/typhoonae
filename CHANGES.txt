@@ -6,7 +6,7 @@ Version 0.2.0 (2010-??-??)
 
   - Supports Google App Engine SDK 1.4.0.
 
-  - Implements Channel API backed using the NGINX push module.
+  - Implements Channel API backed by the NGINX push module.
 
     - http://code.google.com/p/typhoonae/issues/detail?id=57
 

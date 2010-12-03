@@ -10,7 +10,7 @@ Version 0.2.0 (2010-??-??)
 
     - http://code.google.com/p/typhoonae/issues/detail?id=57
 
-  - Adds experimental support for the appcfg.py upload command.
+  - Adds experimental support for the appcfg.py update command.
 
     - http://code.google.com/p/typhoonae/issues/detail?id=49
 

@@ -737,11 +737,12 @@ def write_ejabberd_conf(options):
     bin_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
     xmpp_host = options.xmpp_host
 
-    ejabberd_conf = open(options.ejabberd, 'w')
+    ejabberd_conf_path = os.path.abspath(options.ejabberd)
+    ejabberd_conf = open(ejabberd_conf_path, 'w')
     ejabberd_conf.write(EJABBERD_CONFIG % locals())
     ejabberd_conf.close()
 
-    return [options.ejabberd]
+    return [ejabberd_conf_path]
 
 
 def write_celery_conf(options, conf, app_root):

@@ -126,6 +126,7 @@ class Appversion(db.Model):
     app_yaml = db.BlobProperty()
     fcgi_port = db.IntegerProperty()
     portconfig = db.ReferenceProperty(PortConfig)
+    conf_paths = db.StringListProperty()
     state = db.IntegerProperty(choices=VALID_STATES, default=STATE_UPDATING)
 
     @property
@@ -137,7 +138,7 @@ class IndexPage(webapp.RequestHandler):
     """Provides a simple index page."""
 
     def get(self):
-        apps = Appversion.all().fetch(10)
+        apps = Appversion.all().order('app_id').fetch(100)
         template_path = os.path.join(os.path.dirname(__file__), 'index.html')
         output = template.render(template_path, {'apps': apps})
         self.response.out.write(output)
@@ -410,6 +411,36 @@ class CronHandler(webapp.RequestHandler):
         pass
 
 
+class DeleteHandler(webapp.RequestHandler):
+    """Handler for deleting an application."""
+
+    def get(self):
+        app_id = self.request.get('app_id')
+        version = self.request.get('version')
+        appversion_count = Appversion.all().filter('app_id=', app_id).count()
+        query = db.GqlQuery(
+            "SELECT * FROM Appversion WHERE app_id = :1 AND version = :2",
+            app_id, version)
+        appversion = query.get()
+        for path in appversion.conf_paths:
+            try:
+                os.remove(path)
+                logging.debug("Deleted configuration file '%s'" % path)
+            except OSError:
+                logging.error("Failed to remove configuration file '%s'" % path)
+        options = readDefaultOptions()
+        portconfig = PortConfig.get_by_key_name(
+            'portconfig_%s' % options.server_name.replace('.', '_'))
+        used_ports = set(portconfig.used_ports)
+        used_ports.remove(appversion.fcgi_port)
+        supervisor_rpc = getSupervisorRpcInterface()
+        updateProcesses(appversion, supervisor_rpc)
+        portconfig.used_port = sorted(used_ports)
+        portconfig.put()
+        appversion.delete()
+        self.redirect('/')
+
+
 app = webapp.WSGIApplication([
     ('/', IndexPage),
     ('/_ah/login', LoginPage),
@@ -417,6 +448,7 @@ app = webapp.WSGIApplication([
     ('/api/appversion/(.*)', AppversionHandler),
     ('/api/datastore/(.*)/(.*)', DatastoreHandler),
     ('/api/cron/(.*)', CronHandler),
+    ('/delete', DeleteHandler),
 ], debug=True)
 
 
@@ -563,20 +595,68 @@ def configureAppversion(appversion, app_dir, options):
         appversion.version, appversion.app_id, options.internal_address)
 
     def write_httpd_conf(default_version=False):
-        f = typhoonae.apptool.write_nginx_conf
-        f(options, conf, app_dir, default_version)
+        paths = []
+        func = typhoonae.apptool.write_nginx_conf
+        paths += func(options, conf, app_dir, default_version)
         if options.ssl_enabled:
-            f(options, conf, app_dir, default_version, secure=True, mode='a')
-        f(options, conf, app_dir, default_version, internal=True, mode='a')
+            paths += func(
+                options, conf, app_dir, default_version, secure=True, mode='a')
+        paths += func( 
+            options, conf, app_dir, default_version, internal=True, mode='a')
+        return paths
 
-    write_httpd_conf()
-    write_httpd_conf(True)
+    conf_paths = set()
+
+    conf_paths.update(write_httpd_conf())
+    conf_paths.update(write_httpd_conf(True))
 
     typhoonae.apptool.make_blobstore_dirs(
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
-    typhoonae.apptool.write_supervisor_conf(options, conf, app_dir)
+    conf_paths.update(
+        typhoonae.apptool.write_supervisor_conf(options, conf, app_dir))
     typhoonae.apptool.write_ejabberd_conf(options)
     typhoonae.apptool.write_crontab(options, app_dir)
+
+    appversion.conf_paths = list(conf_paths)
+    appversion.put()
+
+
+def updateProcesses(appversion, supervisor_rpc):
+    """Reloads the supervisord configuration and updates the processes.
+
+    Args:
+        supervisor_rpc: Supervisor RPC client.
+    """
+    added, changed, removed = supervisor_rpc.reloadConfig()[0]
+
+    if appversion.config.inbound_services:
+        if XMPP_INBOUND_SERVICE_NAME in app_config.inbound_services:
+            supervisor_rpc.stopProcess('ejabberd')
+            supervisor_rpc.startProcess('ejabberd')
+            logging.info("Restarted XMPP gateway")
+
+    for name in removed:
+        results = supervisor_rpc.stopProcessGroup(name)
+        logging.info("Stoppend %s", name)
+        supervisor_rpc.removeProcessGroup(name)
+        logging.info("Removed process group %s", name)
+
+    for name in changed:
+        results = supervisor_rpc.stopProcessGroup(name)
+        logging.info("Stopped %s", name)
+        supervisor_rpc.removeProcessGroup(name)
+        supervisor_rpc.addProcessGroup(name)
+        logging.info("Updated process group %s", name)
+
+    for name in added:
+        supervisor_rpc.addProcessGroup(name)
+        logging.info("Added process group %s", name)
+
+    time.sleep(2)
+
+    supervisor_rpc.stopProcess('nginx')
+    supervisor_rpc.startProcess('nginx')
+    logging.info("Restarted HTTP frontend")
 
 
 class DeploymentThread(threading.Thread):
@@ -624,36 +704,8 @@ class DeploymentThread(threading.Thread):
 
         app_config = self.appversion.config
 
-        if self.appversion.config.inbound_services:
-            if XMPP_INBOUND_SERVICE_NAME in app_config.inbound_services:
-                supervisor_rpc.stopProcess('ejabberd')
-                supervisor_rpc.startProcess('ejabberd')
-                logging.info("Restarted XMPP gateway")
-
-        added, changed, removed = supervisor_rpc.reloadConfig()[0]
-
-        for name in removed:
-            results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("Stoppend %s", name)
-            supervisor_rpc.removeProcessGroup(name)
-            logging.info("Removed process group %s", name)
-
-        for name in changed:
-            results = supervisor_rpc.stopProcessGroup(name)
-            logging.info("Stopped %s", name)
-            supervisor_rpc.removeProcessGroup(name)
-            supervisor_rpc.addProcessGroup(name)
-            logging.info("Updated process group %s", name)
-
-        for name in added:
-            supervisor_rpc.addProcessGroup(name)
-            logging.info("Added process group %s", name)
-
-        time.sleep(2)
-
-        supervisor_rpc.stopProcess('nginx')
-        supervisor_rpc.startProcess('nginx')
-        logging.info("Restarted HTTP frontend")
+        # Update processes managed by supervisord
+        updateProcesses(self.appversion, supervisor_rpc)
 
         # Update Appversion instance
         if not self.appversion.fcgi_port and not self.appversion.portconfig:

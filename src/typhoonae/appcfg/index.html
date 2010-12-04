@@ -5,14 +5,32 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <title>TyphoonAE Application Configuration Service</title>
   <style>
-    body {font-family: 'Lucida Grande', Geneva, Verdana, Arial, Sans-Serif;}
+    body {font-family: 'Lucida Grande', Geneva, Verdana, Arial, Sans-Serif; font-size: 0.8em;}
+    table {border-top: 1px solid #e5ecf9; solid #e5ecf9; border-left: 1px solid #e5ecf9}
+    th {background-color: #e5ecf9;}
+    td {border-bottom: 1px solid #e5ecf9; border-right: 1px solid #e5ecf9;}
+    a, a:active, a:hover, a:visited {color: #0000cc; text-decoration: none;}
   </style>
 </head>
 <body>
-  <ul>
+  <table cellpadding="5px" cellspacing="0">
+    <tr>
+      <th>App Id</th>
+      <th>Version</th>
+      <th>Updated</th>
+      <th>Action</th>
+    </tr>
   {% for app in apps %}
-    <li>{{ app.app_id }} ({{ app.current_version_id }})</li>
+    <tr>
+      <td>{{ app.app_id }}</td>
+      <td>{{ app.version }}</td>
+      <td>{{ app.updated }}</td>
+      <td>
+        <a href="/delete?app_id={{ app.app_id}}&version={{ app.version }}"
+          >Delete</a>
+      </td>
+    </tr>
   {% endfor %}
-  </ul>
+  </table>
 </body>
 </html>

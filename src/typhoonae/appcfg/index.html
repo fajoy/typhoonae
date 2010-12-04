@@ -4,10 +4,20 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <title>TyphoonAE Application Configuration Service</title>
+  <script type="text/javascript" language="javascript">
+    function delete_app(app_id, version)
+    {
+      var yes = confirm("Really delete application?");
+      if (yes) {
+        window.location = "/delete?app_id="+app_id+"&version="+version;
+      }
+    }
+  </script>
   <style>
-    body {font-family: 'Lucida Grande', Geneva, Verdana, Arial, Sans-Serif; font-size: 0.8em;}
+    body {font-family: Helvetica, Arial, Sans-Serif; font-size: 0.8em;}
     table {border-top: 1px solid #e5ecf9; solid #e5ecf9; border-left: 1px solid #e5ecf9}
     th {background-color: #e5ecf9;}
+    th.border_right {border-right: 1px solid #ffffff;}
     td {border-bottom: 1px solid #e5ecf9; border-right: 1px solid #e5ecf9;}
     a, a:active, a:hover, a:visited {color: #0000cc; text-decoration: none;}
   </style>
@@ -15,9 +25,9 @@
 <body>
   <table cellpadding="5px" cellspacing="0">
     <tr>
-      <th>App Id</th>
-      <th>Version</th>
-      <th>Updated</th>
+      <th class="border_right">App Id</th>
+      <th class="border_right">Version</th>
+      <th class="border_right">Updated</th>
       <th>Action</th>
     </tr>
   {% for app in apps %}
@@ -26,8 +36,8 @@
       <td>{{ app.version }}</td>
       <td>{{ app.updated }}</td>
       <td>
-        <a href="/delete?app_id={{ app.app_id}}&version={{ app.version }}"
-          >Delete</a>
+        <a href="javascript:delete_app('{{app.app_id}}', '{{app.version}}');"
+          >delete</a>
       </td>
     </tr>
   {% endfor %}

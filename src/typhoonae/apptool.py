@@ -485,12 +485,12 @@ def write_nginx_conf(
         ])
 
     if options.multiple:
-        nginx_config_path = os.path.join(
+        nginx_conf_path = os.path.join(
             'etc', '%s-nginx.conf' % app_version_domain)
     else:
-        nginx_config_path = os.path.join('etc', 'default-nginx.conf')
-    nginx_config_path = os.path.abspath(nginx_config_path)
-    httpd_conf_stub = open(nginx_config_path, mode)
+        nginx_conf_path = os.path.join('etc', 'default-nginx.conf')
+    nginx_conf_path = os.path.abspath(nginx_conf_path)
+    httpd_conf_stub = open(nginx_conf_path, mode)
 
     if not internal and not secure:
         httpd_conf_stub.write(
@@ -611,6 +611,8 @@ def write_nginx_conf(
     httpd_conf_stub.write(NGINX_FOOTER)
     httpd_conf_stub.close()
 
+    return [nginx_conf_path]
+
 
 def write_supervisor_conf(options, conf, app_root):
     """Writes supervisord configuration stub."""
@@ -686,8 +688,8 @@ def write_supervisor_conf(options, conf, app_root):
         ['--%s=%s' % (opt, arg) for opt, arg in additional_options if arg])
 
     supervisor_conf_name = '%s.latest.%s-supervisor.conf' % (version, app_id)
-    supervisor_conf_stub = open(
-        os.path.join(root, 'etc', supervisor_conf_name), 'w')
+    supervisor_conf_path = os.path.join(root, 'etc', supervisor_conf_name)
+    supervisor_conf_stub = open(supervisor_conf_path, 'w')
     supervisor_conf_stub.write(
         "# Automatically generated supervisor configuration file: don't edit!\n"
         "# Use apptool to modify.\n")
@@ -726,6 +728,8 @@ def write_supervisor_conf(options, conf, app_root):
 
     supervisor_conf_stub.close()
 
+    return [supervisor_conf_path]
+
 
 def write_ejabberd_conf(options):
     """Writes ejabberd configuration file."""
@@ -736,6 +740,8 @@ def write_ejabberd_conf(options):
     ejabberd_conf = open(options.ejabberd, 'w')
     ejabberd_conf.write(EJABBERD_CONFIG % locals())
     ejabberd_conf.close()
+
+    return [options.ejabberd]
 
 
 def write_celery_conf(options, conf, app_root):
@@ -767,6 +773,8 @@ def write_celery_conf(options, conf, app_root):
     celery_conf = open(options.celery, 'w')
     celery_conf.write(CELERY_CONFIG % locals())
     celery_conf.close()
+
+    return [options.celery]
 
 
 def print_error(msg):

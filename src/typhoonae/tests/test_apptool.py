@@ -39,54 +39,77 @@ class ApptoolTestCase(unittest.TestCase):
         self.conf = typhoonae.getAppConfig()
         assert self.conf.application == 'sample'
 
-    def tearDown(self):
+        class OptionsMock:
+            amqp_host = "localhost"
+            auth_domain = "example.com"
+            blobstore_path = "/tmp/blobstore"
+            datastore = "mongodb"
+            develop_mode = False
+            fcgi_host = "localhost"
+            fcgi_port = 8081
+            email = "test@example.com"
+            environment = ""
+            html_error_pages_root = "/tmp/html"
+            http_base_auth_enabled = False
+            http_port = 8080
+            imap_host = "localhost"
+            imap_port = 143
+            imap_ssl = False
+            imap_user = ""
+            imap_password = ""
+            imap_mailbox = "INBOX"
+            internal_address = "localhost:8770"
+            login_url = None
+            logout_url = None
+            multiple = False
+            password = ""
+            server_name = "host.local"
+            server_software = "TyphoonAE"
+            set_crontab = False
+            smtp_host = "localhost"
+            smtp_port = 25
+            smtp_user = ""
+            smtp_password = ""
+            ssl_enabled = False
+            ssl_certificate = None
+            ssl_certificate_key = None
+            upload_url = "upload/"
+            use_celery = False
+            var = "/tmp/var"
+            xmpp_host = "localhost"
 
+        self.options = OptionsMock()
+
+    def tearDown(self):
+        """Clean up the test environment."""
+
+        try:
+            shutil.rmtree(os.path.join(os.getcwd(), 'etc'))
+        except OSError:
+            pass
         os.chdir(self.curr_dir)
 
     def testScheduledTasksConfig(self):
         """Tests the configuration for scheduled tasks."""
 
-        class OptionsMock:
-            internal_address = 'localhost:8080'
-            set_crontab = False
-
-        options = OptionsMock()
-
-        typhoonae.apptool.read_crontab(options)
-        tab = typhoonae.apptool.write_crontab(options, self.app_root)
+        typhoonae.apptool.read_crontab(self.options)
+        tab = typhoonae.apptool.write_crontab(self.options, self.app_root)
         self.assertEqual([
                 ('*/1', '*', '*', '*', '*', os.path.join(
                     os.getcwd(), 'bin', 'runtask') +
-                    ' http://localhost:8080/a',
+                    ' http://localhost:8770/a',
                  ' # Test A (every 1 minutes)', 'Test A (every 1 minutes)')],
                  tab)
 
     def testNGINXConfig(self):
         """Writes a NGINX configuration file."""
 
-        class OptionsMock:
-            blobstore_path = "/tmp/blobstore"
-            fcgi_host = "localhost"
-            fcgi_port = 8081
-            html_error_pages_root = "/tmp/html"
-            http_base_auth_enabled = False
-            http_port = 8080
-            multiple = False
-            server_name = "host.local"
-            ssl_enabled = False
-            ssl_certificate = None
-            ssl_certificate_key = None
-            upload_url = "upload/"
-            var = "/tmp/var"
-
-        options = OptionsMock()
+        os.mkdir(os.path.join(os.getcwd(), 'etc'))
+        paths = typhoonae.apptool.write_nginx_conf(
+            self.options, self.conf, self.app_root)
 
         try:
-            os.mkdir(os.path.join(os.getcwd(), 'etc'))
-            typhoonae.apptool.write_nginx_conf(
-                options, self.conf, self.app_root)
-            f = open(
-                os.path.join(os.getcwd(), 'etc', 'default-nginx.conf'), 'r')
+            f = open(paths[0], 'r')
             config = f.read()
             self.assertTrue("""location ~* ^/(.*\.(gif|jpg|png))$ {
     root "%(app_root)s";
@@ -230,5 +253,10 @@ location = /50x.html {
         except Exception, e:
             print config
             raise e
-        finally:
-            shutil.rmtree(os.path.join(os.getcwd(), 'etc'))
+
+    def testSupervisorConfig(self):
+        """Writes a supervisord configuration file."""
+
+        os.mkdir(os.path.join(os.getcwd(), 'etc'))
+        paths = typhoonae.apptool.write_supervisor_conf(
+            self.options, self.conf, self.app_root)

@@ -640,7 +640,7 @@ def updateProcesses(appversion, supervisor_rpc):
     added, changed, removed = supervisor_rpc.reloadConfig()[0]
 
     if appversion.config.inbound_services:
-        if XMPP_INBOUND_SERVICE_NAME in app_config.inbound_services:
+        if XMPP_INBOUND_SERVICE_NAME in appversion.config.inbound_services:
             supervisor_rpc.stopProcess('ejabberd')
             supervisor_rpc.startProcess('ejabberd')
             logging.info("Restarted XMPP gateway")

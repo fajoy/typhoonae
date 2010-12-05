@@ -390,6 +390,16 @@ class AppversionHandler(webapp.RequestHandler):
         logging.info("Deleting appversion (app_id=u'%s')", app_id)
         appversion.delete()
 
+    def _RpcMethod_setdefault(self, app_id, version, path, data):
+        appversion = self.getAppversion(app_id, version, STATE_DEPLOYED)
+        app_dir = self.getAppversionDirectory(appversion)
+
+        deployment = DeploymentThread(appversion, app_dir)
+        self.__deploy_lock.acquire()
+        deployment.start()
+        deployment.join()
+        self.__deploy_lock.release()
+
 
 class DatastoreHandler(webapp.RequestHandler):
     """Implements web-hooks for actions on the datastore.

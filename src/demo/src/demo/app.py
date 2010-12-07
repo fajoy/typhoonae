@@ -19,7 +19,7 @@ import datetime
 import django.utils.simplejson
 import google.appengine.api.capabilities
 import google.appengine.api.images
-import google.appengine.api.labs.taskqueue
+import google.appengine.api.taskqueue
 import google.appengine.api.memcache
 import google.appengine.api.users
 import google.appengine.api.xmpp
@@ -147,9 +147,9 @@ class DemoRequestHandler(google.appengine.ext.webapp.RequestHandler):
 
         now = datetime.datetime.now()
         eta = now + datetime.timedelta(seconds=5)
-        google.appengine.api.labs.taskqueue.add(url='/makenote',
-                                                eta=eta,
-                                                payload="%i delayed" % count)
+        google.appengine.api.taskqueue.add(url='/makenote',
+                                           eta=eta,
+                                           payload="%i delayed" % count)
         vars = dict(
             blobs=blobs,
             count=count,

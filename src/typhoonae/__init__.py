@@ -15,20 +15,12 @@
 # limitations under the License.
 """Helper functions for registering App Engine API proxy stubs."""
 
-import google.appengine.api.apiproxy_stub_map
-import google.appengine.api.appinfo
-import google.appengine.api.mail_stub
-import google.appengine.api.urlfetch_stub
-import google.appengine.api.user_service_stub
-import google.appengine.api.validation
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import appinfo
+from google.appengine.api import validation
 import logging
 import os
 import re
-import typhoonae.blobstore.blobstore_stub
-import typhoonae.blobstore.file_blob_storage
-import typhoonae.capability_stub
-import typhoonae.memcache.memcache_stub
-import typhoonae.channel.channel_service_stub
 
 
 SUPPORTED_DATASTORES = frozenset([
@@ -40,19 +32,20 @@ end_request_hook = None
 def getAppConfig(directory='.'):
     """Returns a configuration object."""
 
-    attrs = google.appengine.api.appinfo.AppInfoExternal.ATTRIBUTES
+    attrs = appinfo.AppInfoExternal.ATTRIBUTES
 
-    attrs[google.appengine.api.appinfo.SERVICES] = (
-        google.appengine.api.validation.Optional(
-            google.appengine.api.validation.Repeated(
-                google.appengine.api.validation.Regex(
-                    r'(mail|xmpp_message|websocket_message)'))))
+    regex = validation.Regex(
+        r'(mail|xmpp_message|xmpp_subscribe|xmpp_presence|rest|warmup|'
+        r'websocket_message)')
+
+    attrs[appinfo.SERVICES] = (
+        validation.Optional(validation.Repeated(regex)))
 
     path = os.path.join(directory, 'app.yaml')
     conf_file = open(path, 'r')
 
     try:
-        conf = google.appengine.api.appinfo.LoadSingleAppInfo(conf_file)
+        conf = appinfo.LoadSingleAppInfo(conf_file)
     except IOError:
         raise RuntimeError
     finally:
@@ -67,7 +60,7 @@ def initURLMapping(conf, options):
     url_mapping = []
 
     add_handlers = [
-        google.appengine.api.appinfo.URLMap(url=url, script=script)
+        appinfo.URLMap(url=url, script=script)
         for url, script in [
             # Configure script with login handler
             (options.login_url, '$PYTHON_LIB/typhoonae/handlers/login.py'),
@@ -122,8 +115,10 @@ def initURLMapping(conf, options):
 def setupCapability():
     """Sets up cabability service."""
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-        'capability_service', typhoonae.capability_stub.CapabilityServiceStub())
+    from typhoonae import capability_stub
+
+    apiproxy_stub_map.apiproxy.RegisterStub(
+        'capability_service', capability_stub.CapabilityServiceStub())
 
 
 def setupDatastore(options, conf, datastore_file, history, require_indexes, trusted):
@@ -154,7 +149,7 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
     else:
         raise RuntimeError, "unknown datastore"
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+    apiproxy_stub_map.apiproxy.RegisterStub(
         'datastore_v3', datastore)
 
     if name == 'bdbdatastore':
@@ -169,8 +164,10 @@ def setupMail(smtp_host, smtp_port, smtp_user, smtp_password,
               enable_sendmail=False, show_mail_body=False):
     """Sets up mail."""
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('mail',
-        google.appengine.api.mail_stub.MailServiceStub(
+    from google.appengine.api import mail_stub
+
+    apiproxy_stub_map.apiproxy.RegisterStub('mail',
+        mail_stub.MailServiceStub(
             smtp_host, smtp_port, smtp_user, smtp_password,
             enable_sendmail=enable_sendmail, show_mail_body=show_mail_body))
 
@@ -178,8 +175,10 @@ def setupMail(smtp_host, smtp_port, smtp_user, smtp_password,
 def setupMemcache():
     """Sets up memcache."""
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('memcache',
-        typhoonae.memcache.memcache_stub.MemcacheServiceStub())
+    from typhoonae.memcache import memcache_stub
+
+    apiproxy_stub_map.apiproxy.RegisterStub('memcache',
+        memcache_stub.MemcacheServiceStub())
 
 
 def setupTaskQueue(internal_address, use_celery=False, root_path='.'):
@@ -195,7 +194,7 @@ def setupTaskQueue(internal_address, use_celery=False, root_path='.'):
     else:
         from typhoonae.taskqueue import taskqueue_stub
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('taskqueue',
+    apiproxy_stub_map.apiproxy.RegisterStub('taskqueue',
         taskqueue_stub.TaskQueueServiceStub(
             internal_address=internal_address, root_path=root_path))
 
@@ -203,8 +202,10 @@ def setupTaskQueue(internal_address, use_celery=False, root_path='.'):
 def setupURLFetchService():
     """Sets up urlfetch."""
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('urlfetch',
-        google.appengine.api.urlfetch_stub.URLFetchServiceStub())
+    from google.appengine.api import urlfetch_stub
+
+    apiproxy_stub_map.apiproxy.RegisterStub('urlfetch',
+        urlfetch_stub.URLFetchServiceStub())
 
 
 def setupUserService(login_url='/_ah/login', logout_url='/_ah/logout'):
@@ -215,8 +216,10 @@ def setupUserService(login_url='/_ah/login', logout_url='/_ah/logout'):
         logout_url: The logout URL.
     """
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('user',
-        google.appengine.api.user_service_stub.UserServiceStub(
+    from google.appengine.api import user_service_stub
+
+    apiproxy_stub_map.apiproxy.RegisterStub('user',
+        user_service_stub.UserServiceStub(
             login_url=login_url+'?continue=%s',
             logout_url=logout_url+'?continue=%s'))
 
@@ -229,8 +232,8 @@ def setupXMPP(host):
     """
     from typhoonae.xmpp import xmpp_service_stub
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
-        typhoonae.xmpp.xmpp_service_stub.XmppServiceStub(host=host))
+    apiproxy_stub_map.apiproxy.RegisterStub('xmpp',
+        xmpp_service_stub.XmppServiceStub(host=host))
 
 
 def setupChannel(internal_addr):
@@ -239,8 +242,10 @@ def setupChannel(internal_addr):
     Args:
         internal_addt: Internal address of the Channel service.
     """
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub('channel',
-      typhoonae.channel.channel_service_stub.ChannelServiceStub(internal_addr))
+    from typhoonae.channel import channel_service_stub
+
+    apiproxy_stub_map.apiproxy.RegisterStub('channel',
+      channel_service_stub.ChannelServiceStub(internal_addr))
 
     # We have to monkeypatch the SDK to avoid renaming the SERVER_SOFTWARE
     # variable.
@@ -255,18 +260,21 @@ def setupBlobstore(blobstore_path, app_id):
         blobstore_path: Directory within which to store blobs.
         app_id: App id to store blobs on behalf of.
     """
-    storage = typhoonae.blobstore.file_blob_storage.FileBlobStorage(
+    from typhoonae.blobstore import blobstore_stub
+    from typhoonae.blobstore import file_blob_storage
+
+    storage = file_blob_storage.FileBlobStorage(
         blobstore_path, app_id)
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+    apiproxy_stub_map.apiproxy.RegisterStub(
         'blobstore',
-        typhoonae.blobstore.blobstore_stub.BlobstoreServiceStub(storage))
+        blobstore_stub.BlobstoreServiceStub(storage))
 
 
 def setupWebSocket():
     """Sets up Web Socket service."""
     from typhoonae.websocket import websocket_stub
 
-    google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+    apiproxy_stub_map.apiproxy.RegisterStub(
         'websocket', websocket_stub.WebSocketServiceStub())
 
 
@@ -290,11 +298,10 @@ def setupStubs(conf, options):
     """Sets up api proxy stubs.
 
     Args:
-        conf: An google.appengine.api.appinfo.AppInfoExternal instance.
+        conf: An appinfo.AppInfoExternal instance.
         options: Dictionary with command line options.
     """
-    google.appengine.api.apiproxy_stub_map.apiproxy = \
-        google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
+    apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
 
     datastore = options.datastore.lower()
 
@@ -341,13 +348,13 @@ def setupStubs(conf, options):
     try:
         from google.appengine.api.images import images_stub
         host_prefix = 'http://%s:%s' % (options.server_name, options.http_port)
-        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+        apiproxy_stub_map.apiproxy.RegisterStub(
             'images',
             images_stub.ImagesServiceStub(host_prefix=host_prefix))
     except ImportError, e:
         logging.warning('Could not initialize images API; you are likely '
                         'missing the Python "PIL" module. ImportError: %s', e)
         from google.appengine.api.images import images_not_implemented_stub
-        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+        apiproxy_stub_map.apiproxy.RegisterStub(
             'images',
             images_not_implemented_stub.ImagesNotImplementedServiceStub())

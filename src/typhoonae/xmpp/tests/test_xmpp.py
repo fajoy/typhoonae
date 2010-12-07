@@ -52,7 +52,7 @@ class XmppServiceTestCase(unittest.TestCase):
         stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub('xmpp')
 
         self.assertEqual(
-            typhoonae.typhoonae.xmpp.xmpp_service_stub.XmppServiceStub,
+            typhoonae.xmpp.xmpp_service_stub.XmppServiceStub,
             stub.__class__)
 
     def testGetPresence(self):

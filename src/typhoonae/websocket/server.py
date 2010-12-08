@@ -1,5 +1,6 @@
 """Web Socket server implementation which uses tornado."""
 
+import base64
 import logging
 import mimetools
 import optparse
@@ -12,6 +13,7 @@ import tornado.websocket
 import typhoonae.websocket
 import urllib
 import urllib2
+import urlparse
 
 
 DESCRIPTION = "Web Socket Service."
@@ -23,8 +25,8 @@ WEB_SOCKETS = {}
 HANDSHAKE = 1 << 0
 MESSAGE   = 1 << 1
 
-HANDSHAKE_URL = 'http://%s/_ah/websocket/handshake/%s'
-MESSAGE_URL   = 'http://%s/_ah/websocket/message/%s'
+HANDSHAKE_URI = '_ah/websocket/handshake'
+MESSAGE_URI   = '_ah/websocket/message'
 
 
 def post_multipart(url, fields):
@@ -83,38 +85,42 @@ class BroadcastHandler(tornado.web.RequestHandler):
     """The broadcaster."""
 
     def post(self):
-        for id in WEB_SOCKETS.keys():
+        app_id = self.request.headers.get('X-TyphoonAE-AppId')
+        for id in WEB_SOCKETS[app_id].keys():
             try:
-                WEB_SOCKETS[id].write_message(self.request.body)
+                WEB_SOCKETS[app_id][id].write_message(self.request.body)
             except IOError:
-                del WEB_SOCKETS[id]
+                del WEB_SOCKETS[app_id][id]
 
 
 class MessageHandler(tornado.web.RequestHandler):
     """Receives messages and passes them to web sockets."""
 
     def post(self):
-        id = self.request.headers.get('X-Typhoonae-Websocket')
+        id = self.request.headers.get(typhoonae.websocket.WEBSOCKET_HEADER)
+        app_id = self.request.headers.get('X-TyphoonAE-AppId')
         if id:
             try:
-                WEB_SOCKETS[int(id)].write_message(self.request.body)
+                WEB_SOCKETS[app_id][int(id)].write_message(self.request.body)
             except IOError:
-                del WEB_SOCKETS[int(id)]
+                del WEB_SOCKETS[app_id][int(id)]
 
 
 class Dispatcher(threading.Thread):
     """Dispatcher thread for non-blocking message delivery."""
 
-    def __init__(self, socket, request_type, param_path, body=''):
+    def __init__(self, address, socket, request_type, param_path, body=''):
         """Constructor.
 
         Args:
+            address: The server address.
             socket: String which represents the socket id.
             request_type: The request type.
             param_path: Parameter path.
             body: The message body.
         """
         super(Dispatcher, self).__init__()
+        self._address = address
         self._socket = socket
         self._type = request_type
         self._path = param_path
@@ -124,9 +130,11 @@ class Dispatcher(threading.Thread):
         """Post message."""
 
         if self._type == HANDSHAKE:
-            url = HANDSHAKE_URL % (ADDRESS, self._path)
+            url = 'http://%s:%s/%s/%s' % (
+                self._address, PORT, HANDSHAKE_URI, self._path)
         elif self._type == MESSAGE:
-            url = MESSAGE_URL % (ADDRESS, self._path)
+            url = 'http://%s:%s/%s/%s' % (
+                self._address, PORT, MESSAGE_URI, self._path)
         post_multipart(url, [(u'body', self._body), (u'from', self._socket)])
 
 
@@ -138,18 +146,22 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self, param_path):
         sock_id = self.stream.socket.fileno()
-        WEB_SOCKETS[sock_id] = self
-        dispatcher = Dispatcher(str(sock_id), HANDSHAKE, param_path)
+        app_id = base64.b64decode(
+            re.match(r'^/([a-zA-Z0-9=]+)/.*', self.request.uri).group(1))
+        if app_id not in WEB_SOCKETS:
+            WEB_SOCKETS[app_id] = {}
+        WEB_SOCKETS[app_id][sock_id] = self
+        address = urlparse.urlsplit(self.request.headers['Origin']).hostname
+        dispatcher = Dispatcher(address, str(sock_id), HANDSHAKE, param_path)
         dispatcher.start()
 
     def on_message(self, message):
-        param_path = re.match(r'/%s/(.*)' % APP_ID, self.request.uri).group(1)
+        param_path = re.match(r"^/[a-zA-Z0-9=]+/(.*)",
+                              self.request.uri).group(1)
         sock_id = self.stream.socket.fileno()
+        address = urlparse.urlsplit(self.request.headers['Origin']).hostname
         dispatcher = Dispatcher(
-            str(sock_id),
-            MESSAGE,
-            param_path,
-            body=message)
+            address, str(sock_id), MESSAGE, param_path, body=message)
         dispatcher.start()
 
     def on_close(self):
@@ -159,28 +171,24 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 def main():
     """The main function."""
 
-    global ADDRESS, APP_ID
+    global PORT
 
     op = optparse.OptionParser(description=DESCRIPTION, usage=USAGE)
 
-    op.add_option("-a", "--address", dest="address", metavar="HOST:PORT",
-                  help="the application host and port",
-                  default="localhost:8080")
-
-    op.add_option("--app_id", dest="app_id", metavar="STRING",
-                  help="the application id", default="")
+    op.add_option("--internal_port", dest="internal_port", metavar="PORT",
+                  help="the application internal port",
+                  default=8770)
 
     (options, args) = op.parse_args()
 
-    ADDRESS = options.address
-    APP_ID = options.app_id
+    PORT = options.internal_port
 
     logging.basicConfig(format=LOG_FORMAT, level=logging.ERROR)
 
     application = tornado.web.Application([
         (r"/broadcast", BroadcastHandler),
         (r"/message", MessageHandler),
-        (r"/%s/(.*)" % urllib.quote(APP_ID), WebSocketHandler),
+        (r"/[a-zA-Z0-9=]+/(.*)", WebSocketHandler),
     ])
 
     http_server = tornado.httpserver.HTTPServer(application)

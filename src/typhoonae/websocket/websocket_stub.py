@@ -18,8 +18,10 @@
 from typhoonae import websocket
 from typhoonae.websocket import websocket_service_pb2
 
+import base64
 import google.appengine.api.apiproxy_stub
 import httplib
+import logging
 import os
 import re
 
@@ -52,10 +54,10 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         super(WebSocketServiceStub, self).__init__(service_name)
         self._port = port
 
-    def _GetPort(self):
-        """Returns service port."""
+    def _GetAddress(self):
+        """Returns service address."""
 
-        return self._port
+        return "%s:%s" % (self._GetEnviron('SERVER_NAME'), self._port)
 
     @staticmethod
     def _GetEnviron(name):
@@ -86,8 +88,8 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         url_parts = dict(
             protocol='ws',
             host=self._GetEnviron('SERVER_NAME'),
-            port=self._GetPort(),
-            app_id=self._GetEnviron('APPLICATION_ID'),
+            port=self._port,
+            app_key=base64.b64encode(self._GetEnviron('APPLICATION_ID')),
             success_path=re.sub('^/', '', request.success_path))
 
         response.url = websocket.WEBSOCKET_HANDLER_URL % url_parts
@@ -104,9 +106,10 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         path = 'message'
         if broadcast: path = 'broadcast'
 
-        conn = httplib.HTTPConnection("localhost:%s" % self._GetPort())
+        conn = httplib.HTTPConnection(self._GetAddress())
 
         headers = {websocket.WEBSOCKET_HEADER: str(socket),
+                   'X-TyphoonAE-AppId': self._GetEnviron('APPLICATION_ID'),
                    'Content-Type': 'text/plain'}
 
         try:

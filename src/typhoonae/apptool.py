@@ -289,9 +289,9 @@ environment = %(environment)s
 """
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
-[program:%(app_id)s_websocket]
-command = %(bin_dir)s/websocket --address=%(internal_address)s --app_id=%(app_id)s
-process_name = %(app_id)s_websocket
+[program:websocket]
+command = %(bin_dir)s/websocket --internal_port=%(internal_port)s
+process_name = websocket
 priority = 999
 redirect_stderr = true
 stdout_logfile = %(var)s/log/websocket.log
@@ -636,6 +636,7 @@ def write_supervisor_conf(options, conf, app_root):
     imap_password = options.imap_password
     imap_mailbox = options.imap_mailbox
     internal_address = options.internal_address
+    internal_port = None
     password = options.password
     root = os.getcwd()
     server_software = options.server_software
@@ -660,6 +661,7 @@ def write_supervisor_conf(options, conf, app_root):
 
     if internal_address:
         additional_options.append(('internal_address', internal_address))
+        unused_host, internal_port = internal_address.split(':')
 
     if options.login_url:
         additional_options.append(('login_url', options.login_url))
@@ -711,6 +713,8 @@ def write_supervisor_conf(options, conf, app_root):
     else:
         supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
 
+    supervisor_conf_stub.write(SUPERVISOR_WEBSOCKET_CONFIG % locals())
+
     jid = conf.application + '@' + xmpp_host
     password = conf.application
 
@@ -719,9 +723,6 @@ def write_supervisor_conf(options, conf, app_root):
             if service == 'xmpp_message':
                 supervisor_conf_stub.write(
                     SUPERVISOR_XMPP_HTTP_DISPATCH_CONFIG % locals())
-            elif service == 'websocket_message':
-                supervisor_conf_stub.write(
-                    SUPERVISOR_WEBSOCKET_CONFIG % locals())
             elif service == 'mail':
                 supervisor_conf_stub.write(
                     SUPERVISOR_IMAP_HTTP_DISPATCH_CONFIG % locals())

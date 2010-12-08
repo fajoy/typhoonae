@@ -17,7 +17,6 @@
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import appinfo
-from google.appengine.api import validation
 import logging
 import os
 import re
@@ -31,15 +30,6 @@ end_request_hook = None
 
 def getAppConfig(directory='.'):
     """Returns a configuration object."""
-
-    attrs = appinfo.AppInfoExternal.ATTRIBUTES
-
-    regex = validation.Regex(
-        r'(mail|xmpp_message|xmpp_subscribe|xmpp_presence|rest|warmup|'
-        r'websocket_message)')
-
-    attrs[appinfo.SERVICES] = (
-        validation.Optional(validation.Repeated(regex)))
 
     path = os.path.join(directory, 'app.yaml')
     conf_file = open(path, 'r')
@@ -342,8 +332,7 @@ def setupStubs(conf, options):
     if 'xmpp_message' in inbound_services:
         setupXMPP(options.xmpp_host)
 
-    if 'websocket_message' in inbound_services:
-        setupWebSocket()
+    setupWebSocket()
 
     try:
         from google.appengine.api.images import images_stub

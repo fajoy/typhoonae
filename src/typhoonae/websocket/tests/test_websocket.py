@@ -65,11 +65,11 @@ class WebSocketTestCase(unittest.TestCase):
         """Tries to obtain a valid Web Socket URL."""
 
         self.assertEqual(
-            'ws://host:8888/app/',
+            'ws://host:8888/YXBw/',
             typhoonae.websocket.create_websocket_url())
 
         self.assertEqual(
-            'ws://host:8888/app/foo',
+            'ws://host:8888/YXBw/foo',
             typhoonae.websocket.create_websocket_url('/foo'))
 
     def test_message(self):

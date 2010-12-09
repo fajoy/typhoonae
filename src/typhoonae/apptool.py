@@ -647,6 +647,7 @@ def write_supervisor_conf(options, conf, app_root):
     upload_url = options.upload_url
     var = os.path.abspath(options.var)
     version = conf.version
+    websocket_disabled = options.websocket_disabled
     xmpp_host = options.xmpp_host
 
     if options.multiple:
@@ -713,7 +714,8 @@ def write_supervisor_conf(options, conf, app_root):
     else:
         supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
 
-    supervisor_conf_stub.write(SUPERVISOR_WEBSOCKET_CONFIG % locals())
+    if not websocket_disabled:
+        supervisor_conf_stub.write(SUPERVISOR_WEBSOCKET_CONFIG % locals())
 
     jid = conf.application + '@' + xmpp_host
     password = conf.application
@@ -950,6 +952,10 @@ def main():
 
     op.add_option("--develop", dest="develop_mode", action="store_true",
                   help="configure application for development", default=False)
+
+    op.add_option("--disable_websocket", dest="websocket_disabled",
+                  action="store_true",
+                  help="disable the Web Socket Service backend", default=False)
 
     op.add_option("--ejabberd", dest="ejabberd", metavar="FILE",
                   help="write ejabberd configuration to this file",

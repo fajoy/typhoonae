@@ -76,6 +76,7 @@ class ApptoolTestCase(unittest.TestCase):
             upload_url = "upload/"
             use_celery = False
             var = "/tmp/var"
+            websocket_disabled = False
             xmpp_host = "localhost"
 
         self.options = OptionsMock()

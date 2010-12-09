@@ -421,6 +421,16 @@ class CronHandler(webapp.RequestHandler):
         pass
 
 
+class QueueHandler(webapp.RequestHandler):
+    """Implements web-hooks for configuring the Task Queue service.
+
+    Handles all POST requests for /api/queue.
+    """
+
+    def post(self, func_name):
+        pass
+
+
 class DeleteHandler(webapp.RequestHandler):
     """Handler for deleting an application."""
 
@@ -458,6 +468,7 @@ app = webapp.WSGIApplication([
     ('/api/appversion/(.*)', AppversionHandler),
     ('/api/datastore/(.*)/(.*)', DatastoreHandler),
     ('/api/cron/(.*)', CronHandler),
+    ('/api/queue/(.*)', QueueHandler),
     ('/delete', DeleteHandler),
 ], debug=True)
 

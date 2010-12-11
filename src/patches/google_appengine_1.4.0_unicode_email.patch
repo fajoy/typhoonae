@@ -1,0 +1,61 @@
+--- google_appengine/google/appengine/api/mail.py	2010-12-11 15:08:31.448610373 +0000
++++ google_appengine/google/appengine/api/new_mail.py	2010-12-11 15:06:54.266882018 +0000
+@@ -31,6 +31,8 @@
+ from email import MIMEMultipart
+ from email import MIMEText
+ from email import Parser
++from email import utils
++from email.Header import Header
+ import logging
+ 
+ from google.appengine.api import api_base_pb
+@@ -347,12 +349,24 @@
+   Raises:
+     InvalidAttachmentTypeError when the file name of an attachment
+   """
++  # In protocol_message all strings are ASCII or UTF-8. Unicode strings have
++  # been converted to UTF-8. As ASCII is a subset of UTF-8, we unconditionally
++  # set the encoding as utf-8.
++  def string_to_mime_text(txt, subtype='plain'):
++    return MIMEText.MIMEText(txt, subtype, 'utf-8')
++
++  def encode_addr(addr):
++    name, realaddr = utils.parseaddr(addr)
++    name = str(Header(name.decode('utf-8'), 'utf-8'))
++    realaddr = realaddr.encode('ascii', 'ignore')
++    return utils.formataddr((name, realaddr))
++
+   parts = []
+   if protocol_message.has_textbody():
+-    parts.append(MIMEText.MIMEText(protocol_message.textbody()))
++    parts.append(string_to_mime_text(protocol_message.textbody()))
+   if protocol_message.has_htmlbody():
+-    parts.append(MIMEText.MIMEText(protocol_message.htmlbody(),
+-                                   _subtype='html'))
++    parts.append(string_to_mime_text(protocol_message.htmlbody(),
++                                     subtype='html'))
+ 
+   if len(parts) == 1:
+     payload = parts
+@@ -372,15 +386,15 @@
+     result.attach(mime_attachment)
+ 
+   if protocol_message.to_size():
+-    result['To'] = ', '.join(protocol_message.to_list())
++    result['To'] = ', '.join(map(encode_addr, protocol_message.to_list()))
+   if protocol_message.cc_size():
+-    result['Cc'] = ', '.join(protocol_message.cc_list())
++    result['Cc'] = ', '.join(map(encode_addr, protocol_message.cc_list()))
+   if protocol_message.bcc_size():
+-    result['Bcc'] = ', '.join(protocol_message.bcc_list())
++    result['Bcc'] = ', '.join(map(encode_addr, protocol_message.bcc_list()))
+ 
+-  result['From'] = protocol_message.sender()
+-  result['Reply-To'] = protocol_message.replyto()
+-  result['Subject'] = protocol_message.subject()
++  result['From'] = encode_addr(protocol_message.sender())
++  result['Reply-To'] = encode_addr(protocol_message.replyto())
++  result['Subject'] = Header(protocol_message.subject(), 'utf-8')
+ 
+   return result
+ 

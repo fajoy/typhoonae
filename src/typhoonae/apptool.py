@@ -622,6 +622,7 @@ def write_supervisor_conf(options, conf, app_root):
     auth_domain = options.auth_domain
     bin_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
     blobstore_path = os.path.abspath(options.blobstore_path)
+    current_version_id = options.current_version_id
     datastore = options.datastore.lower()
     develop_mode = options.develop_mode
     email = options.email
@@ -656,6 +657,9 @@ def write_supervisor_conf(options, conf, app_root):
         server_name = options.server_name
 
     additional_options = []
+
+    if current_version_id:
+        additional_options.append(('current_version_id', current_version_id))
 
     if develop_mode:
         additional_options.append(('debug', None))
@@ -944,6 +948,10 @@ def main():
 
     op.add_option("--crontab", dest="set_crontab", action="store_true",
                   help="set crontab if cron.yaml exists", default=False)
+
+    op.add_option("--current_version_id", dest="current_version_id",
+                  metavar="STRING", help="the current version id",
+                  default=None)
 
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this Datastore backend (%s)"

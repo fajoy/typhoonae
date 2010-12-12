@@ -198,7 +198,8 @@ def serve(conf, options):
         os.environ.clear()
         os.environ.update(env)
         os.environ['APPLICATION_ID'] = conf.application
-        os.environ['CURRENT_VERSION_ID'] = conf.version + ".1"
+        os.environ['CURRENT_VERSION_ID'] = (options.current_version_id
+                                            or conf.version + ".1")
         os.environ['AUTH_DOMAIN'] = options.auth_domain
         os.environ['SERVER_SOFTWARE'] = options.server_software
         os.environ['SCRIPT_NAME'] = ''
@@ -299,6 +300,10 @@ def main():
     op.add_option("--blobstore_path", dest="blobstore_path", metavar="PATH",
                   help="path to use for storing Blobstore file stub data",
                   default=os.path.join('var', 'blobstore'))
+
+    op.add_option("--current_version_id", dest="current_version_id",
+                  metavar="STRING", help="the current version id",
+                  default=None)
 
     op.add_option("--datastore", dest="datastore", metavar="NAME",
                   help="use this Datastore backend (%s)"

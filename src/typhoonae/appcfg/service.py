@@ -612,6 +612,8 @@ def configureAppversion(appversion, app_dir, options):
     """
     conf = appversion.config
 
+    options.current_version_id = appversion.current_version_id
+
     options.internal_address = '%s.latest.%s.%s' % (
         appversion.version, appversion.app_id, options.internal_address)
 

@@ -43,6 +43,7 @@ class ApptoolTestCase(unittest.TestCase):
             amqp_host = "localhost"
             auth_domain = "example.com"
             blobstore_path = "/tmp/blobstore"
+            current_version_id = None
             datastore = "mongodb"
             develop_mode = False
             fcgi_host = "localhost"

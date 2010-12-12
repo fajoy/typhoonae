@@ -1,7 +1,7 @@
 CHANGES
 =======
 
-Version 0.2.0 (2010-??-??)
+Version 0.2.0 (2010-12-12)
 --------------------------
 
   - Supports Google App Engine SDK 1.4.0.

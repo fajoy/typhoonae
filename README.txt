@@ -34,4 +34,7 @@ Unpack the archive and follow the steps described in the README.txt file. This
 package and the Google App Engine SDK 1.4.0 will also be installed by the
 buildout.
 
+For the ones who don't want to build their own TyphoonAE environment, we supply
+a preconfigured VMware appliance. See http://code.google.com/p/typhoonae/wiki/VMware for a brief documentation.
+
 Visit the project page http://typhoonae.googlecode.com for further information.

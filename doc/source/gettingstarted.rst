@@ -71,11 +71,11 @@ Installation
 ============
 
 Download and unpack the `buildout archive
-<http://typhoonae.googlecode.com/files/typhoonae-buildout-0.2.0.tar.gz>`_ to
+<http://typhoonae.googlecode.com/files/typhoonae-buildout-0.2.1.tar.gz>`_ to
 get a starting point::
 
-  $ tar xvzf typhoonae-buildout-0.2.0.tar.gz
-  $ cd typhoonae-buildout-0.2.0
+  $ tar xvzf typhoonae-buildout-0.2.1.tar.gz
+  $ cd typhoonae-buildout-0.2.1
 
 Build the stack::
 

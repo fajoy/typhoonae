@@ -17,6 +17,7 @@
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import appinfo
+from google.appengine.api import appinfo_includes
 import logging
 import os
 import re
@@ -28,20 +29,41 @@ SUPPORTED_DATASTORES = frozenset([
 end_request_hook = None
 
 
-def getAppConfig(directory='.'):
-    """Returns a configuration object."""
+class Error(Exception):
+  """Base-class for exceptions in this module."""
+
+
+class InvalidAppConfigError(Error):
+  """The supplied application configuration file is invalid."""
+
+
+def getAppConfig(directory='.', parse_app_config=appinfo_includes.Parse):
+    """Reads application configuration (app.yaml).
+
+    Args:
+        directory: String containing the application directory path.
+        parse_app_config: Used for dependency injection.
+
+    Returns:
+        AppInfoExternal instance.
+
+    Raises:
+        If the config file could not be read or the config does not contain any
+        URLMap instances, this function will raise an InvalidAppConfigError
+        exception.
+    """
 
     path = os.path.join(directory, 'app.yaml')
-    conf_file = open(path, 'r')
 
     try:
-        conf = appinfo.LoadSingleAppInfo(conf_file)
+        appinfo_file = file(path, 'r')
     except IOError:
-        raise RuntimeError
+        raise InvalidAppConfigError(
+            'Application configuration could not be read from "%s"' % path)
+    try:
+        return parse_app_config(appinfo_file)
     finally:
-        conf_file.close()
-
-    return conf
+        appinfo_file.close()
 
 
 def initURLMapping(conf, options):

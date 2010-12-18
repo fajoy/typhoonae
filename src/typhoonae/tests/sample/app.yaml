@@ -3,6 +3,9 @@ version: 1
 runtime: python
 api_version: 1
 
+builtins:
+- appstats: on
+
 handlers:
 
 - url: /(.*\.(gif|jpg|png))

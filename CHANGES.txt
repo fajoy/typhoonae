@@ -4,6 +4,8 @@ CHANGES
 Version 0.2.1 (2010-??-??)
 --------------------------
 
+  - Supports Google App Engine SDK 1.4.1.
+
   - Builtin handlers are configurable via app.yaml now.
 
 

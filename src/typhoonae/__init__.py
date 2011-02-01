@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009, 2010 Tobias Rodäbel
+# Copyright 2009, 2010, 2011 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
             "passwd": options.mysql_passwd,
             "db": options.mysql_db
         }
-        datastore = typhoonae.mysql.datastore_mysql_stub.DatastoreMySQLStub(
+        datastore = datastore_mysql_stub.DatastoreMySQLStub(
             conf.application, database_info, verbose=options.debug_mode)
     else:
         raise RuntimeError, "unknown datastore"

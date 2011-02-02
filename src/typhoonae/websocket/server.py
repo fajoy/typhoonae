@@ -206,6 +206,13 @@ def main():
                   help="the application internal port",
                   default=8770)
 
+    op.add_option("--port", dest="port", metavar="PORT",
+                  help="port for the Web Socket server to listen on",
+                  default=8888)
+
+    op.add_option("--server_name", dest="server_name", metavar="STRING",
+                  help="use this server name", default='localhost')
+
     (options, args) = op.parse_args()
 
     PORT = options.internal_port
@@ -219,7 +226,7 @@ def main():
     ])
 
     http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(8888)
+    http_server.listen(int(options.port))
     tornado.ioloop.IOLoop.instance().start()
 
 

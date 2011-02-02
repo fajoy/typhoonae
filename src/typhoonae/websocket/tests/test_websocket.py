@@ -35,13 +35,16 @@ class WebSocketTestCase(unittest.TestCase):
             'APPLICATION_ID':'app'
         })
 
+        host = 'localhost'
+        port = 8888
+
         # Set up API proxy stubs.
         google.appengine.api.apiproxy_stub_map.apiproxy = \
             google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
 
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'websocket',
-            typhoonae.websocket.websocket_stub.WebSocketServiceStub())
+            typhoonae.websocket.websocket_stub.WebSocketServiceStub(host, port))
 
         google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
             'urlfetch',

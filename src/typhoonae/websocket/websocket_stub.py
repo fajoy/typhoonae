@@ -44,7 +44,7 @@ class ConfigurationError(Error):
 class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     """TyphoonAE's WebSocket service stub."""
 
-    def __init__(self, service_name='websocket', port=8888):
+    def __init__(self, host, port=8888, service_name='websocket'):
         """Constructor.
 
         Args:
@@ -52,12 +52,13 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             port: Port number of the Web Socket service.
         """
         super(WebSocketServiceStub, self).__init__(service_name)
+        self._host = host
         self._port = port
 
     def _GetAddress(self):
         """Returns service address."""
 
-        return "%s:%s" % (self._GetEnviron('SERVER_NAME'), self._port)
+        return "%s:%s" % (self._host, self._port)
 
     @staticmethod
     def _GetEnviron(name):

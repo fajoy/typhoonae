@@ -282,12 +282,12 @@ def setupBlobstore(blobstore_path, app_id):
         blobstore_stub.BlobstoreServiceStub(storage))
 
 
-def setupWebSocket():
+def setupWebSocket(host, port):
     """Sets up Web Socket service."""
     from typhoonae.websocket import websocket_stub
 
     apiproxy_stub_map.apiproxy.RegisterStub(
-        'websocket', websocket_stub.WebSocketServiceStub())
+        'websocket', websocket_stub.WebSocketServiceStub(host, port))
 
 
 def setupRemoteDatastore(app_id, email, password):
@@ -354,7 +354,7 @@ def setupStubs(conf, options):
     if 'xmpp_message' in inbound_services:
         setupXMPP(options.xmpp_host)
 
-    setupWebSocket()
+    setupWebSocket(options.websocket_host, options.websocket_port)
 
     try:
         from google.appengine.api.images import images_stub

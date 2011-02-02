@@ -50,6 +50,8 @@ class InitTestCase(unittest.TestCase):
             smtp_user = ''
             smtp_password = ''
             use_celery = False
+            websocket_host = 'localhost'
+            websocket_port = 8888
             xmpp_host = 'localhost'
 
         typhoonae.setupStubs(self.conf, TestOptions())

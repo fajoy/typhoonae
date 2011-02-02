@@ -290,7 +290,7 @@ environment = %(environment)s
 
 SUPERVISOR_WEBSOCKET_CONFIG = """
 [program:websocket]
-command = %(bin_dir)s/websocket --internal_port=%(internal_port)s
+command = %(bin_dir)s/websocket --internal_port=%(internal_port)s --port=%(websocket_port)s
 process_name = websocket
 priority = 999
 redirect_stderr = true
@@ -649,6 +649,8 @@ def write_supervisor_conf(options, conf, app_root):
     var = os.path.abspath(options.var)
     version = conf.version
     websocket_disabled = options.websocket_disabled
+    websocket_host = options.websocket_host
+    websocket_port = options.websocket_port
     xmpp_host = options.xmpp_host
 
     if options.multiple:
@@ -676,6 +678,10 @@ def write_supervisor_conf(options, conf, app_root):
 
     if options.use_celery:
         additional_options.append(('use_celery', None))
+
+    if not options.websocket_disabled:
+        additional_options.append(('websocket_host', websocket_host))
+        additional_options.append(('websocket_port', websocket_port))
 
     if datastore == 'mysql':
         if options.mysql_db:
@@ -1095,6 +1101,12 @@ def main():
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",
                   default=setdir(os.path.abspath(os.path.join('.', 'var'))))
+
+    op.add_option("--websocket_host", dest="websocket_host", metavar="ADDR",
+                  help="use this Web Socket host", default="localhost")
+
+    op.add_option("--websocket_port", dest="websocket_port", metavar="PORT",
+                  help="use this Web Socket port", default=8888)
 
     op.add_option("--verbose", dest="verbose", action="store_true",
                   help="set verbosity mode to display all warnings",

@@ -78,6 +78,8 @@ class ApptoolTestCase(unittest.TestCase):
             use_celery = False
             var = "/tmp/var"
             websocket_disabled = False
+            websocket_host = 'localhost'
+            websocket_port = 8888
             xmpp_host = "localhost"
 
         self.options = OptionsMock()

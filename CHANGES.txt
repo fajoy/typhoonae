@@ -1,12 +1,16 @@
 CHANGES
 =======
 
-Version 0.2.1 (2010-??-??)
+Version 0.2.1 (2011-??-??)
 --------------------------
 
   - Supports Google App Engine SDK 1.4.1.
 
   - Builtin handlers are configurable via app.yaml now.
+
+  - Fixes an issue where importing the MySQL Datastore API Proxy Stub failed.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=81
 
 
 Version 0.2.0 (2010-12-12)

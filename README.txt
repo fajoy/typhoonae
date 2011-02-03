@@ -11,7 +11,7 @@ Google's API.
 Copyright and License
 ---------------------
 
-Copyright 2009, 2010 Tobias Rodaebel
+Copyright 2009, 2010, 2011 Tobias Rodaebel
 
 This software is released under the Apache License, Version 2.0. You may obtain
 a copy of the License at
@@ -31,7 +31,7 @@ buildout configuration which can be downloaded here::
   http://typhoonae.googlecode.com/files/typhoonae-buildout-0.2.1.tar.gz
 
 Unpack the archive and follow the steps described in the README.txt file. This
-package and the Google App Engine SDK 1.4.1 will also be installed by the
+package and the Google App Engine SDK 1.4.2 will also be installed by the
 buildout.
 
 For the ones who don't want to build their own TyphoonAE environment, we supply

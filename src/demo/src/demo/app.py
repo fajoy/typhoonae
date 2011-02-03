@@ -16,7 +16,6 @@
 """Demo application."""
 
 import datetime
-import django.utils.simplejson
 import google.appengine.api.capabilities
 import google.appengine.api.images
 import google.appengine.api.taskqueue
@@ -31,6 +30,7 @@ import google.appengine.ext.webapp.util
 import logging
 import os
 import random
+import simplejson
 import urllib
 
 NUM_SHARDS = 20
@@ -218,7 +218,7 @@ class NoteWorker(google.appengine.ext.webapp.RequestHandler):
 
         data = {'key': key, 'message': result.body}
 
-        self.response.out.write(django.utils.simplejson.dumps(data))
+        self.response.out.write(simplejson.dumps(data))
 
 
 class InviteHandler(google.appengine.ext.webapp.RequestHandler):
@@ -274,7 +274,7 @@ class AjaxHandler(google.appengine.ext.webapp.RequestHandler):
             google.appengine.api.memcache.add("data", data, 10)
         else:
             logging.info('data from memcache')
-        self.response.out.write(django.utils.simplejson.dumps({'data': data}))
+        self.response.out.write(simplejson.dumps({'data': data}))
 
 
 app = google.appengine.ext.webapp.WSGIApplication([

@@ -210,9 +210,6 @@ def main():
                   help="port for the Web Socket server to listen on",
                   default=8888)
 
-    op.add_option("--server_name", dest="server_name", metavar="STRING",
-                  help="use this server name", default='localhost')
-
     (options, args) = op.parse_args()
 
     PORT = options.internal_port

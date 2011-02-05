@@ -68,7 +68,7 @@ def post_multipart(url, fields):
         res = urllib2.urlopen(req)
     except urllib2.URLError, e:
         reason = getattr(e, 'reason', e)
-        logging.error(reason)
+        logging.error("%s (URL: %s)" % (reason, url))
         return
 
     return res.read()

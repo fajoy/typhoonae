@@ -19,7 +19,6 @@ import base64
 import cStringIO
 import fcgiapp
 import google.appengine.api.users
-import google.appengine.tools.dev_appserver
 import imp
 import logging
 import optparse
@@ -110,24 +109,23 @@ def load_module(handler_path, cgi_path, module_dict=sys.modules, debug=False):
         module_dict: Used for dependency injection.
         debug: Enables debug mode and forces reload of the CGI script.
     """
-    module_fullname = google.appengine.tools.dev_appserver.GetScriptModuleName(
-        handler_path)
+    from google.appengine.tools import dev_appserver
+    module_fullname = dev_appserver.GetScriptModuleName(handler_path)
     script_module = module_dict.get(module_fullname)
     if debug and script_module:
         logging.info(
             'Debug mode enabled. Forcing reload of "%s"', handler_path)
         script_module = None
     module_code = None
-    has_main = google.appengine.tools.dev_appserver.ModuleHasValidMainFunction(
-        script_module)
+    has_main = dev_appserver.ModuleHasValidMainFunction(script_module)
     if script_module is not None and has_main:
         logging.debug('Reusing main() function of module "%s"', module_fullname)
     else:
         if script_module is None:
             script_module = imp.new_module(module_fullname)
 
-        missing_inits = (google.appengine.tools.dev_appserver.
-                         FindMissingInitFiles(cgi_path, module_fullname))
+        missing_inits = dev_appserver.FindMissingInitFiles(
+            cgi_path, module_fullname)
         if missing_inits:
             logging.warning(
                 'Missing package initialization files: %s',

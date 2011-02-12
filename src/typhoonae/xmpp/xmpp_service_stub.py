@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009, 2010 Tobias Rodäbel
+# Copyright 2009, 2010, 2011 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,6 +91,18 @@ class XmppServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         def action(client):
             roster = client.getRoster()
             roster.Subscribe(request.jid())
+
+        self.do_action(action, request)
+
+    def _Dynamic_SendPresence(self, request, response):
+        """Implementation of XmppService::SendPresence.
+
+        Args:
+            request: An XmppSendPresenceRequest.
+            response: An XmppSendPresenceResponse .
+        """
+        def action(client):
+            client.sendPresence(request.jid())
 
         self.do_action(action, request)
 

@@ -245,7 +245,8 @@ class XMPPHandler(google.appengine.ext.webapp.RequestHandler):
         logging.info("Received XMPP message: %s" % message.body)
 
         if message.body[0:5].lower() == 'hello':
-             message.reply("Hi, %s!" % message.sender)
+            message.reply("Hi, %s!" % message.sender)
+            google.appengine.api.xmpp.send_presence(message.to)
 
         note = Note()
         note.body = message.body

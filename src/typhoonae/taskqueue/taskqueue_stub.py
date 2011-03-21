@@ -23,6 +23,7 @@ import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.taskqueue.taskqueue_service_pb
 import google.appengine.api.taskqueue.taskqueue_stub
 import google.appengine.api.urlfetch
+import google.appengine.api.queueinfo
 import google.appengine.runtime.apiproxy_errors
 import logging
 import os
@@ -34,10 +35,33 @@ import typhoonae.taskqueue
 MAX_CONNECTION_RETRIES = 1
 
 
+def _ParseQueueYaml(root_path):
+    """Loads the queue.yaml file and parses it.
+
+    Args:
+        root_path: Directory containing queue.yaml. Not used.
+
+    Returns:
+        None if queue.yaml doesn't exist, otherwise a queueinfo.QueueEntry
+        object populated from the queue.yaml.
+    """
+    if root_path is None:
+        return None
+    for queueyaml in ('queue.yaml', 'queue.yml'):
+        try:
+            fh = open(os.path.join(root_path, queueyaml), 'r')
+        except IOError:
+            continue
+        try:
+            queue_info = google.appengine.api.queueinfo.LoadSingleQueue(fh)
+            return queue_info
+        finally:
+            fh.close()
+    return None
+
+
 class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     """Task queue service stub."""
-
-    pyaml = google.appengine.api.taskqueue.taskqueue_stub._ParseQueueYaml
 
     def __init__(
             self,
@@ -78,7 +102,7 @@ class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     def _ValidQueue(self, queue_name):
         if queue_name == 'default':
             return True
-        queue_info = self.pyaml(self.root_path)
+        queue_info = _ParseQueueYaml(self.root_path)
         if queue_info and queue_info.queue:
             for entry in queue_info.queue:
                 if entry.name == queue_name:

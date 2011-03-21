@@ -19,7 +19,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from celery.signals import worker_init
 from celery.task.base import Task
 from google.appengine.api import queueinfo
-from google.appengine.api.taskqueue.taskqueue_stub import _ParseQueueYaml
+from typhoonae.taskqueue.taskqueue_stub import _ParseQueueYaml
 
 import base64
 import datetime
@@ -114,7 +114,7 @@ def create_task_queue(queue_name, rate_qps, bucket_size=5):
 
 def create_task_queues_from_yaml(app_root):
     tasks = {}
-    queue_info = _ParseQueueYaml(None, app_root)
+    queue_info = _ParseQueueYaml(app_root)
     if queue_info and queue_info.queue:
         for entry in queue_info.queue:
             tasks[entry.name] = create_task_queue(

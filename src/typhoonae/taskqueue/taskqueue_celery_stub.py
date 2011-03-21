@@ -37,8 +37,6 @@ import typhoonae.taskqueue.celery_tasks
 class TaskQueueServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
     """Task queue service stub."""
 
-    pyaml = google.appengine.api.taskqueue.taskqueue_stub._ParseQueueYaml
-
     def __init__(
             self,
             internal_address,

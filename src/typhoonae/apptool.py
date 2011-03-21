@@ -15,8 +15,6 @@
 # limitations under the License.
 """Console script to perform common tasks on configuring an application."""
 
-from google.appengine.api.taskqueue.taskqueue_stub import _ParseQueueYaml
-
 import google.appengine.api.croninfo
 import google.appengine.cron
 import getpass
@@ -30,6 +28,7 @@ import sys
 import tempfile
 import typhoonae
 import typhoonae.fcgiserver
+import typhoonae.taskqueue.taskqueue_stub
 
 
 logger = logging.getLogger(__name__)
@@ -775,7 +774,7 @@ def write_celery_conf(options, conf, app_root):
         soft_task_time_limit = 'None'
     var = options.var
 
-    queue_info = _ParseQueueYaml(None, app_root)
+    queue_info = typhoonae.taskqueue.taskqueue_stub._ParseQueueYaml(app_root)
     if queue_info and queue_info.queue:
         queues = [entry.name for entry in queue_info.queue]
     else:

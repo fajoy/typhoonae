@@ -271,6 +271,9 @@ def setupBlobstore(blobstore_path, app_id):
     Args:
         blobstore_path: Directory within which to store blobs.
         app_id: App id to store blobs on behalf of.
+
+    Returns:
+        A file_blob_storage.FileBlobStorage instance.
     """
     from typhoonae.blobstore import blobstore_stub
     from typhoonae.blobstore import file_blob_storage
@@ -280,6 +283,20 @@ def setupBlobstore(blobstore_path, app_id):
     apiproxy_stub_map.apiproxy.RegisterStub(
         'blobstore',
         blobstore_stub.BlobstoreServiceStub(storage))
+    return storage
+
+
+def setupFiles(storage):
+    """Sets up File service.
+
+    Args:
+        storage: File blob storage.
+    """
+    from google.appengine.api.files import file_service_stub
+
+    apiproxy_stub_map.apiproxy.RegisterStub(
+        'file',
+        file_service_stub.FileServiceStub(storage))
 
 
 def setupWebSocket(host, port):
@@ -342,7 +359,9 @@ def setupStubs(conf, options):
 
     setupUserService(options.login_url, options.logout_url)
 
-    setupBlobstore(options.blobstore_path, conf.application)
+    storage = setupBlobstore(options.blobstore_path, conf.application)
+
+    setupFiles(storage)
 
     setupChannel(options.internal_address)
 

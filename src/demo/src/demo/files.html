@@ -8,11 +8,13 @@
 <body>
   <h1>Using the Files API</h1>
   <form action="" method="POST">
-    <fieldset>
-      <pre>{{ text }}</pre>
-      <input type="text" name="text" />
-      <input type="submit" value="Append" />
-    </fieldset>
+    Contents:
+    <pre>{{ text }}</pre>
+    <hr />
+    Create new file:<br />
+    <textarea name="text"></textarea>
+    <input type="submit" value="Create" />
   </form>
+  {{ new_key }}
 </body>
 </html>

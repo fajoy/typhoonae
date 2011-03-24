@@ -43,26 +43,24 @@ class MainHandler(google.appengine.ext.webapp.RequestHandler):
 
         self.response.out.write(output)
 
-    def post(self, key):
+    def post(self, unused_key):
         """Handles post."""
-
-        key = urllib.unquote(key or "foobar")
 
         text = self.request.get('text')
 
+        filename = google.appengine.api.files.blobstore.create()
+
         try:
-            f = google.appengine.api.files.open("/blobstore/%s" % key, "a")
+            f = google.appengine.api.files.open(filename, "a")
             f.write(text)
             f.close()
+            google.appengine.api.files.finalize(filename)
         except (google.appengine.api.files.InvalidFileNameError,
                 google.appengine.api.files.ExistenceError), e:
             import cgi
             text = cgi.escape(repr(e))
 
-        output = google.appengine.ext.webapp.template.render(
-            'files.html', {'text': text})
-
-        self.response.out.write(output)
+        self.redirect('/')
 
 
 app = google.appengine.ext.webapp.WSGIApplication([

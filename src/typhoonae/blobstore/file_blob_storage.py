@@ -13,7 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""TyphoonAE's implementation of Blobstore stub storage."""
+"""TyphoonAE's implementation of Blobstore stub storage.
+
+Reuses code from Google App Engine SDK.
+"""
 
 from google.appengine.api import blobstore
 from google.appengine.api import datastore_types

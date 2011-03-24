@@ -292,7 +292,7 @@ def setupFiles(storage):
     Args:
         storage: File blob storage.
     """
-    from google.appengine.api.files import file_service_stub
+    from typhoonae.files import file_service_stub
 
     apiproxy_stub_map.apiproxy.RegisterStub(
         'file',

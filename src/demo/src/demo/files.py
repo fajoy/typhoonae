@@ -15,55 +15,48 @@
 # limitations under the License.
 """Using the Files API."""
 
-import google.appengine.api.files
-import google.appengine.ext.webapp
-import google.appengine.ext.webapp.template
-import google.appengine.ext.webapp.util
+from google.appengine.api import files
+from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
+from google.appengine.ext.webapp import util
+
 import urllib
 
 
-class MainHandler(google.appengine.ext.webapp.RequestHandler):
-    """Provides a tiny UI for creating a file."""
+class MainHandler(webapp.RequestHandler):
+    """Provides a tiny UI for reading or creating a file."""
 
     def get(self, key):
-        """Handles get."""
+        """Reads a stored file."""
 
         key = urllib.unquote(key or "foobar")
 
         try:
-            f = google.appengine.api.files.open("/blobstore/%s" % key, "r")
+            f = files.open("/blobstore/%s" % key, "r")
             text = f.read(100)
             f.close()
-        except (google.appengine.api.files.InvalidFileNameError,
-                google.appengine.api.files.FinalizationError):
+        except (files.InvalidFileNameError, files.FinalizationError):
             text = "Not found"
 
-        output = google.appengine.ext.webapp.template.render(
-            'files.html', {'text': text})
+        output = webapp.template.render('files.html', {'text': text})
 
         self.response.out.write(output)
 
     def post(self, unused_key):
-        """Handles post."""
+        """Creates a file from the posted data."""
 
-        text = self.request.get('text')
+        filename = files.blobstore.create()
 
-        filename = google.appengine.api.files.blobstore.create()
+        f = files.open(filename, "a")
+        f.write(self.request.get('text'))
+        f.close()
 
-        try:
-            f = google.appengine.api.files.open(filename, "a")
-            f.write(text)
-            f.close()
-            google.appengine.api.files.finalize(filename)
-        except (google.appengine.api.files.InvalidFileNameError,
-                google.appengine.api.files.ExistenceError), e:
-            import cgi
-            text = cgi.escape(repr(e))
+        files.finalize(filename)
 
         self.redirect('/')
 
 
-app = google.appengine.ext.webapp.WSGIApplication([
+app = webapp.WSGIApplication([
     ('/files/([^/]+)?', MainHandler),
 ], debug=True)
 
@@ -71,7 +64,7 @@ app = google.appengine.ext.webapp.WSGIApplication([
 def main():
     """The main function."""
 
-    google.appengine.ext.webapp.util.run_wsgi_app(app)
+    webapp.util.run_wsgi_app(app)
 
 
 if __name__ == '__main__':

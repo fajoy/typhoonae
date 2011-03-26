@@ -21,13 +21,6 @@ This implementation uses a simple WSGI server while omitting any security.
 It should only be used internally.
 """
 
-from google.appengine.api import apiproxy_stub_map
-from google.appengine.api import appinfo
-from google.appengine.ext import db
-from google.appengine.ext import webapp
-from google.appengine.ext.webapp import template
-from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, make_server
-
 import ConfigParser
 import Cookie
 import cStringIO
@@ -47,14 +40,23 @@ import time
 import typhoonae.apptool
 import typhoonae.fcgiserver
 
+LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
+
+logging.basicConfig(format=LOG_FORMAT)
+
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import appinfo
+from google.appengine.ext import db
+from google.appengine.ext import webapp
+from google.appengine.ext.webapp import template
+from wsgiref.simple_server import ServerHandler, WSGIRequestHandler, make_server
+
 APPLICATION_ID = 'appcfg'
 DEFAULT_ADDRESS = 'localhost:9190'
 DESCRIPTION = "HTTP service for deploying and managing GAE applications."
 USAGE = "usage: %prog [options]"
 
 SERVER_SOFTWARE = "TyphoonAE/0.2.1 AppConfigService/0.1.0"
-
-LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
 
 DEFAULT_SUPERVISOR_SERVER_URL = 'http://localhost:9001'
 
@@ -769,8 +771,6 @@ def main():
     (options, args) = op.parse_args()
 
     os.environ['APPS_ROOT'] = options.apps_root
-
-    logging.basicConfig(format=LOG_FORMAT)
 
     if options.debug_mode:
         logging.getLogger().setLevel(logging.DEBUG)

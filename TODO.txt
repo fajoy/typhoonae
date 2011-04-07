@@ -1,11 +1,17 @@
 TODO
 ====
 
+Buildout
+--------
+
+  - Use distribute
+
+
 Making API Proxy Stubs Configurable
 -----------------------------------
 
   - buildout.cfg wizzard
 
-  - Identify common buildout.cfg parts and put them into seperate files
+  - Identify common buildout.cfg parts and put them into separate files
 
   - Improve capabilities stub

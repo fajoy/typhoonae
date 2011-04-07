@@ -5,3 +5,7 @@ Making API Proxy Stubs Configurable
 -----------------------------------
 
   - buildout.cfg wizzard
+
+  - Identify common buildout.cfg parts and put them into seperate files
+
+  - Improve capabilities stub

@@ -21,10 +21,11 @@ from google.appengine.api import appinfo_includes
 import logging
 import os
 import re
+import sys
 
 
 SUPPORTED_DATASTORES = frozenset([
-    'bdbdatastore', 'mongodb', 'mysql', 'remote'])
+    'bdbdatastore', 'mongodb', 'mysql', 'remote', 'rdbms_sqlite'])
 
 end_request_hook = None
 
@@ -82,7 +83,7 @@ def initURLMapping(conf, options):
             ('/_ah/img(?:/.*)?', '$PYTHON_LIB/typhoonae/handlers/images.py'),
             # Configure script with Channel JS API handler
             ('/_ah/channel/jsapi', '$PYTHON_LIB/typhoonae/channel/jsapi.py'),
-            # Configure script with Channel JS API handler
+            # Configure obscure dev/null handler
             ('/_ah/dev/null', '$PYTHON_LIB/typhoonae/handlers/devnull.py')
         ] if url not in [h.url for h in conf.handlers if h.url]
     ]
@@ -170,6 +171,22 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
         logging.info("%s" % app_root)
         dev_appserver_index.SetupIndexes(conf.application, app_root)
         dev_appserver_index.IndexYamlUpdater(app_root)
+
+
+def setupRdbmsSQLite(path):
+    """Sets up the RDBMS backend.
+
+    Args:
+        path: The path to the SQLite database file.
+    """
+
+    from google.appengine import api
+    from google.appengine.api import rdbms_sqlite
+    sys.modules['google.appengine.api.rdbms'] = rdbms_sqlite
+    api.rdbms = rdbms_sqlite
+
+    rdbms_sqlite.SetSqliteFile(path)
+    rdbms_sqlite.connect(database='')
 
 
 def setupMail(smtp_host, smtp_port, smtp_user, smtp_password,
@@ -345,6 +362,8 @@ def setupStubs(conf, options):
                            'dev_appserver.datastore.history',
                            False,
                            False)
+
+    setupRdbmsSQLite(options.rdbms_sqlite_path)
 
     setupCapability()
 

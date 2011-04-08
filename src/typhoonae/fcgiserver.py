@@ -348,6 +348,10 @@ def main():
     op.add_option("--password", dest="password", metavar="PASSWORD",
                   help="the password to use", default='')
 
+    op.add_option("--rdbms_sqlite_path", dest="rdbms_sqlite_path",
+                  metavar="PATH",
+                  help="path to the sqlite3 file for the RDBMS API")
+
     op.add_option("--server_name", dest="server_name", metavar="STRING",
                   help="use this server name", default='localhost')
 

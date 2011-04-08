@@ -695,6 +695,14 @@ def write_supervisor_conf(options, conf, app_root):
         if options.mysql_user:
             additional_options.append(('mysql_user', options.mysql_user))
 
+    if options.rdbms_sqlite_path:
+        rdbms_sqlite_path = options.rdbms_sqlite_path
+    else:
+        rdbms_sqlite_path = os.path.join(var, app_id + '.rdbms')
+
+    additional_options.append(('rdbms_sqlite_path', rdbms_sqlite_path))
+
+
     add_opts = ' '.join(
         ['--%s' % opt for opt, arg in additional_options if arg is None] +
         ['--%s=%s' % (opt, arg) for opt, arg in additional_options if arg])
@@ -1058,6 +1066,10 @@ def main():
 
     op.add_option("--password", dest="password", metavar="PASSWORD",
                   help="the password to use", default='')
+
+    op.add_option("--rdbms_sqlite_path", dest="rdbms_sqlite_path",
+                  metavar="PATH",
+                  help="path to the sqlite3 file for the RDBMS API")
 
     op.add_option("--server_name", dest="server_name", metavar="STRING",
                   help="use this server name", default='localhost')

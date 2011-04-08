@@ -10,6 +10,8 @@ Version 0.2.1 (2011-??-??)
 
   - Builtin handlers are configurable via app.yaml now.
 
+  - Supports new RDBMS API.
+
   - Fixes an issue where importing the MySQL Datastore API Proxy Stub failed.
 
     - http://code.google.com/p/typhoonae/issues/detail?id=81

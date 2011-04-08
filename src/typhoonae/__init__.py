@@ -25,7 +25,7 @@ import sys
 
 
 SUPPORTED_DATASTORES = frozenset([
-    'bdbdatastore', 'mongodb', 'mysql', 'remote', 'rdbms_sqlite'])
+    'bdbdatastore', 'mongodb', 'mysql', 'remote'])
 
 end_request_hook = None
 

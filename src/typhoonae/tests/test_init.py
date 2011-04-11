@@ -18,6 +18,7 @@
 import os
 import re
 import sys
+import tempfile
 import typhoonae
 import unittest
 
@@ -44,6 +45,7 @@ class InitTestCase(unittest.TestCase):
             internal_address = 'localhost:8770'
             login_url = '/_ah/login'
             logout_url = '/_ah/logout'
+            rdbms_sqlite_path = os.path.join(tempfile.gettempdir(), 'test.db')
             server_name = 'localhost'
             smtp_host = 'localhost'
             smtp_port = 25

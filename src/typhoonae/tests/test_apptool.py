@@ -64,6 +64,7 @@ class ApptoolTestCase(unittest.TestCase):
             logout_url = None
             multiple = False
             password = ""
+            rdbms_sqlite_path = None
             server_name = "host.local"
             server_software = "TyphoonAE"
             set_crontab = False

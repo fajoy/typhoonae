@@ -258,3 +258,5 @@ import zc.buildout.buildout
 zc.buildout.buildout.main(args)
 if not options.eggs: # clean up temporary egg directory
     shutil.rmtree(eggs_dir)
+if not os.path.isdir('var'):
+    os.makedirs(os.path.join('var', 'log'))

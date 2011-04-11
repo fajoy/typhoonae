@@ -106,7 +106,7 @@ Installing and Running
 
 Build the whole stack by typing the following commands::
 
-  $ python bootstrap.py
+  $ python bootstrap.py --distribute
   $ ./bin/buildout
 
 Configure the demo application::

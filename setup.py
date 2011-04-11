@@ -52,8 +52,8 @@ setuptools.setup(
     include_package_data=True,
     package_dir={'': 'src'},
     install_requires=[
+        'distribute',
         'fcgiapp',
-        'setuptools',
         'simplejson',
         ],
     extras_require=dict(

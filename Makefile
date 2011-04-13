@@ -8,7 +8,7 @@ all: bin/buildout
 	@bin/buildout -NU
 
 bin/buildout: buildout.cfg
-	$(PYTHON) bootstrap.py
+	$(PYTHON) bootstrap.py --distribute
 
 cleanup:
 	@echo "Cleaning up ..."

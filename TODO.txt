@@ -1,12 +1,6 @@
 TODO
 ====
 
-Buildout
---------
-
-  - Use distribute
-
-
 Making API Proxy Stubs Configurable
 -----------------------------------
 

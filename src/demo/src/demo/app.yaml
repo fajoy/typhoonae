@@ -33,6 +33,14 @@ handlers:
   static_files: static.html
   upload: static.html
 
+- url: /remote_api
+  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
+  login: admin
+
+- url: /_ah/admin/(.*)
+  script: $PYTHON_LIB/google/appengine/ext/admin
+  login: admin
+
 - url: /
   script: app.py
 
@@ -103,13 +111,8 @@ handlers:
 - url: /channel
   script: channel.py
 
-- url: /remote_api
-  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
-  login: admin
-
-- url: /admin.*
-  script: $PYTHON_LIB/google/appengine/ext/admin
-  login: admin
+- url: /hello
+  script: hello.py
 
 - url: .*
   script: failure.py

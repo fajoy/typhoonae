@@ -18,7 +18,6 @@
 import google.appengine.ext.webapp
 import logging
 import os
-import wsgiref.handlers
 
 
 class FailureRequestHandler(google.appengine.ext.webapp.RequestHandler):
@@ -45,7 +44,7 @@ app = google.appengine.ext.webapp.WSGIApplication([
 def main():
     """The main function."""
 
-    wsgiref.handlers.CGIHandler().run(app)
+    google.appengine.ext.webapp.util.run_wsgi_app(app)
 
 
 if __name__ == '__main__':

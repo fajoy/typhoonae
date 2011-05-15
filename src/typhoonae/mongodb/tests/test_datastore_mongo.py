@@ -154,6 +154,29 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
 
         mark_twain.delete()
 
+    def testAsyncPutGetDelete(self):
+        """Tests asynchronously putting, getting and deleting entities."""
+
+        class Person(db.Model):
+            name = db.StringProperty()
+
+        person = Person(name="Arthur")
+        async = db.put_async(person)
+        key = async.get_result()
+
+        self.assertEqual(key, async.get_result())
+
+        async = db.get_async(key)
+        person = async.get_result()
+
+        self.assertEqual("Arthur", person.name)
+
+        async = db.delete_async(key)
+        async.get_result()
+
+        self.assertRaises(
+            datastore_errors.EntityNotFoundError, datastore.Get, key)
+
     def testExceptions(self):
         """Tests whether the correct exceptions are raised."""
 

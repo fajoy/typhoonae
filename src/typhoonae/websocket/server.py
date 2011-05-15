@@ -26,7 +26,6 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 import typhoonae.websocket
-import urllib
 import urllib2
 import urlparse
 
@@ -82,17 +81,17 @@ def encode_multipart_formdata(fields):
 
     BOUNDARY = mimetools.choose_boundary()
     CRLF = u'\r\n'
-    buffer = []
+    buf = []
 
     for (key, value) in fields:
-        buffer.append(u'--%s' % BOUNDARY)
-        buffer.append(u'Content-Disposition: form-data; name="%s"' % key)
-        buffer.append(u'')
-        buffer.append(value)
+        buf.append(u'--%s' % BOUNDARY)
+        buf.append(u'Content-Disposition: form-data; name="%s"' % key)
+        buf.append(u'')
+        buf.append(value)
 
-    buffer.append(u'--%s--' % BOUNDARY)
-    buffer.append(u'')
-    body = CRLF.join(buffer)
+    buf.append(u'--%s--' % BOUNDARY)
+    buf.append(u'')
+    body = CRLF.join(buf)
     content_type = u'multipart/form-data; boundary=%s' % BOUNDARY
 
     return content_type, body
@@ -103,24 +102,24 @@ class BroadcastHandler(tornado.web.RequestHandler):
 
     def post(self):
         app_id = self.request.headers.get('X-TyphoonAE-AppId')
-        for id in WEB_SOCKETS[app_id].keys():
+        for s in WEB_SOCKETS[app_id].keys():
             try:
-                WEB_SOCKETS[app_id][id].write_message(self.request.body)
+                WEB_SOCKETS[app_id][s].write_message(self.request.body)
             except IOError:
-                del WEB_SOCKETS[app_id][id]
+                del WEB_SOCKETS[app_id][s]
 
 
 class MessageHandler(tornado.web.RequestHandler):
     """Receives messages and passes them to web sockets."""
 
     def post(self):
-        id = self.request.headers.get(typhoonae.websocket.WEBSOCKET_HEADER)
+        s = self.request.headers.get(typhoonae.websocket.WEBSOCKET_HEADER)
         app_id = self.request.headers.get('X-TyphoonAE-AppId')
-        if id:
+        if s:
             try:
-                WEB_SOCKETS[app_id][int(id)].write_message(self.request.body)
+                WEB_SOCKETS[app_id][int(s)].write_message(self.request.body)
             except IOError:
-                del WEB_SOCKETS[app_id][int(id)]
+                del WEB_SOCKETS[app_id][int(s)]
 
 
 class Dispatcher(threading.Thread):

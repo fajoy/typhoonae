@@ -403,7 +403,7 @@ def main():
     else:
         logging.getLogger().setLevel(logging.INFO)
 
-    logging.getLogger("amqplib").setLevel(logging.ERROR)
+    logging.getLogger("fcgiserver").setLevel(logging.ERROR)
 
     # Change the current working directory to the application root and load
     # the application configuration

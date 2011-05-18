@@ -376,9 +376,6 @@ def main():
                        "(no leading '/')",
                   default='upload/')
 
-    op.add_option("--use_celery", dest="use_celery", action="store_true",
-                  help="use Celery as Task Queue backend", default=False)
-
     op.add_option("--websocket_host", dest="websocket_host", metavar="ADDR",
                   help="use this Web Socket host", default="localhost")
 

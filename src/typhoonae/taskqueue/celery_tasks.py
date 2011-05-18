@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2010 Joaquin Cuenca Abela, Tobias Rodäbel
+# Copyright 2010, 2011 Joaquin Cuenca Abela, Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ from celery.exceptions import SoftTimeLimitExceeded
 from celery.signals import worker_init
 from celery.task.base import Task
 from google.appengine.api import queueinfo
-from typhoonae.taskqueue.taskqueue_stub import _ParseQueueYaml
 
 import base64
 import datetime
@@ -27,6 +26,31 @@ import logging
 import os
 import re
 import urllib2
+
+
+def _ParseQueueYaml(root_path):
+    """Loads the queue.yaml file and parses it.
+
+    Args:
+        root_path: Directory containing queue.yaml. Not used.
+
+    Returns:
+        None if queue.yaml doesn't exist, otherwise a queueinfo.QueueEntry
+        object populated from the queue.yaml.
+    """
+    if root_path is None:
+        return None
+    for queueyaml in ('queue.yaml', 'queue.yml'):
+        try:
+            fh = open(os.path.join(root_path, queueyaml), 'r')
+        except IOError:
+            continue
+        try:
+            queue_info = queueinfo.LoadSingleQueue(fh)
+            return queue_info
+        finally:
+            fh.close()
+    return None
 
 
 class RequestWithMethod(urllib2.Request):

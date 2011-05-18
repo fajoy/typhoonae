@@ -30,7 +30,6 @@ import logging
 import os
 import simplejson
 import socket
-import typhoonae.taskqueue
 import typhoonae.taskqueue.celery_tasks
 
 

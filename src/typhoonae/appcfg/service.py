@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2010 Tobias Rodäbel
+# Copyright 2010, 2011 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -639,6 +639,7 @@ def configureAppversion(appversion, app_dir, options):
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     conf_paths.update(
         typhoonae.apptool.write_supervisor_conf(options, conf, app_dir))
+    typhoonae.apptool.write_celery_conf(options, conf, app_dir)
     typhoonae.apptool.write_ejabberd_conf(options)
     typhoonae.apptool.write_crontab(options, app_dir)
 

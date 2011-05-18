@@ -210,7 +210,7 @@ def setupMemcache():
         memcache_stub.MemcacheServiceStub())
 
 
-def setupTaskQueue(internal_address, use_celery=False, root_path='.'):
+def setupTaskQueue(internal_address, root_path='.'):
     """Sets up task queue.
 
     Args:
@@ -218,13 +218,10 @@ def setupTaskQueue(internal_address, use_celery=False, root_path='.'):
         root_path: The app's root directory.
     """
 
-    if use_celery:
-        from typhoonae.taskqueue import taskqueue_celery_stub as taskqueue_stub
-    else:
-        from typhoonae.taskqueue import taskqueue_stub
+    from typhoonae.taskqueue import taskqueue_celery_stub
 
     apiproxy_stub_map.apiproxy.RegisterStub('taskqueue',
-        taskqueue_stub.TaskQueueServiceStub(
+        taskqueue_celery_stub.TaskQueueServiceStub(
             internal_address=internal_address, root_path=root_path))
 
 
@@ -372,7 +369,7 @@ def setupStubs(conf, options):
 
     setupMemcache()
 
-    setupTaskQueue(options.internal_address, use_celery=options.use_celery)
+    setupTaskQueue(options.internal_address)
 
     setupURLFetchService()
 

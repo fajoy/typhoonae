@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2009, 2010 Tobias Rodäbel
+# Copyright 2009, 2010, 2011 Tobias Rodäbel
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import sys
 import tempfile
 import typhoonae
 import typhoonae.fcgiserver
-import typhoonae.taskqueue.taskqueue_stub
+import typhoonae.taskqueue.celery_tasks
 
 
 logger = logging.getLogger(__name__)
@@ -227,26 +227,6 @@ autorestart = True
 [eventlistener:%(app_id)s.%(version)s_monitor]
 command=%(bin_dir)s/memmon -g %(app_id)s=200MB
 events=TICK_60
-"""
-
-SUPERVISOR_AMQP_CONFIG = """
-[program:%(app_id)s_taskworker]
-command = %(bin_dir)s/taskworker --amqp_host=%(amqp_host)s
-process_name = %(app_id)s_taskworker
-directory = %(root)s
-priority = 20
-redirect_stderr = true
-stdout_logfile = %(var)s/log/taskworker.log
-environment = %(environment)s
-
-[program:%(app_id)s_deferred_taskworker]
-command = %(bin_dir)s/deferred_taskworker --amqp_host=%(amqp_host)s
-process_name = %(app_id)s_deferred_taskworker
-directory = %(root)s
-priority = 20
-redirect_stderr = true
-stdout_logfile = %(var)s/log/deferred_taskworker.log
-environment = %(environment)s
 """
 
 SUPERVISOR_CELERY_CONFIG = """
@@ -675,9 +655,6 @@ def write_supervisor_conf(options, conf, app_root):
     if options.logout_url:
         additional_options.append(('logout_url', options.logout_url))
 
-    if options.use_celery:
-        additional_options.append(('use_celery', None))
-
     if not options.websocket_disabled:
         additional_options.append(('websocket_host', websocket_host))
         additional_options.append(('websocket_port', websocket_port))
@@ -726,10 +703,7 @@ def write_supervisor_conf(options, conf, app_root):
         raise RuntimeError, "unknown datastore"
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
-    if options.use_celery:
-        supervisor_conf_stub.write(SUPERVISOR_CELERY_CONFIG % locals())
-    else:
-        supervisor_conf_stub.write(SUPERVISOR_AMQP_CONFIG % locals())
+    supervisor_conf_stub.write(SUPERVISOR_CELERY_CONFIG % locals())
 
     if not websocket_disabled:
         supervisor_conf_stub.write(SUPERVISOR_WEBSOCKET_CONFIG % locals())
@@ -780,9 +754,9 @@ def write_celery_conf(options, conf, app_root):
     else:
         task_time_limit = 'None'
         soft_task_time_limit = 'None'
-    var = options.var
+    var = os.path.abspath(options.var)
 
-    queue_info = typhoonae.taskqueue.taskqueue_stub._ParseQueueYaml(app_root)
+    queue_info = typhoonae.taskqueue.celery_tasks._ParseQueueYaml(app_root)
     if queue_info and queue_info.queue:
         queues = [entry.name for entry in queue_info.queue]
     else:
@@ -1106,9 +1080,6 @@ def main():
                        "(no leading '/')",
                   default='upload/')
 
-    op.add_option("--use_celery", dest="use_celery", action="store_true",
-                  help="use Celery as Task Queue backend", default=False)
-
     op.add_option("--var", dest="var", metavar="PATH",
                   help="use this directory for platform independent data",
                   default=setdir(os.path.abspath(os.path.join('.', 'var'))))
@@ -1170,6 +1141,5 @@ def main():
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     write_supervisor_conf(options, conf, app_root)
     write_ejabberd_conf(options)
-    if options.use_celery:
-        write_celery_conf(options, conf, app_root)
+    write_celery_conf(options, conf, app_root)
     write_crontab(options, app_root)

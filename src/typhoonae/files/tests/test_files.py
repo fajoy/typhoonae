@@ -17,17 +17,18 @@
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
+from google.appengine.api import datastore_file_stub
 from google.appengine.api import datastore_types
 from google.appengine.ext import blobstore
 from typhoonae.blobstore import handlers
 from typhoonae.blobstore import blobstore_stub
 from typhoonae.blobstore import file_blob_storage
 from typhoonae.files import file_service_stub
-from typhoonae.mongodb import datastore_mongo_stub
 
 import cStringIO
 import logging
 import os
+import tempfile
 import unittest
 
 
@@ -37,7 +38,7 @@ class FilesTestCase(unittest.TestCase):
     def setUp(self):
         """Register API proxy stubs and add some test data."""
 
-        os.environ['APPLICATION_ID'] = 'test'
+        os.environ['APPLICATION_ID'] = 'demo'
         os.environ['AUTH_DOMAIN'] = 'yourdomain.net'
         os.environ['SERVER_NAME'] = 'server'
         os.environ['SERVER_PORT'] = '9876'
@@ -45,8 +46,11 @@ class FilesTestCase(unittest.TestCase):
 
         apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
 
-        datastore_stub = datastore_mongo_stub.DatastoreMongoStub(
-            'test', '', require_indexes=False)
+        self.datastore_path = tempfile.mktemp('db')
+
+        datastore_stub = datastore_file_stub.DatastoreFileStub(
+            'demo', self.datastore_path, require_indexes=False,
+            trusted=False)
 
         apiproxy_stub_map.apiproxy.RegisterStub(
             'datastore_v3', datastore_stub)
@@ -66,7 +70,7 @@ class FilesTestCase(unittest.TestCase):
                 images_not_implemented_stub.ImagesNotImplementedServiceStub())
 
         storage = file_blob_storage.FileBlobStorage(
-            os.path.dirname(__file__), 'test')
+            os.path.dirname(__file__), 'demo')
 
         self.storage = storage
 
@@ -125,6 +129,8 @@ Submit
             key = datastore_types.Key.from_path(
                 '__BlobInfo__', str(b.key()))
             datastore.Delete(key)
+
+        os.unlink(self.datastore_path)
 
     def testOpenFile(self):
         """Tests opening a file."""

@@ -34,7 +34,7 @@ class BlobstoreTestCase(unittest.TestCase):
     """Testing Blobstore."""
 
     def setUp(self):
-        """Register typhoonae's memcache API proxy stub."""
+        """Setup TyphoonAE's Blobstore API proxy stub and test data."""
 
         os.environ['APPLICATION_ID'] = 'test'
         os.environ['AUTH_DOMAIN'] = 'yourdomain.net'

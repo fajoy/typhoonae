@@ -35,7 +35,7 @@ class FilesTestCase(unittest.TestCase):
     """Testing the Files API."""
 
     def setUp(self):
-        """Register API proxy stubs and test data."""
+        """Register API proxy stubs and add some test data."""
 
         os.environ['APPLICATION_ID'] = 'test'
         os.environ['AUTH_DOMAIN'] = 'yourdomain.net'

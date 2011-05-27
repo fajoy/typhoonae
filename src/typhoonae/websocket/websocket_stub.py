@@ -18,10 +18,8 @@
 from typhoonae import websocket
 from typhoonae.websocket import websocket_service_pb2
 
-import base64
 import google.appengine.api.apiproxy_stub
 import httplib
-import logging
 import os
 import re
 
@@ -90,7 +88,6 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             protocol='ws',
             host=self._GetEnviron('SERVER_NAME'),
             port=self._port,
-            app_key=base64.b64encode(self._GetEnviron('APPLICATION_ID')),
             success_path=re.sub('^/', '', request.success_path))
 
         response.url = websocket.WEBSOCKET_HANDLER_URL % url_parts
@@ -104,13 +101,13 @@ class WebSocketServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             broadcast: This flag determines whether a message should be sent to
                 all active sockets but the sender.
         """
-        path = 'message'
         if broadcast: path = 'broadcast'
+        else: path = 'message'
 
         conn = httplib.HTTPConnection(self._GetAddress())
 
         headers = {websocket.WEBSOCKET_HEADER: str(socket),
-                   'X-TyphoonAE-AppId': self._GetEnviron('APPLICATION_ID'),
+                   'X-TyphoonAE-ServerName': self._GetEnviron('SERVER_NAME'),
                    'Content-Type': 'text/plain'}
 
         try:

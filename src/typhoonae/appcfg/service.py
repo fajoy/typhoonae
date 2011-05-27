@@ -639,7 +639,8 @@ def configureAppversion(appversion, app_dir, options):
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     conf_paths.update(
         typhoonae.apptool.write_supervisor_conf(options, conf, app_dir))
-    typhoonae.apptool.write_celery_conf(options, conf, app_dir)
+    if "queue.yaml" in os.listdir(app_dir):
+        typhoonae.apptool.write_celery_conf(options, conf, app_dir)
     typhoonae.apptool.write_ejabberd_conf(options)
     typhoonae.apptool.write_crontab(options, app_dir)
 

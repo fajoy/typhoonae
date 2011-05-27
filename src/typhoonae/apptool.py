@@ -703,7 +703,8 @@ def write_supervisor_conf(options, conf, app_root):
         raise RuntimeError, "unknown datastore"
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
-    supervisor_conf_stub.write(SUPERVISOR_CELERY_CONFIG % locals())
+    if 'queue.yaml' in os.listdir(app_root):
+        supervisor_conf_stub.write(SUPERVISOR_CELERY_CONFIG % locals())
 
     if not websocket_disabled:
         supervisor_conf_stub.write(SUPERVISOR_WEBSOCKET_CONFIG % locals())
@@ -1141,5 +1142,6 @@ def main():
         os.path.abspath(os.path.join(options.blobstore_path, conf.application)))
     write_supervisor_conf(options, conf, app_root)
     write_ejabberd_conf(options)
-    write_celery_conf(options, conf, app_root)
+    if 'queue.yaml' in os.listdir(app_root):
+        write_celery_conf(options, conf, app_root)
     write_crontab(options, app_root)

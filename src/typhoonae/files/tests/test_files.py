@@ -15,6 +15,8 @@
 # limitations under the License.
 """Unit tests for TyphoonAE's Files API implementation."""
 
+from __future__ import with_statement
+
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
 from google.appengine.api import datastore_file_stub
@@ -145,3 +147,17 @@ Submit
         f.close()
 
         self.assertEqual('\x89PNG\r\n\x1a\n\x00\x00', data)
+
+    def testWriteFile(self):
+        """Tests writing files."""
+
+        from google.appengine.api import files
+
+        # Create the file
+        file_name = files.blobstore.create(mime_type='application/octet-stream')
+
+        # Open the file and write to it
+        with files.open(file_name, 'a') as f:
+            f.write('data')
+
+        # TODO Finalizing the file and getting its blob key

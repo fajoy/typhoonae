@@ -47,13 +47,16 @@ URIs = {HANDSHAKE: HANDSHAKE_URI,
         MESSAGE: MESSAGE_URI,
         SOCKET_CLOSED: SOCKET_CLOSED_URI}
 
+WEBSOCKET_ORIGIN_HEADER = typhoonae.websocket.WEBSOCKET_ORIGIN_HEADER
 
-def post_multipart(url, fields):
+
+def post_multipart(url, fields, add_headers={}):
     """Posts multipart form data fields.
 
     Args:
         url: Post multipart form data to this URL.
         fields: A list of tuples of the form [(fieldname, value), ...].
+        add_headers: Dict of additional headers to be included into the request.
     """
 
     content_type, body = encode_multipart_formdata(fields)
@@ -63,6 +66,8 @@ def post_multipart(url, fields):
     headers = {'Content-Type': content_type,
                typhoonae.websocket.WEBSOCKET_HEADER: '',
                'Content-Length': str(len(body))}
+
+    headers.update(add_headers)
 
     req = urllib2.Request(url, body, headers)
 
@@ -128,7 +133,8 @@ class MessageHandler(tornado.web.RequestHandler):
 class Dispatcher(threading.Thread):
     """Dispatcher thread for non-blocking message delivery."""
 
-    def __init__(self, address, socket, request_type, param_path, body=''):
+    def __init__(self, address, socket, request_type, param_path, headers={},
+                 body=''):
         """Constructor.
 
         Args:
@@ -136,6 +142,7 @@ class Dispatcher(threading.Thread):
             socket: String which represents the socket id.
             request_type: The request type.
             param_path: Parameter path.
+            headers: Dict of headers to be submitted to the request handler.
             body: The message body.
         """
         super(Dispatcher, self).__init__()
@@ -144,6 +151,7 @@ class Dispatcher(threading.Thread):
         self._socket = socket or u''
         self._type = request_type
         self._path = param_path
+        self._headers = headers
         self._body = body or u''
 
     def run(self):
@@ -152,7 +160,10 @@ class Dispatcher(threading.Thread):
         url = 'http://%s:%s/%s/%s' % (
             self._address, PORT, URIs[self._type], self._path)
 
-        post_multipart(url, [(u'body', self._body), (u'from', self._socket)])
+        post_multipart(
+            url,
+            [(u'body', self._body), (u'from', self._socket)],
+            self._headers)
 
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
@@ -161,24 +172,27 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kw):
         super(WebSocketHandler, self).__init__(*args, **kw)
 
-    def open(self, param_path):
+    def open(self, path):
         sock_id = self.stream.socket.fileno()
-        address = self.request.headers['Host'].split(':')[0]
-        if address not in WEB_SOCKETS:
-            WEB_SOCKETS[address] = {}
-        WEB_SOCKETS[address][sock_id] = self
-        dispatcher = Dispatcher(address, str(sock_id), HANDSHAKE, param_path)
+        addr = self.request.headers['Host'].split(':')[0]
+        if addr not in WEB_SOCKETS:
+            WEB_SOCKETS[addr] = {}
+        WEB_SOCKETS[addr][sock_id] = self
+        headers = {WEBSOCKET_ORIGIN_HEADER: self.request.headers['Origin']}
+        dispatcher = Dispatcher(
+            addr, str(sock_id), HANDSHAKE, path, headers=headers)
         dispatcher.start()
 
     def _dispatch(self, request_type, message=None):
-        param_path = re.match(r"^/(.*)", self.request.uri).group(1)
+        path = re.match(r"^/(.*)", self.request.uri).group(1)
         if self.stream.socket:
             sock_id = str(self.stream.socket.fileno())
         else:
             sock_id = None
-        address = self.request.headers['Host'].split(':')[0]
+        addr = self.request.headers['Host'].split(':')[0]
+        headers = {WEBSOCKET_ORIGIN_HEADER: self.request.headers['Origin']}
         dispatcher = Dispatcher(
-            address, sock_id, request_type, param_path, body=message)
+            addr, sock_id, request_type, path, headers=headers, body=message)
         dispatcher.start()
 
     def on_message(self, message):

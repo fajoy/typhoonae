@@ -26,6 +26,7 @@ from typhoonae.websocket import websocket_service_pb2
 
 __all__ = [
     'WEBSOCKET_HEADER',
+    'WEBSOCKET_ORIGIN_HEADER',
     'WEBSOCKET_HANDLER_URL',
     'BadArgumentError',
     'create_websocket_url',
@@ -35,6 +36,8 @@ __all__ = [
 ]
 
 WEBSOCKET_HEADER = "X-TyphoonAE-WebSocket"
+
+WEBSOCKET_ORIGIN_HEADER = "WebSocket-Origin"
 
 WEBSOCKET_HANDLER_URL = "%(protocol)s://%(host)s:%(port)s/%(success_path)s"
 

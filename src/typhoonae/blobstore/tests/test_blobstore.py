@@ -68,7 +68,7 @@ class BlobstoreTestCase(unittest.TestCase):
                 images_not_implemented_stub.ImagesNotImplementedServiceStub())
 
         storage = file_blob_storage.FileBlobStorage(
-            os.path.dirname(__file__), 'test')
+            os.path.dirname(__file__), 'demo')
 
         self.storage = storage
 

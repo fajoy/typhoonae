@@ -16,17 +16,18 @@
 """Unit tests for TyphoonAE's Blobstore implementation."""
 
 import cStringIO
-import google.appengine.api.apiproxy_stub_map
-import google.appengine.api.datastore
-import google.appengine.api.datastore_types
-import google.appengine.ext.blobstore
-import google.appengine.ext.db
+from google.appengine.api import apiproxy_stub_map
+from google.appengine.api import datastore
+from google.appengine.api import datastore_file_stub
+from google.appengine.api import datastore_types
+from google.appengine.ext import blobstore
+from typhoonae.blobstore import handlers
+from typhoonae.blobstore import blobstore_stub
+import typhoonae.blobstore.file_blob_storage
+
 import logging
 import os
-import typhoonae.blobstore.handlers
-import typhoonae.blobstore.blobstore_stub
-import typhoonae.blobstore.file_blob_storage
-import typhoonae.mongodb.datastore_mongo_stub
+import tempfile
 import unittest
 
 
@@ -36,24 +37,25 @@ class BlobstoreTestCase(unittest.TestCase):
     def setUp(self):
         """Setup TyphoonAE's Blobstore API proxy stub and test data."""
 
-        os.environ['APPLICATION_ID'] = 'test'
+        os.environ['APPLICATION_ID'] = 'demo'
         os.environ['AUTH_DOMAIN'] = 'yourdomain.net'
         os.environ['SERVER_NAME'] = 'server'
         os.environ['SERVER_PORT'] = '9876'
         os.environ['USER_EMAIL'] = 'test@yourdomain.net'
 
-        google.appengine.api.apiproxy_stub_map.apiproxy = \
-                    google.appengine.api.apiproxy_stub_map.APIProxyStubMap()
+        apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap()
 
-        datastore = typhoonae.mongodb.datastore_mongo_stub.DatastoreMongoStub(
-            'test', '', require_indexes=False)
+        self.datastore_path = tempfile.mktemp('db')
 
-        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-            'datastore_v3', datastore)
+        datastore_stub = datastore_file_stub.DatastoreFileStub(
+            'demo', self.datastore_path, require_indexes=False,
+            trusted=False)
+
+        apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', datastore_stub)
 
         try:
             from google.appengine.api.images import images_stub
-            google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+            apiproxy_stub_map.apiproxy.RegisterStub(
                 'images',
                 images_stub.ImagesServiceStub())
         except ImportError, e:
@@ -61,7 +63,7 @@ class BlobstoreTestCase(unittest.TestCase):
                 'Could not initialize images API; you are likely '
                 'missing the Python "PIL" module. ImportError: %s', e)
             from google.appengine.api.images import images_not_implemented_stub
-            google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
+            apiproxy_stub_map.apiproxy.RegisterStub(
                 'images',
                 images_not_implemented_stub.ImagesNotImplementedServiceStub())
 
@@ -70,9 +72,8 @@ class BlobstoreTestCase(unittest.TestCase):
 
         self.storage = storage
 
-        google.appengine.api.apiproxy_stub_map.apiproxy.RegisterStub(
-            'blobstore',
-            typhoonae.blobstore.blobstore_stub.BlobstoreServiceStub(storage))
+        apiproxy_stub_map.apiproxy.RegisterStub(
+            'blobstore', blobstore_stub.BlobstoreServiceStub(storage))
 
         environ = dict()
         environ['REQUEST_URI'] = environ['PATH_INFO'] = \
@@ -110,34 +111,30 @@ Submit
 
         fp = cStringIO.StringIO(buf)
 
-        handler = typhoonae.blobstore.handlers.UploadCGIHandler()
+        handler = handlers.UploadCGIHandler()
         fp = handler(fp, environ)
 
     def tearDown(self):
         """Clean up."""
 
-        query = google.appengine.ext.blobstore.BlobInfo.all()
+        query = blobstore.BlobInfo.all()
         cursor = query.fetch(10)
 
         for b in cursor:
-            key = google.appengine.api.datastore_types.Key.from_path(
-                '__BlobInfo__', str(b.key()))
-            google.appengine.api.datastore.Delete(key)
+            key = datastore_types.Key.from_path('__BlobInfo__', str(b.key()))
+            datastore.Delete(key)
 
     def testCreateUploadSession(self):
         """Creates an upload session entity."""
 
-        stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
-            'blobstore')
+        stub = apiproxy_stub_map.apiproxy.GetStub('blobstore')
         session = stub._CreateSession('foo', 'bar')
         self.assertNotEqual(None, session)
 
     def testGetEnviron(self):
         """Tests internal helper method to obtain environment variables."""
 
-        from google.appengine.api.blobstore import blobstore_stub
-        stub = google.appengine.api.apiproxy_stub_map.apiproxy.GetStub(
-            'blobstore')
+        stub = apiproxy_stub_map.apiproxy.GetStub('blobstore')
         os.environ['TEST_ENV_VAR'] = 'blobstore-test'
         self.assertEqual('blobstore-test', stub._GetEnviron('TEST_ENV_VAR'))
         self.assertRaises(
@@ -148,36 +145,40 @@ Submit
     def testCreateUploadURL(self):
         """Creates an upload URL."""
 
+        import google.appengine.api.blobstore
+
         upload_url = google.appengine.api.blobstore.create_upload_url('foo')
         self.assertTrue(upload_url.startswith('http://server:9876/upload/'))
 
     def testBlobInfo(self):
         """Tests retreiving a BlobInfo entity."""
 
-        result = google.appengine.ext.blobstore.BlobInfo.all().fetch(1)
-        self.assertEqual(google.appengine.ext.blobstore.BlobInfo,
+        result = blobstore.BlobInfo.all().fetch(1)
+        self.assertEqual(blobstore.BlobInfo,
                          type(result.pop()))
 
     def testBlobKey(self):
         """Tests whether a valid BlobKey can be stored in the datastore."""
 
-        class MyModel(google.appengine.ext.db.Model):
-            file = google.appengine.ext.blobstore.BlobReferenceProperty()
+        from google.appengine.ext import db
+
+        class MyModel(db.Model):
+            my_file = blobstore.BlobReferenceProperty()
 
         entity = MyModel()
-        result = google.appengine.ext.blobstore.BlobInfo.all().fetch(1)
-        entity.file = result.pop()
+        result = blobstore.BlobInfo.all().fetch(1)
+        entity.my_file = result.pop()
         entity.put()
 
         fetched_entity = MyModel.all().fetch(1).pop()
-        self.assertEqual(3943L, fetched_entity.file.size)
-        self.assertEqual(google.appengine.api.datastore_types.BlobKey,
-                         type(fetched_entity.file.key()))
+        self.assertEqual(3943L, fetched_entity.my_file.size)
+        self.assertEqual(
+            datastore_types.BlobKey, type(fetched_entity.my_file.key()))
 
     def testOpenBlob(self):
         """Opens a blob file for streaming."""
 
-        query = google.appengine.ext.blobstore.BlobInfo.all()
+        query = blobstore.BlobInfo.all()
         key = str(query.fetch(1).pop().key())
         self.storage.OpenBlob(key)
 
@@ -185,7 +186,7 @@ Submit
         """Creates an image object from blob data."""
 
         from google.appengine.api.images import Image
-        query = google.appengine.ext.blobstore.BlobInfo.all()
+        query = blobstore.BlobInfo.all()
         key = str(query.fetch(1).pop().key())
         img = Image(blob_key=key)
         img.resize(width=200)
@@ -196,24 +197,23 @@ Submit
     def testFetchData(self):
         """Fetches data for blob."""
 
-        query = google.appengine.ext.blobstore.BlobInfo.all()
+        query = blobstore.BlobInfo.all()
         key = str(query.fetch(1).pop().key())
-        data = google.appengine.ext.blobstore.fetch_data(key, 0, 5)
+        data = blobstore.fetch_data(key, 0, 5)
         self.assertEqual('\x89PNG\r\n', data)
 
     def testBlobReader(self):
         """Tests the BlobReader API."""
 
-        from google.appengine.ext.blobstore import BlobReader
-        query = google.appengine.ext.blobstore.BlobInfo.all()
+        query = blobstore.BlobInfo.all()
         blob_info = query.fetch(1).pop()
         blob_key = str(blob_info.key())
 
-        reader = BlobReader(blob_key)
+        reader = blobstore.BlobReader(blob_key)
         self.assertEqual(blob_info.filename, reader.blob_info.filename)
         self.assertEqual(blob_info.size, reader.blob_info.size)
 
-        data = google.appengine.ext.blobstore.fetch_data(blob_key, 0, 5)
+        data = blobstore.fetch_data(blob_key, 0, 5)
         self.assertEqual(data, reader.read()[:6])
         reader.close()
         self.assertTrue(reader.closed)

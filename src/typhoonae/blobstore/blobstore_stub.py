@@ -31,11 +31,15 @@ import time
 
 __all__ = [
     'BlobstoreServiceStub',
+    'ConfigurationError',
     'CreateUploadSession',
 ]
 
 
 _UPLOAD_SESSION_KIND = '__BlobUploadSession__'
+
+
+ConfigurationError = blobstore_stub.ConfigurationError
 
 
 def CreateUploadSession(creation, success_path, user):
@@ -109,8 +113,7 @@ class BlobstoreServiceStub(apiproxy_stub.APIProxyStub):
         try:
             return os.environ[name]
         except KeyError:
-            raise blobstore_stub.ConfigurationError(
-                '%s is not set in environment.' % name)
+            raise ConfigurationError('%s is not set in environment.' % name)
 
     def _CreateSession(self, success_path, user):
         """Create new upload session.

@@ -95,9 +95,9 @@ def DecodeBlobKey(blob_key):
     Returns:
         Blob id.
     """
-    id, hash = base64.urlsafe_b64decode(str(blob_key.name())).split('.', 1)
-    assert hashlib.md5(os.environ['APPLICATION_ID']+SALT).digest() == hash
-    return id.zfill(10)
+    _id, _hash = base64.urlsafe_b64decode(str(blob_key.name())).split('.', 1)
+    assert hashlib.md5(os.environ['APPLICATION_ID']+SALT).digest() == _hash
+    return _id.zfill(10)
 
 
 class UploadCGIHandler(object):

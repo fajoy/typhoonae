@@ -15,7 +15,6 @@
 # limitations under the License.
 """Unit tests for TyphoonAE's Blobstore implementation."""
 
-import cStringIO
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
 from google.appengine.api import datastore_file_stub
@@ -23,8 +22,9 @@ from google.appengine.api import datastore_types
 from google.appengine.ext import blobstore
 from typhoonae.blobstore import handlers
 from typhoonae.blobstore import blobstore_stub
-import typhoonae.blobstore.file_blob_storage
+from typhoonae.blobstore import file_blob_storage
 
+import cStringIO
 import logging
 import os
 import tempfile
@@ -67,7 +67,7 @@ class BlobstoreTestCase(unittest.TestCase):
                 'images',
                 images_not_implemented_stub.ImagesNotImplementedServiceStub())
 
-        storage = typhoonae.blobstore.file_blob_storage.FileBlobStorage(
+        storage = file_blob_storage.FileBlobStorage(
             os.path.dirname(__file__), 'test')
 
         self.storage = storage

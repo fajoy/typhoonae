@@ -21,6 +21,7 @@ from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
 from google.appengine.api import datastore_file_stub
 from google.appengine.api import datastore_types
+from google.appengine.api import files
 from google.appengine.ext import blobstore
 from typhoonae.blobstore import handlers
 from typhoonae.blobstore import blobstore_stub
@@ -128,8 +129,7 @@ Submit
         cursor = query.fetch(10)
 
         for b in cursor:
-            key = datastore_types.Key.from_path(
-                '__BlobInfo__', str(b.key()))
+            key = datastore_types.Key.from_path('__BlobInfo__', str(b.key()))
             datastore.Delete(key)
 
         os.unlink(self.datastore_path)
@@ -137,12 +137,14 @@ Submit
     def testOpenFile(self):
         """Tests opening a file."""
 
-        from google.appengine.api import files
-
+        # Get blob key
         query = blobstore.BlobInfo.all()
         key = str(query.fetch(1).pop().key())
-        
+ 
+        # Open the file for reading
         f = files.open("/blobstore/%s" % key, "r")
+
+        # Read data and close file
         data = f.read(10)
         f.close()
 
@@ -151,8 +153,6 @@ Submit
     def testWriteFile(self):
         """Tests writing files."""
 
-        from google.appengine.api import files
-
         # Create the file
         file_name = files.blobstore.create(mime_type='application/octet-stream')
 
@@ -160,4 +160,15 @@ Submit
         with files.open(file_name, 'a') as f:
             f.write('data')
 
-        # TODO Finalizing the file and getting its blob key
+        # Finalize the file and get its blob key
+        files.finalize(file_name)
+        blob_key = files.blobstore.get_blob_key(file_name)
+
+        # Check file contents
+        f = files.open("/blobstore/%s" % blob_key, "r")
+        self.assertEqual('data', f.read(10))
+        f.close()
+
+        # Clean up
+        blobstore_stub = apiproxy_stub_map.apiproxy.GetStub('blobstore')
+        blobstore_stub.storage.DeleteBlob(blob_key)

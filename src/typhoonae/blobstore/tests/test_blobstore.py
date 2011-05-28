@@ -219,3 +219,11 @@ Submit
         self.assertEqual(data, reader.read()[:6])
         reader.close()
         self.assertTrue(reader.closed)
+
+    def testGenerateBlobKey(self):
+        """Tests generating a new blob key."""
+ 
+        stub = apiproxy_stub_map.apiproxy.GetStub('blobstore')
+        blob_key = stub.storage.GenerateBlobKey()
+        self.assertEqual(
+            datastore_types.BlobKey(u'MTEuLliaEqXh7TAp7gmgYS0vWw=='), blob_key)

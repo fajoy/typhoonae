@@ -24,6 +24,7 @@ from typhoonae.blobstore import handlers
 
 import errno
 import os
+import random
 
 
 __all__ = ['FileBlobStorage']
@@ -97,7 +98,7 @@ class FileBlobStorage(blobstore.blobstore_stub.BlobStorage):
         if not os.path.exists(blob_directory):
             os.makedirs(blob_directory)
         blob_file = self._FileForBlob(blob_key)
-        output = _local_open(blob_file, 'wb')
+        output = open(blob_file, 'wb')
 
         try:
             while True:
@@ -135,3 +136,20 @@ class FileBlobStorage(blobstore.blobstore_stub.BlobStorage):
         except OSError, e:
             if e.errno != errno.ENOENT:
                 raise e
+
+    def GenerateBlobKey(self):
+        """Generates new blob key."""
+
+        blobs_dir = os.path.join(self._storage_directory, self._app_id)
+        path = os.path.join(blobs_dir, random.choice(os.listdir(blobs_dir)))
+        file_names = os.listdir(path)
+
+        def generate_file_name():
+            if len(file_names) == 0:
+                num = int(os.path.basename(path))
+            else:
+                num = max([int(n) for n in file_names])
+            return str(num + 10).zfill(10)
+
+        blob_key = handlers.EncodeBlobKey(generate_file_name())
+        return self._BlobKey(blob_key)

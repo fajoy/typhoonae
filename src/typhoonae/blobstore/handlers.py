@@ -22,6 +22,7 @@ import datetime
 import google.appengine.api.blobstore
 import google.appengine.api.datastore
 import google.appengine.api.datastore_errors
+import google.appengine.api.datastore_types
 import hashlib
 import httplib
 import logging
@@ -65,7 +66,7 @@ Content-Disposition: form-data; name="%(name)s"
 
 
 def EncodeBlobKey(path):
-    """Generates a BlobKey.
+    """Encodes blob key.
 
     Args:
         path: The original file path.
@@ -95,7 +96,11 @@ def DecodeBlobKey(blob_key):
     Returns:
         Blob id.
     """
-    _id, _hash = base64.urlsafe_b64decode(str(blob_key.name())).split('.', 1)
+    if isinstance(blob_key, google.appengine.api.datastore_types.BlobKey):
+        encoded_key = str(blob_key)
+    elif isinstance(blob_key, google.appengine.api.datastore_types.Key):
+        encoded_key = str(blob_key.name())
+    _id, _hash = base64.urlsafe_b64decode(encoded_key).split('.', 1)
     assert hashlib.md5(os.environ['APPLICATION_ID']+SALT).digest() == _hash
     return _id.zfill(10)
 

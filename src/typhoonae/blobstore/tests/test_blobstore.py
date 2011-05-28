@@ -124,6 +124,8 @@ Submit
             key = datastore_types.Key.from_path('__BlobInfo__', str(b.key()))
             datastore.Delete(key)
 
+        os.unlink(self.datastore_path)
+
     def testCreateUploadSession(self):
         """Creates an upload session entity."""
 

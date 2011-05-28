@@ -6,7 +6,7 @@ Version 0.2.1 (2011-??-??)
 
   - Supports Google App Engine SDK 1.5.0.
 
-  - Uses experimental Files API (from development server).
+  - Implements experimental Files API serving files directly through NGINX.
 
   - Builtin handlers are configurable via app.yaml now.
 

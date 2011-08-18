@@ -4,7 +4,7 @@ CHANGES
 Version 0.2.1 (2011-??-??)
 --------------------------
 
-  - Supports Google App Engine SDK 1.5.2.
+  - Uses Google App Engine SDK 1.5.3.
 
   - Implements experimental Files API serving files directly through NGINX.
 

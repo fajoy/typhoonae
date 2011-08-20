@@ -18,7 +18,6 @@
 from google.appengine.api import apiproxy_stub
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore
-from google.appengine.api import datastore_admin
 from google.appengine.api import datastore_errors
 from google.appengine.api import datastore_types
 from google.appengine.api import taskqueue
@@ -978,18 +977,6 @@ class DatastoreMySQLTestCase(DatastoreMySQLTestCaseBase):
         self.assertEqual(
             [1978L, 1976L, 1974L, 1972L, 1970L, 1968L],
             [n.value for n in f])
-
-    def testGetSchema(self):
-        """Infers an app's schema from the entities in the datastore."""
-
-        class Foo(db.Model):
-            foobar = db.IntegerProperty(default=42)
-
-        Foo().put()
-
-        entity_pbs = datastore_admin.GetSchema()
-        entity = datastore.Entity.FromPb(entity_pbs.pop())
-        self.assertEqual('Foo', entity.key().kind())
 
     def testTransactionalTasks(self):
         """Tests tasks within transactions."""

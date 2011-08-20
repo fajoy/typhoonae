@@ -30,6 +30,7 @@ from google.appengine.runtime import apiproxy_errors
 from google.appengine.datastore import entity_pb
 from pymongo.connection import Connection
 from pymongo.binary import Binary
+from pymongo.errors import InvalidName
 
 import logging
 import pymongo
@@ -649,7 +650,10 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
     # HACK we need to get one Entity from this collection so we know what the
     # property types are (because we need to construct queries that depend on
     # the types of the properties)...
-    prototype = self.__db[collection].find_one()
+    try:
+        prototype = self.__db[collection].find_one()
+    except pymongo.errors.InvalidName:
+        raise datastore_errors.BadRequestError('query without kind')
     if prototype is None:
       return
     prototype = datastore.Entity._FromPb(

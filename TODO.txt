@@ -16,6 +16,8 @@ Task Queue Service
 
   - Add default queue.
 
+  - Implement Pull Queues.
+
 
 Making API Proxy Stubs Configurable
 -----------------------------------
@@ -25,3 +27,9 @@ Making API Proxy Stubs Configurable
   - Improve capabilities stub.
 
   - Implement buildout.cfg wizzard.
+
+
+App Configuration
+-----------------
+
+  - Add support for custom error responses.

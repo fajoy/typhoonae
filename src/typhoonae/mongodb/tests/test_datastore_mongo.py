@@ -89,17 +89,6 @@ class DatastoreMongoTestCaseBase(unittest.TestCase):
 
         self.stub = apiproxy_stub_map.apiproxy.GetStub('datastore_v3')
 
-#        import tempfile
-#        from google.appengine.api import datastore_file_stub
-#        self.datastore_path = tempfile.mktemp('db')
-#
-#        datastore_stub = datastore_file_stub.DatastoreFileStub(
-#            'test', self.datastore_path, require_indexes=False,
-#            trusted=False)
-#
-#        apiproxy_stub_map.apiproxy.RegisterStub(
-#            'datastore_v3', datastore_stub)
-
         apiproxy_stub_map.apiproxy.RegisterStub(
             'taskqueue', TaskQueueServiceStubMock())
 

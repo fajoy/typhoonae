@@ -51,9 +51,14 @@ entity_pb.Reference.__hash__ = lambda self: hash(self.Encode())
 datastore_pb.Query.__hash__ = lambda self: hash(self.Encode())
 
 _MAX_QUERY_COMPONENTS = 100
+
 _MAX_QUERY_OFFSET = 1000
+
 _CURSOR_CONCAT_STR = '!CURSOR!'
+
 _MAX_ACTIONS_PER_TXN = 5
+
+_NAMESPACE_CONCAT_STR = '_'
 
 
 class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
@@ -155,7 +160,10 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
                 if pb.app() == self.__app_id)
 
   def __collection_for_key(self, key):
-    return key.path().element(-1).type()
+    collection = key.path().element(-1).type()
+    if key.has_name_space():
+        collection += _NAMESPACE_CONCAT_STR + key.name_space()
+    return collection
 
   def __id_for_key(self, key):
     db_path = []
@@ -638,6 +646,8 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
               "You must update the index.yaml file in your application root.")
 
     collection = query.kind()
+    if query.has_name_space():
+        collection += _NAMESPACE_CONCAT_STR + query.name_space()
 
     clone = datastore_pb.Query()
     clone.CopyFrom(query)

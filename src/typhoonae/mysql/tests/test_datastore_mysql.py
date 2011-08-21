@@ -194,6 +194,35 @@ class DatastoreMySQLTestCase(DatastoreMySQLTestCaseBase):
         
         db.delete(keys)
 
+    def testNamespaces(self):
+        """Tests namespace support."""
+
+        from google.appengine.api import namespace_manager
+
+        namespace = namespace_manager.get_namespace()
+
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        try:
+            namespace_manager.set_namespace('testing')
+            a = Author(name='Douglas Adams', key_name='douglasadams')
+            a.put()
+
+            b = Book(parent=a, title="Last Chance to See")
+            b.put()
+
+            query = Book.all().filter("title =", "Last Chance to See")
+            self.assertEqual(query.get().title, b.title)
+        finally:
+            namespace_manager.set_namespace(namespace) 
+
+        query = Book.all().filter("title =", "Last Chance to See")
+        self.assertEqual(query.get(), None)
+
     def testExpando(self):
         """Test the Expando superclass."""
 

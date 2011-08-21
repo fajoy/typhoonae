@@ -89,6 +89,17 @@ class DatastoreMongoTestCaseBase(unittest.TestCase):
 
         self.stub = apiproxy_stub_map.apiproxy.GetStub('datastore_v3')
 
+#        import tempfile
+#        from google.appengine.api import datastore_file_stub
+#        self.datastore_path = tempfile.mktemp('db')
+#
+#        datastore_stub = datastore_file_stub.DatastoreFileStub(
+#            'test', self.datastore_path, require_indexes=False,
+#            trusted=False)
+#
+#        apiproxy_stub_map.apiproxy.RegisterStub(
+#            'datastore_v3', datastore_stub)
+
         apiproxy_stub_map.apiproxy.RegisterStub(
             'taskqueue', TaskQueueServiceStubMock())
 
@@ -240,6 +251,35 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         self.assertEqual(2, len(items))
         
         db.delete(keys)
+
+    def testNamespaces(self):
+        """Tests namespace support."""
+
+        from google.appengine.api import namespace_manager
+
+        namespace = namespace_manager.get_namespace()
+
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        try:
+            namespace_manager.set_namespace('testing')
+            a = Author(name='Douglas Adams', key_name='douglasadams')
+            a.put()
+
+            b = Book(parent=a, title="Last Chance to See")
+            b.put()
+
+            query = Book.all().filter("title =", "Last Chance to See")
+            self.assertEqual(query.get().title, b.title)
+        finally:
+            namespace_manager.set_namespace(namespace) 
+
+        query = Book.all().filter("title =", "Last Chance to See")
+        self.assertEqual(query.get(), None)
 
     def testExpando(self):
         """Test the Expando superclass."""

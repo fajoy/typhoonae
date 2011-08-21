@@ -1,6 +1,16 @@
 TODO
 ====
 
+Datastre MongoDB API Proxy Stub
+-------------------------------
+
+  - Support Expando.
+
+  - Add support for kindless ancestor queries.
+
+  - Implement correct db.ListProperty behaviour.
+
+
 Task Queue Service
 ------------------
 
@@ -10,8 +20,8 @@ Task Queue Service
 Making API Proxy Stubs Configurable
 -----------------------------------
 
-  - buildout.cfg wizzard
+  - Identify common buildout.cfg parts and put them into separate files.
 
-  - Identify common buildout.cfg parts and put them into separate files
+  - Improve capabilities stub.
 
-  - Improve capabilities stub
+  - Implement buildout.cfg wizzard.

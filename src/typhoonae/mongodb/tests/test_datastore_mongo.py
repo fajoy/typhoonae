@@ -28,6 +28,7 @@ from google.appengine.datastore import datastore_index
 from google.appengine.ext import db
 from google.appengine.ext.db import polymodel
 from google.appengine.runtime import apiproxy_errors
+from nose.plugins.skip import SkipTest
 
 import datetime
 import os
@@ -240,36 +241,38 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         
         db.delete(keys)
 
-#    def testExpando(self):
-#        """Test the Expando superclass."""
-#
-#        class Song(db.Expando):
-#            title = db.StringProperty()
-# 
-#        crazy = Song(
-#            title='Crazy like a diamond',
-#            author='Lucy Sky',
-#            publish_date='yesterday',
-#            rating=5.0)
-# 
-#        oboken = Song(
-#            title='The man from Hoboken',
-#            author=['Anthony', 'Lou'],
-#            publish_date=datetime.datetime(1977, 5, 3))
-#
-#        crazy.last_minute_note=db.Text('Get a train to the station.')
-#
-#        crazy.put()
-#        oboken.put()
-#
-#        self.assertEqual(
-#            'The man from Hoboken',
-#            Song.all().filter('author =', 'Anthony').get().title)
-#
-#        self.assertEqual(
-#            'The man from Hoboken',
-#            Song.all().filter('publish_date >', datetime.datetime(1970, 1, 1)).
-#                get().title)
+    def testExpando(self):
+        """Test the Expando superclass."""
+
+        raise SkipTest  # TODO: Implement Expando.
+
+        class Song(db.Expando):
+            title = db.StringProperty()
+ 
+        crazy = Song(
+            title='Crazy like a diamond',
+            author='Lucy Sky',
+            publish_date='yesterday',
+            rating=5.0)
+ 
+        oboken = Song(
+            title='The man from Hoboken',
+            author=['Anthony', 'Lou'],
+            publish_date=datetime.datetime(1977, 5, 3))
+
+        crazy.last_minute_note=db.Text('Get a train to the station.')
+
+        crazy.put()
+        oboken.put()
+
+        self.assertEqual(
+            'The man from Hoboken',
+            Song.all().filter('author =', 'Anthony').get().title)
+
+        self.assertEqual(
+            'The man from Hoboken',
+            Song.all().filter('publish_date >', datetime.datetime(1970, 1, 1)).
+                get().title)
 
     def testPolymodel(self):
         """Tests Polymodels."""
@@ -389,29 +392,31 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         self.assertEqual(1, Author.all().count())
         self.assertEqual(0, Book.all().count())
 
-#    def testKindlessAncestorQueries(self):
-#        """Perform kindless queries for entities with a given ancestor."""
-#
-#        class Author(db.Model):
-#            name = db.StringProperty()
-#
-#        class Book(db.Model):
-#            title = db.StringProperty()
-#
-#        author = Author(name='Mark Twain', key_name='marktwain').put()
-#
-#        book = Book(parent=author, title="The Adventures Of Tom Sawyer").put()
-#
-#        query = db.Query()
-#        query.ancestor(author)
-#        query.filter('__key__ = ', book)
-#
-#        self.assertEqual(book, query.get().key())
-#
-#        book = query.get()
-#        book.delete()
-#
-#        self.assertEqual(0, query.count())
+    def testKindlessAncestorQueries(self):
+        """Perform kindless queries for entities with a given ancestor."""
+
+        raise SkipTest  # TODO: Implement kindless ancestor queries.
+
+        class Author(db.Model):
+            name = db.StringProperty()
+
+        class Book(db.Model):
+            title = db.StringProperty()
+
+        author = Author(name='Mark Twain', key_name='marktwain').put()
+
+        book = Book(parent=author, title="The Adventures Of Tom Sawyer").put()
+
+        query = db.Query()
+        query.ancestor(author)
+        query.filter('__key__ = ', book)
+
+        self.assertEqual(book, query.get().key())
+
+        book = query.get()
+        book.delete()
+
+        self.assertEqual(0, query.count())
 
     def testRunQuery(self):
         """Runs some simple queries."""
@@ -759,6 +764,8 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
     def testListProperties(self):
         """Tests list properties."""
 
+        raise SkipTest  # TODO: Implement correct db.ListProperty behaviour.
+
         class Numbers(db.Model):
             values = db.ListProperty(int)
 
@@ -787,11 +794,11 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
 
         self.assertEqual(1, query.count())
 
-#        query = db.GqlQuery(
-#            "SELECT * FROM Issue WHERE reviewers = :1",
-#            'me@somewhere.net')
-#
-#        self.assertEqual(1, query.count())
+        query = db.GqlQuery(
+            "SELECT * FROM Issue WHERE reviewers = :1",
+            'me@somewhere.net')
+
+        self.assertEqual(1, query.count())
 
         query = db.GqlQuery(
             "SELECT * FROM Issue WHERE reviewers = :1",
@@ -1085,18 +1092,6 @@ class DatastoreMongoTestCase(DatastoreMongoTestCaseBase):
         self.assertEqual(
             [2978L, 2976L, 2974L, 2972L, 2970L, 2968L],
             [n.value for n in f])
-
-#    def testGetSchema(self):
-#        """Infers an app's schema from the entities in the datastore."""
-#
-#        class Foo(db.Model):
-#            foobar = db.IntegerProperty(default=42)
-#
-#        Foo().put()
-#
-#        entity_pbs = datastore_admin.GetSchema()
-#        entity = datastore.Entity.FromPb(entity_pbs.pop())
-#        self.assertEqual('Foo', entity.key().kind())
 
     def testTransactionalTasks(self):
         """Tests tasks within transactions."""

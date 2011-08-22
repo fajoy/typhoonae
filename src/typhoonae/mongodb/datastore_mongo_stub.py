@@ -58,7 +58,7 @@ _CURSOR_CONCAT_STR = '!CURSOR!'
 
 _MAX_ACTIONS_PER_TXN = 5
 
-_NAMESPACE_CONCAT_STR = '_'
+_NAMESPACE_CONCAT_STR = '.'
 
 
 class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
@@ -162,7 +162,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
   def __collection_for_key(self, key):
     collection = key.path().element(-1).type()
     if key.has_name_space():
-        collection += _NAMESPACE_CONCAT_STR + key.name_space()
+        collection = key.name_space() + _NAMESPACE_CONCAT_STR + collection
     return collection
 
   def __id_for_key(self, key):
@@ -647,7 +647,7 @@ class DatastoreMongoStub(apiproxy_stub.APIProxyStub):
 
     collection = query.kind()
     if query.has_name_space():
-        collection += _NAMESPACE_CONCAT_STR + query.name_space()
+        collection = query.name_space() + _NAMESPACE_CONCAT_STR + collection
 
     clone = datastore_pb.Query()
     clone.CopyFrom(query)

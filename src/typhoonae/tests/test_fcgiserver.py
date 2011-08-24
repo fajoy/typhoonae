@@ -44,7 +44,7 @@ class TestCase(unittest.TestCase):
             logout_url = '/_ah/logout'
 
         self.assertRaises(
-            fcgiapp.error,
+            typhoonae.fcgiserver.FastCGIException,
             typhoonae.fcgiserver.serve,
             typhoonae.getAppConfig(), Options())
 

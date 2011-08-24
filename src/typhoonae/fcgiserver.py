@@ -36,6 +36,10 @@ SERVER_SOFTWARE = "TyphoonAE/0.2.1"
 LOG_FORMAT = '%(levelname)-8s %(asctime)s %(filename)s:%(lineno)s] %(message)s'
 
 
+class FastCGIException(Exception):
+    """Raised when a FastCGI exception occurs."""
+
+
 class CGIHandlerChain(object):
     """CGI handler chain."""
 
@@ -189,7 +193,10 @@ def serve(conf, options):
     url_mapping = typhoonae.initURLMapping(conf, options)
 
     while True:
-        (inp, out, unused_err, env) = fcgiapp.Accept()
+        try:
+            (inp, out, unused_err, env) = fcgiapp.Accept()
+        except fcgiapp.error:
+            raise FastCGIException()
 
         # Initialize application environment
         os_env = dict(os.environ)

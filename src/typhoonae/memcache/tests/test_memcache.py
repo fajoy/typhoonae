@@ -209,6 +209,31 @@ class MemcacheTestCase(unittest.TestCase):
         google.appengine.api.memcache.replace('first', second)
         assert google.appengine.api.memcache.get('first') == second
 
+    def testClient(self):
+        """Tests the class-based Memcache interface."""
+
+        client = google.appengine.api.memcache.Client()
+        client.set('foobar', 'some value')
+        assert client.get('foobar') == 'some value'
+
+    def testComapareAndSet(self):
+        """Tests the Compare-And-Set method."""
+
+        client = google.appengine.api.memcache.Client() 
+        client.set('mycounter', 0)
+
+        def bump_counter(key): 
+            retries = 0
+            while retries < 10: # Retry loop 
+                counter = client.gets(key) 
+                assert counter is not None, 'Uninitialized counter' 
+                if client.cas(key, counter+1): 
+                    break 
+                retries += 1
+        
+        bump_counter('mycounter')
+        assert client.get('mycounter') == 1
+
     def testCacheProtobuf(self):
         """Tries to cache an encoded protocol buffer."""
 

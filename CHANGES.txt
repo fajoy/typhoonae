@@ -8,6 +8,8 @@ Version 0.2.1 (2011-??-??)
 
   - Implements experimental Files API serving files directly through NGINX.
 
+  - Memcache API supports new Compare-And-Set function.
+
   - Builtin handlers are configurable via app.yaml now.
 
   - Improved support for Capabilities API.

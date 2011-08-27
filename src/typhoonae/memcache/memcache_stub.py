@@ -23,6 +23,7 @@ import google.appengine.runtime.apiproxy_errors
 import logging
 import os
 import pylibmc
+import threading
 import time
 
 DEFAULT_ADDR = '127.0.0.1'
@@ -69,6 +70,8 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         if config is None:
             config = dict(addr=DEFAULT_ADDR, port=DEFAULT_PORT)
 
+        self._next_cas_id = 1
+        self._next_cas_id_lock = threading.Lock()
         self._cache = pylibmc.Client(['%(addr)s:%(port)i' % config])
 
     def _GetMemcacheBehavior(self):
@@ -90,12 +93,14 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             if value is None:
                 continue
             flags = 0
-            stored_flags, stored_value = cPickle.loads(value)
+            stored_flags, cas_id, stored_value = cPickle.loads(value)
             flags |= stored_flags
             item = response.add_item()
             item.set_key(key)
             item.set_value(stored_value)
             item.set_flags(flags)
+            if request.for_cas():
+                item.set_cas_id(cas_id)
 
     def _Dynamic_Set(self, request, response):
         """Implementation of MemcacheService::Set().
@@ -108,9 +113,9 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             key = getKey(item.key(), request.name_space())
             set_policy = item.set_policy()
             old_entry = self._cache.get(key)
+            if old_entry:
+                stored_flags, cas_id, stored_value = cPickle.loads(old_entry)
             set_status = MemcacheSetResponse.NOT_STORED
-
-            set_value = cPickle.dumps([item.flags(), item.value()])
 
             if ((set_policy == MemcacheSetRequest.SET) or
                 (set_policy == MemcacheSetRequest.ADD and old_entry is None) or
@@ -118,10 +123,29 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
                  old_entry is not None)):
 
                 if (old_entry is None or set_policy == MemcacheSetRequest.SET):
-                    self._cache.set(key, set_value, item.expiration_time())
                     set_status = MemcacheSetResponse.STORED
-                elif (set_policy == MemcacheSetRequest.REPLACE):
+
+            elif (set_policy == MemcacheSetRequest.CAS and item.for_cas() and
+                item.has_cas_id()):
+                if old_entry is None:
+                    set_status = MemcacheSetResponse.NOT_STORED
+                elif cas_id != item.cas_id():
+                    set_status = MemcacheSetResponse.EXISTS
+                else:
+                    set_status = MemcacheSetResponse.STORED
+
+            if (set_status == MemcacheSetResponse.STORED
+                or set_policy == MemcacheSetRequest.REPLACE):
+
+                self._next_cas_id_lock.acquire()
+                set_value = cPickle.dumps(
+                    [item.flags(), self._next_cas_id, item.value()])
+                if set_policy == MemcacheSetRequest.REPLACE:
                     self._cache.replace(key, set_value)
+                else:
+                    self._cache.set(key, set_value, item.expiration_time())
+                self._next_cas_id += 1
+                self._next_cas_id_lock.release()
 
             response.add_set_status(set_status)
 
@@ -163,10 +187,12 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         if value is None:
             if not request.has_initial_value():
                 return None
-            flags, stored_value = (google.appengine.api.memcache.TYPE_INT,
-                                   str(request.initial_value()))
+            flags, cas_id, stored_value = (
+                google.appengine.api.memcache.TYPE_INT,
+                self._next_cas_id,
+                str(request.initial_value()))
         else:
-            flags, stored_value = cPickle.loads(value)
+            flags, cas_id, stored_value = cPickle.loads(value)
 
         if flags == google.appengine.api.memcache.TYPE_INT:
             new_value = int(stored_value)
@@ -177,9 +203,12 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         elif request.direction() == MemcacheIncrementRequest.DECREMENT:
             new_value -= request.delta()
 
-        new_stored_value = cPickle.dumps([flags, str(new_value)])
+        new_stored_value = cPickle.dumps([flags, cas_id, str(new_value)])
         try:
             self._cache.set(key, new_stored_value)
+            self._next_cas_id_lock.acquire()
+            self._next_cas_id += 1
+            self._next_cas_id_lock.release()
         except:
             return None
 

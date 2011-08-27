@@ -11,12 +11,6 @@ Datastre MongoDB API Proxy Stub
   - Implement correct db.ListProperty behaviour.
 
 
-Memcache Service
-----------------
-
-  - Implement Compare-And-Set.
-
-
 Task Queue Service
 ------------------
 

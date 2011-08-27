@@ -15,11 +15,13 @@
 # limitations under the License.
 """Memcache integration."""
 
+from google.appengine.api import apiproxy_stub
+from google.appengine.api import memcache
+from google.appengine.api.memcache import memcache_service_pb
+from google.appengine.runtime import apiproxy_errors
+
 import base64
 import cPickle
-import google.appengine.api.apiproxy_stub
-import google.appengine.api.memcache.memcache_service_pb
-import google.appengine.runtime.apiproxy_errors
 import logging
 import os
 import pylibmc
@@ -29,16 +31,11 @@ import time
 DEFAULT_ADDR = '127.0.0.1'
 DEFAULT_PORT = 11211
 
-MemcacheSetResponse       = (google.appengine.api.memcache.memcache_service_pb.
-                             MemcacheSetResponse)
-MemcacheSetRequest        = (google.appengine.api.memcache.memcache_service_pb.
-                             MemcacheSetRequest)
-MemcacheIncrementRequest  = (google.appengine.api.memcache.memcache_service_pb.
-                             MemcacheIncrementRequest)
-MemcacheIncrementResponse = (google.appengine.api.memcache.memcache_service_pb.
-                             MemcacheIncrementResponse)
-MemcacheDeleteResponse    = (google.appengine.api.memcache.memcache_service_pb.
-                             MemcacheDeleteResponse)
+MemcacheSetResponse       = memcache_service_pb.MemcacheSetResponse
+MemcacheSetRequest        = memcache_service_pb.MemcacheSetRequest
+MemcacheIncrementRequest  = memcache_service_pb.MemcacheIncrementRequest
+MemcacheIncrementResponse = memcache_service_pb.MemcacheIncrementResponse
+MemcacheDeleteResponse    = memcache_service_pb.MemcacheDeleteResponse
 
 
 def getKey(key, namespace=None):
@@ -53,7 +50,7 @@ def getKey(key, namespace=None):
     return base64.b64encode(key)
 
 
-class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
+class MemcacheServiceStub(apiproxy_stub.APIProxyStub):
     """Memcache service stub.
 
     This stub uses memcached to store data.
@@ -188,15 +185,15 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
             if not request.has_initial_value():
                 return None
             flags, cas_id, stored_value = (
-                google.appengine.api.memcache.TYPE_INT,
+                memcache.TYPE_INT,
                 self._next_cas_id,
                 str(request.initial_value()))
         else:
             flags, cas_id, stored_value = cPickle.loads(value)
 
-        if flags == google.appengine.api.memcache.TYPE_INT:
+        if flags == memcache.TYPE_INT:
             new_value = int(stored_value)
-        elif flags == google.appengine.api.memcache.TYPE_LONG:
+        elif flags == memcache.TYPE_LONG:
             new_value = long(stored_value)
         if request.direction() == MemcacheIncrementRequest.INCREMENT:
             new_value += request.delta()
@@ -223,9 +220,8 @@ class MemcacheServiceStub(google.appengine.api.apiproxy_stub.APIProxyStub):
         """
         new_value = self._Increment(request.name_space(), request)
         if new_value is None:
-            raise google.appengine.runtime.apiproxy_errors.ApplicationError(
-                google.appengine.api.memcache.memcache_service_pb.
-                MemcacheServiceError.UNSPECIFIED_ERROR)
+            raise apiproxy_errors.ApplicationError(
+                memcache_service_pb.MemcacheServiceError.UNSPECIFIED_ERROR)
         response.set_new_value(new_value)
 
     def _Dynamic_BatchIncrement(self, request, response):

@@ -26,7 +26,9 @@ from google.appengine.datastore import datastore_index
 from google.appengine.ext import db
 from google.appengine.ext.db import polymodel
 from google.appengine.runtime import apiproxy_errors
+from warnings import filterwarnings, resetwarnings
 
+import MySQLdb
 import datetime
 import os
 import time
@@ -82,6 +84,9 @@ class DatastoreMySQLTestCaseBase(unittest.TestCase):
             "db": "testdb"
         }
 
+        # Suppress waring messages from MySQL
+        filterwarnings('ignore', category=MySQLdb.Warning)
+
         datastore = typhoonae.mysql.datastore_mysql_stub.DatastoreMySQLStub(
             'test', database_info)
 
@@ -100,6 +105,7 @@ class DatastoreMySQLTestCaseBase(unittest.TestCase):
         """Clears all data."""
 
         self.stub.Clear()
+        resetwarnings()
 
 
 class DatastoreMySQLTestCase(DatastoreMySQLTestCaseBase):

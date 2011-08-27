@@ -11,6 +11,13 @@ Datastre MongoDB API Proxy Stub
   - Implement correct db.ListProperty behaviour.
 
 
+Memcache Service
+----------------
+
+  - Use libmemcached's origianal Compare-And-Swap API instead of our Stub
+    implementation. This requires pylibmc-1.2.0 and Python 2.7.
+
+
 Task Queue Service
 ------------------
 

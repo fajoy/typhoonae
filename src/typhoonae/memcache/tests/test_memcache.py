@@ -119,7 +119,7 @@ class MemcacheTestCase(unittest.TestCase):
         os.environ['APPLICATION_ID'] = 'app'
         assert (memcache_stub.getKey('b', namespace='a') == 'YXBwLmEuYg==')
         del os.environ['APPLICATION_ID']
-        memcache.set('counter', 0, namespace='me') 
+        memcache.set('counter', 0, namespace='me')
         assert memcache.get('counter', namespace='me') == 0
 
     def testIncrementDecrement(self):
@@ -127,7 +127,7 @@ class MemcacheTestCase(unittest.TestCase):
 
         memcache.incr('unknown_key')
         assert memcache.get('unknown_key') == None
-        memcache.set('counter', 0) 
+        memcache.set('counter', 0)
         assert memcache.get('counter') == 0
         memcache.incr('counter')
         assert memcache.get('counter') == 1
@@ -212,20 +212,35 @@ class MemcacheTestCase(unittest.TestCase):
     def testComapareAndSet(self):
         """Tests the Compare-And-Set method."""
 
-        client = memcache.Client() 
+        client = memcache.Client()
         client.set('mycounter', 0)
 
-        def bump_counter(key): 
+        def bump_counter(key):
             retries = 0
-            while retries < 10: # Retry loop 
-                counter = client.gets(key) 
-                assert counter is not None, 'Uninitialized counter' 
-                if client.cas(key, counter+1): 
-                    break 
+            while retries < 10: # Retry loop
+                counter = client.gets(key)
+                assert counter is not None, 'Uninitialized counter'
+                if client.cas(key, counter+1):
+                    break
                 retries += 1
-        
+
         bump_counter('mycounter')
         assert client.get('mycounter') == 1
+
+    def testNamespaces(self):
+        """Tests namespace support."""
+
+        from google.appengine.api import namespace_manager
+
+        namespace = namespace_manager.get_namespace()
+
+        try:
+            namespace_manager.set_namespace('testing')
+            memcache.set('foobar', 1)
+        finally:
+            namespace_manager.set_namespace(namespace)
+
+        self.assertEqual(memcache.get('foobar'), None)
 
     def testCacheProtobuf(self):
         """Tries to cache an encoded protocol buffer."""

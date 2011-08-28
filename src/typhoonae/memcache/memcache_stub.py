@@ -67,8 +67,6 @@ class MemcacheServiceStub(apiproxy_stub.APIProxyStub):
         if config is None:
             config = dict(addr=DEFAULT_ADDR, port=DEFAULT_PORT)
 
-        self._next_cas_id = 1
-        self._next_cas_id_lock = threading.Lock()
         self._cache = pylibmc.Client(['%(addr)s:%(port)i' % config])
 
     def _GetMemcacheBehavior(self):
@@ -110,6 +108,7 @@ class MemcacheServiceStub(apiproxy_stub.APIProxyStub):
             key = getKey(item.key(), request.name_space())
             set_policy = item.set_policy()
             old_entry = self._cache.get(key)
+            cas_id = 0
             if old_entry:
                 stored_flags, cas_id, stored_value = cPickle.loads(old_entry)
             set_status = MemcacheSetResponse.NOT_STORED
@@ -134,15 +133,12 @@ class MemcacheServiceStub(apiproxy_stub.APIProxyStub):
             if (set_status == MemcacheSetResponse.STORED
                 or set_policy == MemcacheSetRequest.REPLACE):
 
-                self._next_cas_id_lock.acquire()
                 set_value = cPickle.dumps(
-                    [item.flags(), self._next_cas_id, item.value()])
+                    [item.flags(), cas_id+1, item.value()])
                 if set_policy == MemcacheSetRequest.REPLACE:
                     self._cache.replace(key, set_value)
                 else:
                     self._cache.set(key, set_value, item.expiration_time())
-                self._next_cas_id += 1
-                self._next_cas_id_lock.release()
 
             response.add_set_status(set_status)
 
@@ -179,15 +175,15 @@ class MemcacheServiceStub(apiproxy_stub.APIProxyStub):
         if not request.delta():
             return None
 
+        cas_id = 0
+
         key = getKey(request.key(), namespace)
         value = self._cache.get(key)
         if value is None:
             if not request.has_initial_value():
                 return None
             flags, cas_id, stored_value = (
-                memcache.TYPE_INT,
-                self._next_cas_id,
-                str(request.initial_value()))
+                memcache.TYPE_INT, cas_id, str(request.initial_value()))
         else:
             flags, cas_id, stored_value = cPickle.loads(value)
 
@@ -200,12 +196,9 @@ class MemcacheServiceStub(apiproxy_stub.APIProxyStub):
         elif request.direction() == MemcacheIncrementRequest.DECREMENT:
             new_value -= request.delta()
 
-        new_stored_value = cPickle.dumps([flags, cas_id, str(new_value)])
+        new_stored_value = cPickle.dumps([flags, cas_id+1, str(new_value)])
         try:
             self._cache.set(key, new_stored_value)
-            self._next_cas_id_lock.acquire()
-            self._next_cas_id += 1
-            self._next_cas_id_lock.release()
         except:
             return None
 

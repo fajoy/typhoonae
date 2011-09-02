@@ -71,10 +71,8 @@ setuptools.setup(
         appcfg_service = typhoonae.appcfg.service:main
         appserver = typhoonae.fcgiserver:main
         apptool = typhoonae.apptool:main
-        deferred_taskworker = typhoonae.taskqueue.deferred_worker:main
         ejabberdauth = typhoonae.xmpp.ejabberdauth:main
         runtask = typhoonae.runtask:main
-        taskworker = typhoonae.taskqueue.worker:main
         websocket = typhoonae.websocket.server:main
         xmpp_http_dispatch = typhoonae.xmpp.xmpp_http_dispatch:main
         imap_http_dispatch = typhoonae.mail.imap_http_dispatch:main""",

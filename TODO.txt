@@ -21,8 +21,6 @@ Memcache Service
 Task Queue Service
 ------------------
 
-  - Add default queue.
-
   - Implement Pull Queues.
 
 

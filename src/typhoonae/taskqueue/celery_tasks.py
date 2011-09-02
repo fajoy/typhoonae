@@ -136,19 +136,26 @@ def create_task_queue(queue_name, rate_qps, bucket_size=5):
          __module__=create_task_queue.__module__))
 
 
-def create_task_queues_from_yaml(app_root):
+def create_task_queues_from_yaml(app_root=None):
+    if app_root:
+        queue_info = _ParseQueueYaml(app_root)
+    else:
+        queue_info = None
     tasks = {}
-    queue_info = _ParseQueueYaml(app_root)
     if queue_info and queue_info.queue:
         for entry in queue_info.queue:
             tasks[entry.name] = create_task_queue(
                 entry.name, queueinfo.ParseRate(entry.rate),
                 entry.bucket_size)
+    else:
+        tasks['default'] = create_task_queue('default', 5)
     return tasks
 
 
 def load_queue_config(signal, sender=None, **kwargs):
-    create_task_queues_from_yaml(os.environ['APP_ROOT'])
+    if 'APP_ROOT' not in os.environ:
+        logging.error("application root unknown")
+    create_task_queues_from_yaml(os.environ.get('APP_ROOT'))
 
 
 worker_init.connect(load_queue_config)

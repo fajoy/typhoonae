@@ -18,6 +18,8 @@ Version 0.2.1 (2011-??-??)
 
   - Completely switches to Celery as Task Queue backend.
 
+  - Adds default task queue if no queue.yaml is provided.
+
   - Fixes an issue where multitenancy using namespaces wasn't suppoted by
     the Datastore MongoDB API Proxy Stub.
 

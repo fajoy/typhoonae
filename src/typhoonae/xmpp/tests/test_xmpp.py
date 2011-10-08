@@ -20,13 +20,13 @@ import SimpleHTTPServer
 import google.appengine.api.apiproxy_stub_map
 import google.appengine.api.urlfetch_stub
 import google.appengine.api
-import cgi
 import httplib
 import os
 import threading
 import typhoonae.xmpp.xmpp_http_dispatch
 import typhoonae.xmpp.xmpp_service_stub
 import unittest
+import urlparse
 import xmpp
 
 
@@ -61,24 +61,6 @@ class XmppServiceTestCase(unittest.TestCase):
         self.assertTrue(
             google.appengine.api.xmpp.get_presence('you@net', 'me@net'))
 
-    def testSendMessage(self):
-        """Sends a message."""
-
-        # TODO: We need a proper XMPP server configuration to test whether
-        # sending messages works correctly.
-        self.assertRaises(
-            xmpp.HostUnknown,
-            google.appengine.api.xmpp.send_message,
-            ['foo@bar'], 'Hello, World!')
-
-    def testSendInvite(self):
-        """Sends an invite."""
-
-        self.assertRaises(
-            xmpp.HostUnknown,
-            google.appengine.api.xmpp.send_invite,
-            ['foo@bar'], 'Hello, World!')
-
 
 class StoppableHttpRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     """HTTP request handler with QUIT stopping the server."""
@@ -86,7 +68,7 @@ class StoppableHttpRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.getheader('content-length'))
         qs = self.rfile.read(length)
-        params = cgi.parse_qs(qs, keep_blank_values=1)
+        params = urlparse.parse_qs(qs, keep_blank_values=1)
 
         self.server.buffer.append(params)
 

@@ -190,7 +190,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         else:
             sock_id = None
         addr = self.request.headers['Host'].split(':')[0]
-        headers = {WEBSOCKET_ORIGIN_HEADER: self.request.headers['Origin']}
+        if 'Sec-Websocket-Origin' in self.request.headers:
+            origin = self.request.headers['Sec-Websocket-Origin']
+        else:
+            origin = self.request.headers['Origin']
+        headers = {WEBSOCKET_ORIGIN_HEADER: origin}
         dispatcher = Dispatcher(
             addr, sock_id, request_type, path, headers=headers, body=message)
         dispatcher.start()

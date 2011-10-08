@@ -49,8 +49,7 @@ Before You Install
 Python Interpreter
 ------------------
 
-It is possible to run TyphoonAE's Python parts with Python 2.5.x and 2.6.x, but
-it is recommended to use a version which is supported by the Google App Engine
+It is recommended to use a version which is supported by the Google App Engine
 SDK. See http://code.google.com/intl/de/appengine/docs/python/overview.html for
 further information.
 

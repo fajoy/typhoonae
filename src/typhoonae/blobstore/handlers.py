@@ -53,6 +53,7 @@ Content-Type: %(content_type)s
 MIME-Version: 1.0
 Content-Length: %(content_length)s
 content-type: %(content_type)s
+content-md5: %(content_md5)s
 content-disposition: form-data; name="file"; filename="%(filename)s"
 %(creation_header)s: %(timestamp)s
 
@@ -191,6 +192,7 @@ class UploadCGIHandler(object):
                 blob_key=blobkey,
                 filename=data[field+'.name'],
                 content_type=data[field+'.content_type'],
+                content_md5=data[field+'.md5'],
                 content_length=data[field+'.size'],
                 creation_header=UPLOAD_INFO_CREATION_HEADER,
                 timestamp=timestamp

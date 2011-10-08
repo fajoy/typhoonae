@@ -216,6 +216,7 @@ def serve(conf, options):
             os.environ.get('HTTP_COOKIE', None))
         os.environ['USER_EMAIL'] = email
         os.environ['USER_ID'] = user_id
+        os.environ['REQUEST_ID_HASH'] = ''    # TODO use appropriate value
         if admin:
             os.environ['USER_IS_ADMIN'] = '1'
         else:

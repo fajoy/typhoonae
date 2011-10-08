@@ -69,8 +69,7 @@ def get_short_task_description(name=None, url=None, **kw):
 def handle_task(task, **task_args):
     """Decodes received message and processes task."""
 
-    logger = task.get_logger(task_id=task_args['task_id'],
-                             task_name=task_args['task_name'])
+    logger = task.get_logger()
     headers = {'Content-Type': task_args['content_type'],
                'X-AppEngine-TaskName': task_args['name'],
                'X-AppEngine-TaskRetryCount': str(task_args['try_count']),

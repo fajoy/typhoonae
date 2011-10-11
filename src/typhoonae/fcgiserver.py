@@ -95,7 +95,7 @@ class CGIOutAdapter:
             self.o.flush()
         except IOError:
             logging.error("Invalid CGI output stream (IOError)")
-        except fcgiapp.error:
+        except:
             logging.error("Invalid CGI output stream (FastCGI)")
         finally:
             self.fp.flush()
@@ -195,7 +195,7 @@ def serve(conf, options):
     while True:
         try:
             (inp, out, unused_err, env) = fcgiapp.Accept()
-        except fcgiapp.error:
+        except:
             raise FastCGIException()
 
         # Initialize application environment

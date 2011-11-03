@@ -22,6 +22,11 @@ Version 0.2.1 (2011-??-??)
 
   - Adds default task queue if no queue.yaml is provided.
 
+  - Fixes an issue where updating application files larger than 1 Mb using
+    TyphoonAE's appcfg service failed.
+
+    - http://code.google.com/p/typhoonae/issues/detail?id=89
+
   - Fixes an issue where multitenancy using namespaces wasn't suppoted by
     the Datastore MongoDB API Proxy Stub.
 

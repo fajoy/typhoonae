@@ -195,6 +195,9 @@ class AppversionHandler(webapp.RequestHandler):
             except AppConfigServiceError, e:
                 self.response.out.write(e)
                 self.response.set_status(403)
+        else:
+            logging.error("Unkonwn RPC '%s'", func_name)
+        
 
     def _authenticated(self):
         cookie = self.request.environ.get('HTTP_COOKIE')
@@ -362,6 +365,11 @@ class AppversionHandler(webapp.RequestHandler):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
         app_dir = self.getAppversionDirectory(appversion)
         self.extractFiles(data, app_dir)
+
+    def _RpcMethod_addblob(self, app_id, version, path, data):
+        appversion = self.getAppversion(app_id, version, STATE_UPDATING)
+        app_dir = self.getAppversionDirectory(appversion)
+        self._createFile(app_dir, path, data)
 
     def _RpcMethod_addblobs(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)

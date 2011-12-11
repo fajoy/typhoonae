@@ -360,7 +360,8 @@ def setupStubs(conf, options):
                            False,
                            False)
 
-    setupRdbmsSQLite(options.rdbms_sqlite_path)
+    # Since Google App Engine SDK 1.6.0, this is not longer supported
+    #setupRdbmsSQLite(options.rdbms_sqlite_path)
 
     setupCapability()
 

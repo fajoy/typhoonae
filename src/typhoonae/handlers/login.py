@@ -19,7 +19,7 @@ import Cookie
 import base64
 import cookielib
 import google.appengine.ext.webapp
-import md5
+from hashlib import md5
 import os
 import re
 import socket
@@ -64,7 +64,7 @@ def createLoginCookiePayload(email, admin):
     if admin:
         admin_string = 'True'
     if email:
-        user_id_digest = md5.new(email.lower()).digest()
+        user_id_digest = md5(email.lower()).digest()
         user_id = '1' + ''.join(['%02d' % ord(x) for x in user_id_digest])[:20]
     else:
         user_id = ''

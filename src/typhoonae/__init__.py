@@ -25,7 +25,7 @@ import sys
 
 
 SUPPORTED_DATASTORES = frozenset([
-    'bdbdatastore', 'mongodb', 'mysql', 'remote'])
+    'bdbdatastore', 'mongodb', 'mysql', 'remote', 'sqlite'])
 
 end_request_hook = None
 
@@ -159,6 +159,11 @@ def setupDatastore(options, conf, datastore_file, history, require_indexes, trus
         }
         datastore = datastore_mysql_stub.DatastoreMySQLStub(
             conf.application, database_info, verbose=options.debug_mode)
+    elif name == 'sqlite':
+      from google.appengine.datastore import datastore_sqlite_stub
+      datastore = datastore_sqlite_stub.DatastoreSqliteStub(
+        conf.application, datastore_file, 
+        require_indexes=require_indexes, trusted=trusted)
     else:
         raise RuntimeError, "unknown datastore"
 

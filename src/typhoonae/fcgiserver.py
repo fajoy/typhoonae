@@ -202,6 +202,7 @@ def serve(conf, options):
         os_env = dict(os.environ)
         os.environ.clear()
         os.environ.update(env)
+        os.environ['APPENGINE_RUNTIME'] = conf.runtime
         os.environ['APPLICATION_ID'] = conf.application
         os.environ['CURRENT_VERSION_ID'] = (options.current_version_id
                                             or conf.version + ".1")

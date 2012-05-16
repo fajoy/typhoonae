@@ -699,6 +699,8 @@ def write_supervisor_conf(options, conf, app_root):
         pass
     elif datastore == 'remote':
         pass
+    elif datastore == 'sqlite':
+        pass
     else:
         raise RuntimeError, "unknown datastore"
 

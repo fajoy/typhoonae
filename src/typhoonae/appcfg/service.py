@@ -37,6 +37,7 @@ import sys
 import re
 import threading
 import time
+import compileall
 import typhoonae.apptool
 import typhoonae.fcgiserver
 
@@ -410,6 +411,11 @@ class AppversionHandler(webapp.RequestHandler):
         deployment.join()
         self.__deploy_lock.release()
 
+    def _RpcMethod_precompile(self, app_id, version, path, data):
+        appversion = self.getAppversion(app_id, version, STATE_UPDATING)
+        app_dir = self.getAppversionDirectory(appversion)
+        logging.info("Compiling application directory '%s'...", app_dir)
+        compileall.compile_dir(app_dir, force=False)
 
 class DatastoreHandler(webapp.RequestHandler):
     """Implements web-hooks for actions on the datastore.

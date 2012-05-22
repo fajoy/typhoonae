@@ -202,7 +202,7 @@ class AppversionHandler(webapp.RequestHandler):
                     pool = {}
                     for srv in file(DEFAULT_SERVERS_FILE, 'r').readlines():
                         rpc = urlfetch.create_rpc()
-                        url = "http://%s/%s?%s" % (
+                        url = "http://%s%s?%s" % (
                             srv, self.request.path, self.request.query_string)
                         payload = self.request.body
                         urlfetch.make_fetch_call(
@@ -214,9 +214,12 @@ class AppversionHandler(webapp.RequestHandler):
                             if something is wrong in one of them, kills every others
                             request and return the failed.
                             """
-                            for srv, rpc in pool.iteritems():
-                                if rpc.check_success():
-                                    del pool[srv]
+                            for srv, rpc in pool.items():
+                                result = rpc.get_result()
+                                if result.status_code <> 200:
+                                    raise AppConfigServiceError(
+                                        "HTTP Code: %d" % result.status_code)
+                                del pool[srv]
                     except Exception, e:
                         raise AppConfigServiceError(
                             "Server(%s) returns: %s" % (srv, e))

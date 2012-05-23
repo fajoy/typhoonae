@@ -37,6 +37,7 @@ import sys
 import re
 import threading
 import time
+import urllib
 import compileall
 import typhoonae.apptool
 import typhoonae.fcgiserver
@@ -47,6 +48,7 @@ logging.basicConfig(format=LOG_FORMAT)
 
 from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import appinfo
+from google.appengine.api import urlfetch
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
@@ -83,6 +85,7 @@ FILE_FILTER_PATTERNS = [
     '.*/\.git.*',
 ]
 
+DEFAULT_SERVERS_FILE="etc/SERVERS"
 
 class AppConfigServiceError(Exception):
     """Exception to be raised on errors during appversion deployment."""
@@ -193,12 +196,39 @@ class AppversionHandler(webapp.RequestHandler):
         if func:
             try:
                 func(app_id, version, path, self.request.body)
+                if os.path.exists(DEFAULT_SERVERS_FILE):
+                    """Create a asynchrome request in each servers
+                    in the servers file.
+                    """
+                    pool = {}
+                    for srv in file(DEFAULT_SERVERS_FILE, 'r').readlines():
+                        rpc = urlfetch.create_rpc()
+                        url = "http://%s%s?%s" % (
+                            srv, self.request.path, self.request.query_string)
+                        payload = self.request.body
+                        urlfetch.make_fetch_call(
+                            rpc, url, payload, 'POST', self.request.headers)
+                        pool[srv] = rpc
+                    try:
+                        while pool:
+                            """Checks the result of each servers
+                            if something is wrong in one of them, kills every others
+                            request and return the failed.
+                            """
+                            for srv, rpc in pool.items():
+                                result = rpc.get_result()
+                                if result.status_code <> 200:
+                                    raise AppConfigServiceError(
+                                        "HTTP Code: %d" % result.status_code)
+                                del pool[srv]
+                    except Exception, e:
+                        raise AppConfigServiceError(
+                            "Server(%s) returns: %s" % (srv, e))
             except AppConfigServiceError, e:
                 self.response.out.write(e)
                 self.response.set_status(403)
         else:
             logging.error("Unkonwn RPC '%s'", func_name)
-        
 
     def _authenticated(self):
         cookie = self.request.environ.get('HTTP_COOKIE')
@@ -536,6 +566,11 @@ class AppConfigService(object):
             'datastore_v3', datastore)
 
         logging.debug('Using datastore: %s', datastore_path)
+
+        # Setup Urlfetch
+        from google.appengine.api import urlfetch_stub
+        apiproxy_stub_map.apiproxy.RegisterStub(
+            'urlfetch', urlfetch_stub.URLFetchServiceStub())
 
     def _handleSignal(self, sig, frame):
         logging.debug('Caught signal %d', sig)

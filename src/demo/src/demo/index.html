@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C //DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>TyphoonAE</title>
+    <link rel="stylesheet" href="/css/styles.css" type="text/css" media="all" />
+  </head>
+  <body>
+    <img src="/images/logo.png" alt="TyphoonAE" title="TyphoonAE" />
+    <a href="/_ah/admin/">Admin</a>
+    <div style="float:right">
+      User: {{ user }} {{ login_or_logout }}
+    </div>
+    <div>
+      <p>Counter: {{ count }}</p>
+      <p>Notes from executed tasks and received XMPP messages (memcached):</p>
+      <select size="10" multiple>
+      {% for note in notes %}
+        <option>{{ note }}</option>
+      {% endfor %}
+      </select>
+    </div>
+    <br />
+    <div>
+      <form action="invite" method="POST">
+        <label for="recipient">Send XMPP invitation to JID</label>
+        <input name="recipient" id="recipient" />
+        <input type="submit" value="Send" />
+      </form>
+    </div>
+    <br />
+    <div>
+      <a href="/blobstore">File upload</a>
+    </div>
+    <br />
+    <div>
+      Stored blobs:
+      <ul>
+      {% for blob in blobs %}
+        <li>
+          <img src="{{ blob.thumbnail_url }}" />
+          <a href="/serve/{{blob.info.key}}"
+            >{{ blob.info.filename }}</a> ({{blob.info.size}} bytes)
+          <a href="/files/{{blob.info.key}}">Contents</a>
+          <a href="/delete/{{blob.info.key}}">Delete</a>
+        </li>
+      {% endfor %}
+      </ul>
+    </div>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript">
+      function callAJAX() {
+        $.getJSON("/ajax", function(json) {
+          $("#testAJAX").html(json.data.length/1024 + ' kb received');
+        });
+      };
+    </script>
+    <div id="testAJAX"><a href="javascript:callAJAX();">Make AJAX call</a></div>
+  </body>
+</html>

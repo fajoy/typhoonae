@@ -395,11 +395,14 @@ class AppversionHandler(webapp.RequestHandler):
 
     def _RpcMethod_rollback(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_UPDATING)
-        app_dir = self.getAppversionDirectory(appversion)
-        logging.info("Deleting application directory '%s'", app_dir)
-        shutil.rmtree(app_dir)
-        logging.info("Deleting appversion (app_id=u'%s')", app_id)
-        appversion.delete()
+        if not appversion:
+            logging.info("Nothing to rollback for the app_id=u'%s'", app_id)
+        else:
+            app_dir = self.getAppversionDirectory(appversion)
+            logging.info("Deleting application directory '%s'", app_dir)
+            shutil.rmtree(app_dir)
+            logging.info("Deleting appversion (app_id=u'%s')", app_id)
+            appversion.delete()
 
     def _RpcMethod_setdefault(self, app_id, version, path, data):
         appversion = self.getAppversion(app_id, version, STATE_DEPLOYED)

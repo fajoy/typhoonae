@@ -7,6 +7,7 @@ syntax: glob
 etc/*-nginx.conf
 etc/*-supervisor.conf
 etc/celeryconfig.py
+etc/ssl/*
 
 syntax: regexp
 

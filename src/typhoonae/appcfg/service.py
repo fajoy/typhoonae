@@ -479,6 +479,15 @@ class QueueHandler(webapp.RequestHandler):
     def post(self, func_name):
         pass
 
+class DosHandler(webapp.RequestHandler):
+    """Implements web-hooks for configuring the DOS service.
+
+    Handles all POST requests for /api/dos.
+    """
+
+    def post(self, func_name):
+        pass
+
 
 class DeleteHandler(webapp.RequestHandler):
     """Handler for deleting an application."""
@@ -518,6 +527,7 @@ app = webapp.WSGIApplication([
     ('/api/datastore/(.*)/(.*)', DatastoreHandler),
     ('/api/cron/(.*)', CronHandler),
     ('/api/queue/(.*)', QueueHandler),
+    ('/api/dos/(.*)', DosHandler),
     ('/delete', DeleteHandler),
 ], debug=True)
 
@@ -525,7 +535,7 @@ app = webapp.WSGIApplication([
 class AppConfigService(object):
     """Uses a simple single-threaded WSGI server and signal handling."""
 
-    def __init__(self, addr, app, apps_root, var, verbose=False):
+    def __init__(self, addr, app, apps_root, var, verbose=False, secure=False):
         """Initialize the WSGI server.
 
         Args:
@@ -534,6 +544,7 @@ class AppConfigService(object):
             apps_root: Applications root directory.
             var: Directory for platform independent data.
             verbose: Boolean, default False. If True, enable verbose mode.
+            secure: Boolean, default False. If True, enable secure connection.
         """
         assert isinstance(app, webapp.WSGIApplication)
         self.app = app
@@ -541,6 +552,7 @@ class AppConfigService(object):
         self.host = host
         self.port = int(port)
         self.apps_root = apps_root
+        self.secure = secure
 
         # Setup signals
         signal.signal(signal.SIGHUP, self._handleSignal)
@@ -588,10 +600,22 @@ class AppConfigService(object):
 
         logging.info('Starting (pid:%i)', os.getpid())
         try:
-            logging.debug('HTTP server listening on %s:%i',
-                          self.host, self.port)
+            logging.debug('HTTP server listening on %s:%i, secure=%d',
+                          self.host, self.port, self.secure)
             server = make_server(
                 self.host, self.port, self.app, handler_class=RequestHandler)
+
+            if self.secure:
+                try:
+                    import ssl
+                    server.socket = ssl.wrap_socket(
+                        server.socket, 
+                        keyfile='etc/ssl/appcfgd.key',
+                        certfile='etc/ssl/appcfgd.cert', 
+                        server_side=True)
+                except Exception, e:
+                    logging.exception(e)
+                
             server.serve_forever()
         except KeyboardInterrupt:
             logging.warn('Interrupted')
@@ -821,6 +845,9 @@ def main():
                   default=typhoonae.apptool.setdir(
                         os.path.abspath(os.path.join('.', 'var'))))
 
+    op.add_option("-s", "--secure", dest="secure_mode", action="store_true",
+                  help="enables secure connection", default=False)
+
     (options, args) = op.parse_args()
 
     os.environ['APPS_ROOT'] = options.apps_root
@@ -846,6 +873,7 @@ def main():
         app,
         options.apps_root,
         options.var,
-        options.debug_mode)
+        options.debug_mode,
+        secure=options.secure_mode)
 
     service.serve_forever()

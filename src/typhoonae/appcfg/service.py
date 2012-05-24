@@ -449,6 +449,15 @@ class QueueHandler(webapp.RequestHandler):
     def post(self, func_name):
         pass
 
+class DosHandler(webapp.RequestHandler):
+    """Implements web-hooks for configuring the DOS service.
+
+    Handles all POST requests for /api/dos.
+    """
+
+    def post(self, func_name):
+        pass
+
 
 class DeleteHandler(webapp.RequestHandler):
     """Handler for deleting an application."""
@@ -488,6 +497,7 @@ app = webapp.WSGIApplication([
     ('/api/datastore/(.*)/(.*)', DatastoreHandler),
     ('/api/cron/(.*)', CronHandler),
     ('/api/queue/(.*)', QueueHandler),
+    ('/api/dos/(.*)', DosHandler),
     ('/delete', DeleteHandler),
 ], debug=True)
 

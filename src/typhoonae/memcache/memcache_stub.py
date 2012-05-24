@@ -64,10 +64,10 @@ class MemcacheServiceStub(apiproxy_stub.APIProxyStub):
             service_name: Service name expected for all calls.
         """
         super(MemcacheServiceStub, self).__init__(service_name)
-        if config is None:
-            config = dict(addr=DEFAULT_ADDR, port=DEFAULT_PORT)
+        if not config:
+            config = ["%(addr)s:%(port)i" % dict(addr=DEFAULT_ADDR, port=DEFAULT_PORT)]
 
-        self._cache = pylibmc.Client(['%(addr)s:%(port)i' % config])
+        self._cache = pylibmc.Client(config)
 
     def _GetMemcacheBehavior(self):
         behaviors = self._cache.behaviors

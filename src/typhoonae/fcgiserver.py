@@ -394,6 +394,10 @@ def main():
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
                   help="use this XMPP/Jabber host", default='localhost')
 
+    op.add_option("--memcache", dest="memcache", metavar="ADDR:PORT",
+                  help="use a to configure the address of memcached servers", 
+                  default=[], action="append")
+
     (options, args) = op.parse_args()
 
     if sys.argv[-1].startswith('-') or sys.argv[-1] == sys.argv[0]:

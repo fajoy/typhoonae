@@ -210,7 +210,7 @@ stdout_logfile = %(var)s/log/bdbdatastore.log
 
 SUPERVISOR_APPSERVER_CONFIG = """
 [fcgi-program:%(app_id)s.%(version)s]
-command = %(bin_dir)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(add_opts)s "%(app_root)s"
+command = %(bin_dir)s/appserver --server_name=%(server_name)s --http_port=%(http_port)s --auth_domain=%(auth_domain)s --datastore=%(datastore)s --xmpp_host=%(xmpp_host)s --server_software=%(server_software)s --blobstore_path=%(blobstore_path)s --upload_url=%(upload_url)s --smtp_host=%(smtp_host)s --smtp_port=%(smtp_port)s --smtp_user=%(smtp_user)s --smtp_password=%(smtp_password)s --email=%(email)s --password=%(password)s %(memcache_config)s %(add_opts)s "%(app_root)s" 
 socket = tcp://%(fcgi_host)s:%(fcgi_port)s
 process_name = %%(program_name)s_%%(process_num)02d
 numprocs = 2
@@ -410,7 +410,6 @@ CELERY_DEFAULT_EXCHANGE = "%(app_id)s"
 CELERY_DEFAULT_EXCHANGE_TYPE = "direct"
 CELERY_DEFAULT_ROUTING_KEY = "default"
 """
-
 
 def make_blobstore_dirs(blobstore_path):
     """Makes Blobstore directories."""
@@ -631,6 +630,7 @@ def write_supervisor_conf(options, conf, app_root):
     websocket_host = options.websocket_host
     websocket_port = options.websocket_port
     xmpp_host = options.xmpp_host
+    memcache = options.memcache
 
     if options.multiple:
         server_name = "%s.%s" % (app_id, options.server_name)
@@ -703,6 +703,9 @@ def write_supervisor_conf(options, conf, app_root):
         pass
     else:
         raise RuntimeError, "unknown datastore"
+
+    if len(memcache):
+        memcache_config = " ".join(["--memcache=%s" % srv for srv in memcache])
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
 
@@ -1099,6 +1102,10 @@ def main():
 
     op.add_option("--xmpp_host", dest="xmpp_host", metavar="ADDR",
                   help="use this XMPP host", default=socket.getfqdn())
+
+    op.add_option("--memcache", dest="memcache", metavar="ADDR:PORT",
+                  help="use a to configure the address of memcached servers", 
+                  default=[], action="append")
 
     (options, args) = op.parse_args()
 

@@ -206,13 +206,13 @@ def setupMail(smtp_host, smtp_port, smtp_user, smtp_password,
             enable_sendmail=enable_sendmail, show_mail_body=show_mail_body))
 
 
-def setupMemcache():
+def setupMemcache(config=None):
     """Sets up memcache."""
 
     from typhoonae.memcache import memcache_stub
 
     apiproxy_stub_map.apiproxy.RegisterStub('memcache',
-        memcache_stub.MemcacheServiceStub())
+        memcache_stub.MemcacheServiceStub(config=config))
 
 
 def setupTaskQueue(internal_address, root_path='.'):
@@ -373,7 +373,7 @@ def setupStubs(conf, options):
     setupMail(options.smtp_host, options.smtp_port,
               options.smtp_user, options.smtp_password)
 
-    setupMemcache()
+    setupMemcache(options.memcache)
 
     setupTaskQueue(options.internal_address)
 

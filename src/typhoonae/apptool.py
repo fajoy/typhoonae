@@ -706,6 +706,8 @@ def write_supervisor_conf(options, conf, app_root):
 
     if len(memcache):
         memcache_config = " ".join(["--memcache=%s" % srv for srv in memcache])
+    else:
+        memcache_config = ""
 
     supervisor_conf_stub.write(SUPERVISOR_APPSERVER_CONFIG % locals())
 

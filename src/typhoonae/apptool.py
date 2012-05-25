@@ -704,7 +704,7 @@ def write_supervisor_conf(options, conf, app_root):
     else:
         raise RuntimeError, "unknown datastore"
 
-    if isistance(memache, list):
+    if isinstance(memcache, list):
         memcache_config = " ".join(["--memcache=%s" % srv for srv in memcache])
     elif len(memcache):
         memcache_config = "--memcache=%s" % memcache

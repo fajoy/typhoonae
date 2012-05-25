@@ -82,6 +82,7 @@ class ApptoolTestCase(unittest.TestCase):
             websocket_host = 'localhost'
             websocket_port = 8888
             xmpp_host = "localhost"
+            memcache = ""
 
         self.options = OptionsMock()
 

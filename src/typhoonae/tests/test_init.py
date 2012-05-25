@@ -55,6 +55,7 @@ class InitTestCase(unittest.TestCase):
             websocket_host = 'localhost'
             websocket_port = 8888
             xmpp_host = 'localhost'
+            memcache = ''
 
         typhoonae.setupStubs(self.conf, TestOptions())
 

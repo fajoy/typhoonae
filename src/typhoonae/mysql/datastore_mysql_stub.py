@@ -29,7 +29,7 @@ Datastore stub.
 import array
 import itertools
 import logging
-import md5
+from hashlib import md5
 import sys
 import threading
 import time
@@ -810,7 +810,7 @@ class DatastoreMySQLStub(apiproxy_stub.APIProxyStub):
         for p in e.property_list():
           p_vals = [self.__GetEntityKind(e), p.name(), self.__EncodeIndexPB(p.value()), self.__EncodeIndexPB(e.key().path())]
 
-          hashed_index = md5.new(''.join(p_vals[:2]))
+          hashed_index = md5(''.join(p_vals[:2]))
           hashed_index.update(p_vals[2]) #buffer values cannot be joined into a string
           hashed_index.update(p_vals[3])
           p_vals.append( hashed_index.hexdigest() )
@@ -969,7 +969,7 @@ class DatastoreMySQLStub(apiproxy_stub.APIProxyStub):
         for prop in itertools.chain(entity.property_list(),
                                     entity.raw_property_list()):
           if prop.value().has_uservalue():
-            uid = md5.new(prop.value().uservalue().email().lower()).digest()
+            uid = md5(prop.value().uservalue().email().lower()).digest()
             uid = '1' + ''.join(['%02d' % ord(x) for x in uid])[:20]
             prop.mutable_value().mutable_uservalue().set_obfuscated_gaiaid(uid)
 

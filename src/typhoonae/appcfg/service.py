@@ -663,6 +663,8 @@ class Options(object):
             val = int(val)
         elif re.match(r'^(False|True)$', val, re.M):
             val = eval(val)
+        elif len(val.split()) > 1:
+            val = val.split()
         return val
 
 

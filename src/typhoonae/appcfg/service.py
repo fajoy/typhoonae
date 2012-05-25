@@ -582,6 +582,7 @@ class AppConfigService(object):
 
         # Setup Urlfetch
         from google.appengine.api import urlfetch_stub
+        urlfetch_stub.MAX_REQUEST_SIZE = 5012 << 30
         apiproxy_stub_map.apiproxy.RegisterStub(
             'urlfetch', urlfetch_stub.URLFetchServiceStub())
 

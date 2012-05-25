@@ -1,0 +1,4 @@
+cron:
+- description: make a log entry
+  url: /log
+  schedule: every 1 minutes

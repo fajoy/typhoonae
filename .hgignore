@@ -1,0 +1,22 @@
+syntax: glob
+
+*.egg-info
+*.pyc
+*.swp
+.installed.cfg
+etc/*-nginx.conf
+etc/*-supervisor.conf
+etc/celeryconfig.py
+etc/ssl/*
+
+syntax: regexp
+
+^bin/
+^develop-eggs/
+^doc/build/
+^downloads/
+^eggs/
+^etc/ejabberd.cfg
+^etc/supervisord.conf
+^parts/
+^var/*

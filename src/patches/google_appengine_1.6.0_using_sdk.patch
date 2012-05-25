@@ -1,0 +1,9 @@
+--- google_appengine/google/appengine/dist/_library.py
++++ google_appengine/google/appengine/dist/_library.py
+@@ -49,7 +49,7 @@ import os
+ import sys
+ 
+ server_software = os.getenv('SERVER_SOFTWARE')
+-USING_SDK = not server_software or server_software.startswith('Dev')
++USING_SDK = True #not server_software or server_software.startswith('Dev')
+ del server_software

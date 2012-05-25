@@ -1,0 +1,40 @@
+TODO
+====
+
+Datastre MongoDB API Proxy Stub
+-------------------------------
+
+  - Support Expando.
+
+  - Add support for kindless ancestor queries.
+
+  - Implement correct db.ListProperty behaviour.
+
+
+Memcache Service
+----------------
+
+  - Use libmemcached's origianal Compare-And-Swap API instead of our Stub
+    implementation. This requires pylibmc-1.2.0 and Python 2.7.
+
+
+Task Queue Service
+------------------
+
+  - Implement Pull Queues.
+
+
+Making API Proxy Stubs Configurable
+-----------------------------------
+
+  - Identify common buildout.cfg parts and put them into separate files.
+
+  - Improve capabilities stub.
+
+  - Implement buildout.cfg wizzard.
+
+
+App Configuration
+-----------------
+
+  - Add support for custom error responses.
